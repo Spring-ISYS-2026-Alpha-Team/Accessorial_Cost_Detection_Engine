@@ -1,6 +1,9 @@
 # Credentials — never commit
 .env
 
+# Virtual environment
+venv/
+
 # Python
 __pycache__/
 *.pyc
