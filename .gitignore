@@ -13,6 +13,9 @@ __pycache__/
 dist/
 build/
 
+# Claude Code
+.claude/
+
 # VS Code
 .vscode/
 
