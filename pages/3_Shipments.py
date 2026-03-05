@@ -9,7 +9,9 @@ from auth_utils import check_auth
 from utils.mock_data import generate_mock_shipments, CARRIERS, FACILITIES
 from utils.styling import (
     inject_css, top_nav,
-    NAVY_500, NAVY_100,
+    CARD_BG, BORDER, PLUM,
+    TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
+    BRIGHT_TEAL, CORAL, GOLD,
     RISK_LOW_BG, RISK_LOW_FG,
     RISK_MED_BG, RISK_MED_FG,
     RISK_HIGH_BG, RISK_HIGH_FG,
@@ -18,7 +20,7 @@ from utils.styling import (
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="PACE — Shipments",
-    page_icon="🚚",
+    page_icon="P",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -27,7 +29,7 @@ inject_css()
 # ── Auth guard ────────────────────────────────────────────────────────────────
 if not check_auth():
     st.warning("Please sign in to access this page.")
-    st.page_link("app.py", label="Go to Sign In", icon="🔑")
+    st.page_link("app.py", label="Go to Sign In")
     st.stop()
 
 username = st.session_state.get("username", "User")
@@ -40,8 +42,8 @@ def load_data():
 
 df_all = load_data()
 
-# ── Inline filters ────────────────────────────────────────────────────────────
-with st.expander("⚙️ Filters", expanded=False):
+# ── Filters ───────────────────────────────────────────────────────────────────
+with st.expander("Filters", expanded=False):
     f1, f2, f3 = st.columns(3)
     with f1:
         sel_carriers = st.multiselect(
@@ -57,7 +59,6 @@ with st.expander("⚙️ Filters", expanded=False):
             default=["Low", "Medium", "High"], key="ship_tiers"
         )
 
-# ── Apply filters ─────────────────────────────────────────────────────────────
 df = df_all.copy()
 if sel_carriers:
     df = df[df["carrier"].isin(sel_carriers)]
@@ -66,11 +67,11 @@ if sel_facilities:
 if sel_tiers:
     df = df[df["risk_tier"].isin(sel_tiers)]
 
-# ── Session state for detail toggle ──────────────────────────────────────────
 if "selected_shipment" not in st.session_state:
     st.session_state["selected_shipment"] = None
 
-# ── Helper: render detail view ─────────────────────────────────────────────────
+
+# ── Detail view ───────────────────────────────────────────────────────────────
 def render_detail(row: pd.Series):
     tier = row["risk_tier"]
     tier_colors = {
@@ -78,15 +79,15 @@ def render_detail(row: pd.Series):
         "Medium": (RISK_MED_BG,  RISK_MED_FG),
         "Low":    (RISK_LOW_BG,  RISK_LOW_FG),
     }
-    bg, fg = tier_colors.get(tier, ("#F3F4F6", "#6B7280"))
+    bg, fg = tier_colors.get(tier, (CARD_BG, TEXT_MUTED))
 
     if st.button("← Back to Shipments"):
         st.session_state["selected_shipment"] = None
         st.rerun()
 
     st.markdown(
-        f"<div style='font-size:12px; color:#9CA3AF; margin-bottom:12px;'>"
-        f"Shipments / <b style='color:#374151'>{row['shipment_id']}</b></div>",
+        f"<div style='font-size:12px; color:{TEXT_SECONDARY}; margin-bottom:12px;'>"
+        f"Shipments / <b style='color:{TEXT_PRIMARY}'>{row['shipment_id']}</b></div>",
         unsafe_allow_html=True,
     )
 
@@ -98,23 +99,23 @@ def render_detail(row: pd.Series):
             st.markdown(
                 f"<div style='text-align:right; padding-top:6px;'>"
                 f"<span style='background:{bg}; color:{fg}; padding:5px 14px; "
-                f"border-radius:4px; font-size:13px; font-weight:700;'>{tier.upper()} RISK</span>"
-                f"</div>",
+                f"border-radius:4px; font-size:13px; font-weight:700;'>"
+                f"{tier.upper()} RISK</span></div>",
                 unsafe_allow_html=True,
             )
 
         m1, m2, m3, m4 = st.columns(4)
         with m1:
-            st.markdown("**Carrier**")
+            st.markdown(f"**Carrier**")
             st.write(row["carrier"])
         with m2:
-            st.markdown("**Facility**")
+            st.markdown(f"**Facility**")
             st.write(row["facility"])
         with m3:
-            st.markdown("**Ship Date**")
+            st.markdown(f"**Ship Date**")
             st.write(row["ship_date"])
         with m4:
-            st.markdown("**Base Freight**")
+            st.markdown(f"**Base Freight**")
             st.write(f"${row['base_freight_usd']:,.2f}")
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -124,11 +125,11 @@ def render_detail(row: pd.Series):
     with rc1:
         with st.container(border=True):
             st.markdown("#### Risk Score")
+            st.caption("Model-predicted accessorial risk for this shipment")
             score_pct = row["risk_score"] * 100
-            color = fg
 
             st.markdown(
-                f"<div style='font-size:48px; font-weight:700; color:{color}; "
+                f"<div style='font-size:48px; font-weight:700; color:{fg}; "
                 f"line-height:1; margin:8px 0;'>{score_pct:.0f}%</div>",
                 unsafe_allow_html=True,
             )
@@ -139,10 +140,9 @@ def render_detail(row: pd.Series):
                 unsafe_allow_html=True,
             )
             st.markdown("<br>", unsafe_allow_html=True)
-
             est = row["accessorial_charge_usd"]
             st.markdown(
-                f"<div style='font-size:13px; color:#6B7280; margin-top:8px;'>"
+                f"<div style='font-size:13px; color:{TEXT_SECONDARY}; margin-top:8px;'>"
                 f"Estimated accessorial exposure: "
                 f"<b style='color:{fg};'>${est:,.2f}</b></div>",
                 unsafe_allow_html=True,
@@ -151,12 +151,16 @@ def render_detail(row: pd.Series):
     with rc2:
         with st.container(border=True):
             st.markdown("#### Risk Factor Breakdown")
-            st.caption("Top factors contributing to this prediction")
+            st.caption("Top factors contributing to this prediction — longer bars indicate stronger influence")
 
             weight_norm = min(float(row["weight_lbs"]) / 44_000, 1.0)
             miles_norm  = min(float(row["miles"])      /  5_000, 1.0)
-            carrier_factor  = 0.30 + (0.10 if row["carrier"] in ["Werner Enterprises", "XPO Logistics"] else -0.05)
-            facility_factor = 0.25 + (0.10 if "Memphis" in row["facility"] or "Chicago" in row["facility"] else -0.05)
+            carrier_factor  = 0.30 + (
+                0.10 if row["carrier"] in ["Werner Enterprises", "XPO Logistics"] else -0.05
+            )
+            facility_factor = 0.25 + (
+                0.10 if "Memphis" in row["facility"] or "Chicago" in row["facility"] else -0.05
+            )
 
             factors = {
                 "Carrier History":   round(carrier_factor,  2),
@@ -171,14 +175,14 @@ def render_detail(row: pd.Series):
                 fc1, fc2, fc3 = st.columns([3, 5, 1])
                 with fc1:
                     st.markdown(
-                        f"<span style='font-size:13px; color:#374151;'>{factor}</span>",
+                        f"<span style='font-size:13px; color:{TEXT_PRIMARY};'>{factor}</span>",
                         unsafe_allow_html=True,
                     )
                 with fc2:
                     st.progress(pct / 100)
                 with fc3:
                     st.markdown(
-                        f"<span style='font-size:13px; font-weight:600; color:#111827;'>"
+                        f"<span style='font-size:13px; font-weight:600; color:{TEXT_PRIMARY};'>"
                         f"{pct:.0f}%</span>",
                         unsafe_allow_html=True,
                     )
@@ -187,11 +191,12 @@ def render_detail(row: pd.Series):
 
     with st.container(border=True):
         st.markdown(
-            f"<div style='border-left:4px solid {NAVY_500}; "
-            f"background:{NAVY_100}; padding:16px 20px; border-radius:0 8px 8px 0;'>",
+            f"<div style='border-left:4px solid {BRIGHT_TEAL}; "
+            f"background:rgba(45,212,191,0.08); padding:16px 20px; border-radius:0 8px 8px 0;'>",
             unsafe_allow_html=True,
         )
         st.markdown("#### Recommended Actions")
+        st.caption("Actions prioritized by impact on reducing accessorial exposure")
 
         actions = []
         if tier == "High":
@@ -216,15 +221,14 @@ def render_detail(row: pd.Series):
         for i, action in enumerate(actions, 1):
             st.markdown(
                 f"<div style='display:flex; align-items:flex-start; gap:10px; margin:8px 0;'>"
-                f"<span style='background:{NAVY_500}; color:white; border-radius:50%; "
+                f"<span style='background:{PLUM}; color:white; border-radius:50%; "
                 f"width:22px; height:22px; min-width:22px; display:flex; "
                 f"align-items:center; justify-content:center; font-size:12px; "
                 f"font-weight:700;'>{i}</span>"
-                f"<span style='font-size:14px; color:#1F2937;'>{action}</span>"
+                f"<span style='font-size:14px; color:{TEXT_PRIMARY};'>{action}</span>"
                 f"</div>",
                 unsafe_allow_html=True,
             )
-
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -260,9 +264,9 @@ def render_detail(row: pd.Series):
         )
 
 
-# ── Main: list view vs. detail view ──────────────────────────────────────────
+# ── List vs detail view ───────────────────────────────────────────────────────
 if st.session_state["selected_shipment"] is not None:
-    sid = st.session_state["selected_shipment"]
+    sid   = st.session_state["selected_shipment"]
     match = df_all[df_all["shipment_id"] == sid]
     if not match.empty:
         render_detail(match.iloc[0])
@@ -277,7 +281,7 @@ else:
     st.divider()
 
     search = st.text_input(
-        "", placeholder="🔍 Search by shipment ID…", label_visibility="collapsed"
+        "", placeholder="Search by shipment ID…", label_visibility="collapsed"
     )
     if search:
         df = df[df["shipment_id"].str.contains(search.upper(), na=False)]
