@@ -8,11 +8,17 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from auth_utils import check_auth
 from utils.mock_data import generate_mock_shipments, CARRIERS
-from utils.styling import inject_css, top_nav, NAVY_500, NAVY_900
+from utils.styling import (
+    inject_css, top_nav,
+    NAVY_BG, CARD_BG, BORDER, PLUM,
+    TEXT_PRIMARY, TEXT_SECONDARY,
+    BRIGHT_TEAL, CORAL, LAVENDER, GOLD,
+    DARK_LAYOUT,
+)
 
 st.set_page_config(
     page_title="PACE — Carrier Comparison",
-    page_icon="🚛",
+    page_icon="P",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -20,24 +26,25 @@ inject_css()
 
 if not check_auth():
     st.warning("Please sign in to access this page.")
-    st.page_link("app.py", label="Go to Sign In", icon="🔑")
+    st.page_link("app.py", label="Go to Sign In")
     st.stop()
 
 username = st.session_state.get("username", "User")
 top_nav(username)
 
+
 @st.cache_data
 def load_data():
     return generate_mock_shipments(300)
 
+
 df_all = load_data()
 
-# ── Persist active carriers in session state ──────────────────────────────────
+# ── Carrier selector ──────────────────────────────────────────────────────────
 if "active_carriers" not in st.session_state:
     st.session_state["active_carriers"] = sorted(CARRIERS)
 
-# ── Inline carrier selector ───────────────────────────────────────────────────
-with st.expander("⚙️ Manage Carriers", expanded=False):
+with st.expander("Manage Carriers", expanded=False):
     f1, f2 = st.columns([5, 1])
     with f1:
         selected = st.multiselect(
@@ -58,7 +65,6 @@ with st.expander("⚙️ Manage Carriers", expanded=False):
                 st.session_state["active_carriers"] = []
                 st.rerun()
 
-# ── Guard: need at least 1 carrier ───────────────────────────────────────────
 active_carriers = st.session_state["active_carriers"]
 if not active_carriers:
     st.markdown("## Carrier Comparison")
@@ -69,40 +75,41 @@ df = df_all[df_all["carrier"].isin(active_carriers)].copy()
 
 # ── Header ────────────────────────────────────────────────────────────────────
 st.markdown("## Carrier Comparison")
-st.caption(f"Comparing {len(active_carriers)} carrier{'s' if len(active_carriers) != 1 else ''} across cost, risk, and performance metrics.")
+st.caption(
+    f"Comparing {len(active_carriers)} carrier{'s' if len(active_carriers) != 1 else ''} "
+    "across cost efficiency, risk profile, and accessorial charge rates."
+)
 st.divider()
 
-# ── Build carrier metrics table ───────────────────────────────────────────────
-CARRIER_COLORS = [
-    "#0F2B4A", "#2563A8", "#059669", "#D97706",
-    "#DC2626", "#7C3AED", "#0891B2", "#BE185D",
-]
+# ── Carrier color map ─────────────────────────────────────────────────────────
+CARRIER_COLORS = [BRIGHT_TEAL, LAVENDER, CORAL, GOLD, BORDER, PLUM, "#38BDF8", "#FB7185"]
 color_map = {c: CARRIER_COLORS[i % len(CARRIER_COLORS)]
              for i, c in enumerate(sorted(CARRIERS))}
 
+# ── Carrier metrics ───────────────────────────────────────────────────────────
 metrics = (
     df.groupby("carrier")
     .agg(
-        shipments        =("shipment_id",            "count"),
-        avg_cost         =("total_cost_usd",          "mean"),
-        total_spend      =("total_cost_usd",          "sum"),
-        avg_cpm          =("cost_per_mile",           "mean"),
-        avg_risk         =("risk_score",              "mean"),
-        high_risk_count  =("risk_tier",
-                           lambda x: (x == "High").sum()),
-        total_accessorial=("accessorial_charge_usd",  "sum"),
-        avg_accessorial  =("accessorial_charge_usd",  "mean"),
-        avg_miles        =("miles",                   "mean"),
-        avg_weight       =("weight_lbs",              "mean"),
+        shipments         =("shipment_id",           "count"),
+        avg_cost          =("total_cost_usd",         "mean"),
+        total_spend       =("total_cost_usd",         "sum"),
+        avg_cpm           =("cost_per_mile",          "mean"),
+        avg_risk          =("risk_score",             "mean"),
+        high_risk_count   =("risk_tier", lambda x: (x == "High").sum()),
+        total_accessorial =("accessorial_charge_usd", "sum"),
+        avg_accessorial   =("accessorial_charge_usd", "mean"),
+        avg_miles         =("miles",                  "mean"),
+        avg_weight        =("weight_lbs",             "mean"),
     )
     .reset_index()
 )
-metrics["high_risk_pct"]    = (metrics["high_risk_count"]   / metrics["shipments"] * 100).round(1)
+metrics["high_risk_pct"]    = (metrics["high_risk_count"]   / metrics["shipments"]   * 100).round(1)
 metrics["accessorial_rate"] = (metrics["total_accessorial"] / metrics["total_spend"] * 100).round(1)
 
-# ── Summary metrics table ─────────────────────────────────────────────────────
+# ── Summary table ─────────────────────────────────────────────────────────────
 with st.container(border=True):
     st.markdown("#### Carrier Summary")
+    st.caption("All carriers ranked by cost per mile — lower $/mile = more efficient freight spend")
     display = metrics.copy()
     for col in ["avg_cost", "avg_cpm", "avg_risk", "avg_accessorial", "total_spend"]:
         display[col] = display[col].round(2)
@@ -128,7 +135,8 @@ with st.container(border=True):
         hide_index=True,
         column_config={
             "Avg Risk":       st.column_config.ProgressColumn(
-                "Avg Risk", format="%.0f%%", min_value=0, max_value=1),
+                "Avg Risk", format="%.0f%%", min_value=0, max_value=1
+            ),
             "Avg Total Cost": st.column_config.NumberColumn(format="$%.2f"),
             "Avg $/Mile":     st.column_config.NumberColumn(format="$%.3f"),
             "Avg Accessorial":st.column_config.NumberColumn(format="$%.2f"),
@@ -138,49 +146,49 @@ with st.container(border=True):
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ── Bar chart comparisons ─────────────────────────────────────────────────────
+# ── Bar charts ────────────────────────────────────────────────────────────────
 ch1, ch2 = st.columns(2, gap="medium")
 
 with ch1:
     with st.container(border=True):
         st.markdown("#### Avg Cost per Mile")
+        st.caption("Lower bars indicate more cost-efficient carriers for your freight lanes")
         sorted_m = metrics.sort_values("avg_cpm")
         fig = go.Figure(go.Bar(
             x=sorted_m["carrier"],
             y=sorted_m["avg_cpm"],
             marker_color=[color_map[c] for c in sorted_m["carrier"]],
+            marker_line_width=0,
             text=sorted_m["avg_cpm"].apply(lambda v: f"${v:.2f}"),
             textposition="outside",
+            textfont=dict(color=TEXT_SECONDARY, size=11),
         ))
-        fig.update_layout(
-            margin=dict(l=0, r=0, t=8, b=0), height=280,
-            plot_bgcolor="white", paper_bgcolor="white",
-            yaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-            xaxis=dict(gridcolor="#F3F4F6"),
-            showlegend=False,
-        )
+        fig.update_layout(**DARK_LAYOUT, margin=dict(l=0, r=0, t=8, b=0), height=280,
+                          showlegend=False)
+        fig.update_yaxes(tickprefix="$")
         st.plotly_chart(fig, use_container_width=True)
 
 with ch2:
     with st.container(border=True):
         st.markdown("#### High Risk Shipment Rate")
+        st.caption("Percentage of shipments flagged as high-risk — carriers above 40% warrant closer contract review")
         sorted_m2 = metrics.sort_values("high_risk_pct", ascending=False)
-        bar_colors = ["#DC2626" if p > 40 else "#D97706" if p > 25 else "#059669"
-                      for p in sorted_m2["high_risk_pct"]]
+        bar_colors = [
+            CORAL if p > 40 else GOLD if p > 25 else BRIGHT_TEAL
+            for p in sorted_m2["high_risk_pct"]
+        ]
         fig2 = go.Figure(go.Bar(
             x=sorted_m2["carrier"],
             y=sorted_m2["high_risk_pct"],
             marker_color=bar_colors,
+            marker_line_width=0,
             text=sorted_m2["high_risk_pct"].apply(lambda v: f"{v:.1f}%"),
             textposition="outside",
+            textfont=dict(color=TEXT_SECONDARY, size=11),
         ))
-        fig2.update_layout(
-            margin=dict(l=0, r=0, t=8, b=0), height=280,
-            plot_bgcolor="white", paper_bgcolor="white",
-            yaxis=dict(ticksuffix="%", gridcolor="#F3F4F6"),
-            xaxis=dict(gridcolor="#F3F4F6"),
-            showlegend=False,
-        )
+        fig2.update_layout(**DARK_LAYOUT, margin=dict(l=0, r=0, t=8, b=0), height=280,
+                           showlegend=False)
+        fig2.update_yaxes(ticksuffix="%")
         st.plotly_chart(fig2, use_container_width=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
@@ -190,28 +198,29 @@ ch3, ch4 = st.columns(2, gap="medium")
 with ch3:
     with st.container(border=True):
         st.markdown("#### Accessorial Cost Rate")
-        st.caption("Accessorial charges as % of total spend")
+        st.caption("Accessorial charges as % of total spend — high rates signal frequent detention, layovers, or re-deliveries")
         sorted_m3 = metrics.sort_values("accessorial_rate", ascending=False)
         fig3 = go.Figure(go.Bar(
             x=sorted_m3["carrier"],
             y=sorted_m3["accessorial_rate"],
             marker_color=[color_map[c] for c in sorted_m3["carrier"]],
+            marker_line_width=0,
             text=sorted_m3["accessorial_rate"].apply(lambda v: f"{v:.1f}%"),
             textposition="outside",
+            textfont=dict(color=TEXT_SECONDARY, size=11),
         ))
-        fig3.update_layout(
-            margin=dict(l=0, r=0, t=8, b=0), height=260,
-            plot_bgcolor="white", paper_bgcolor="white",
-            yaxis=dict(ticksuffix="%", gridcolor="#F3F4F6"),
-            xaxis=dict(gridcolor="#F3F4F6"),
-            showlegend=False,
-        )
+        fig3.update_layout(**DARK_LAYOUT, margin=dict(l=0, r=0, t=8, b=0), height=260,
+                           showlegend=False)
+        fig3.update_yaxes(ticksuffix="%")
         st.plotly_chart(fig3, use_container_width=True)
 
 with ch4:
     with st.container(border=True):
         st.markdown("#### Carrier Performance Radar")
-        st.caption("Normalized across cost, risk, and accessorial rate (lower = better)")
+        st.caption(
+            "Normalized scores across four dimensions — "
+            "larger filled area = better overall carrier. Lower cost, risk, and accessorial rate is better."
+        )
 
         def norm(series, invert=True):
             mn, mx = series.min(), series.max()
@@ -239,13 +248,26 @@ with ch4:
                 fill="toself",
                 name=row["carrier"],
                 line_color=color_map[row["carrier"]],
-                opacity=0.6,
+                fillcolor=color_map[row["carrier"]],
+                opacity=0.25,
             ))
         radar_fig.update_layout(
-            polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
-            margin=dict(l=20, r=20, t=20, b=20),
+            polar=dict(
+                bgcolor=NAVY_BG,
+                radialaxis=dict(
+                    visible=True, range=[0, 1],
+                    gridcolor=BORDER,
+                    tickfont=dict(color=TEXT_SECONDARY, size=9),
+                ),
+                angularaxis=dict(
+                    gridcolor=BORDER,
+                    tickfont=dict(color=TEXT_SECONDARY, size=10),
+                ),
+            ),
+            paper_bgcolor=CARD_BG,
+            font=dict(color=TEXT_PRIMARY),
+            margin=dict(l=30, r=30, t=30, b=30),
             height=260,
-            paper_bgcolor="white",
-            legend=dict(font=dict(size=10)),
+            legend=dict(font=dict(color=TEXT_SECONDARY, size=10)),
         )
         st.plotly_chart(radar_fig, use_container_width=True)
