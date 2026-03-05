@@ -1,166 +1,149 @@
-# PACE - Predictive Accessorial Cost Detection Engine
+# PACE — Predictive Accessorial Cost Engine
 
-## Team Alpha - Spring 2026
-**University of Arkansas - ISYS 43603**
+![CI](https://github.com/Spring-ISYS-2026-Alpha-Team/Accessorial_Cost_Detection_Engine/actions/workflows/ci.yml/badge.svg)
 
-## Project Overview
+**PACE** is a decision-support tool for freight logistics teams. It ingests historical shipment data, validates it, assigns ML-based risk scores, and surfaces actionable recommendations to help prevent unexpected accessorial charges — detention fees, lumper fees, layovers — before they occur.
 
-PACE is a decision-support system that helps freight logistics companies predict and prevent unexpected accessorial charges (detention fees, lumper fees, layovers) before they occur. By leveraging historical shipment data and machine learning models, PACE generates risk scores and cost estimates that enable proactive operational and pricing decisions.
+---
 
-## Sprint 1 Deliverables
+## Features
 
-Sprint 1 focuses on foundational authentication and data management capabilities:
+### Risk Dashboard
+- KPI summary cards: total shipments, average risk score, high-risk count, estimated accessorial exposure
+- Interactive charts: risk score distribution histogram and average risk by carrier
+- Filterable by date range, carrier, and risk tier
+- Searchable shipment table with real-time updates
 
-### Completed User Stories (19 Story Points)
-- **PB-1**: User account creation (3 pts) ✅
-- **PB-2**: Secure login (3 pts) ✅
-- **PB-4**: Secure logout (1 pt) ✅
-- **PB-5**: CSV upload for historical shipment data (5 pts) ✅
-- **PB-6**: Manual shipment record creation (5 pts) ✅
-- **PB-9**: View shipment details (2 pts) ✅
+### CSV Upload & Validation
+- Drag-and-drop CSV ingestion with a built-in sample dataset option
+- Row-level validation: required fields, date formats, numeric ranges, non-negative constraints
+- Detailed error and warning reports before committing data
+- One-click risk scoring on clean uploads
 
-## Technology Stack
+### Shipments Explorer
+- Paginated, filterable list of all shipments (carrier, facility, risk tier)
+- Per-shipment detail view with:
+  - Risk score gauge and tier badge
+  - Factor breakdown (carrier history, facility profile, distance, weight, freight rate)
+  - Recommended actions tailored to risk tier
+  - Historical comparison table for the same carrier
 
-- **Backend**: ASP.NET Core Web API (.NET 8)
-- **Frontend**: Blazor Server
-- **Database**: SQL Server
-- **ORM**: Entity Framework Core
-- **Authentication**: ASP.NET Core Identity
+### Authentication
+- Session-based login with auth guard on every page
+- Secure logout clears all session state
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| UI | [Streamlit](https://streamlit.io) |
+| Data Processing | pandas, NumPy |
+| Visualization | Plotly |
+| Database | Azure SQL (via pyodbc) |
+| Config | python-dotenv |
+
+---
 
 ## Project Structure
 
 ```
-PACE/
-├── Backend/
-│   ├── PACE.API/              # Web API project
-│   ├── PACE.Data/             # Data access layer
-│   └── PACE.Models/           # Domain models
-├── Frontend/
-│   └── PACE.Blazor/           # Blazor Server UI
-├── Database/
-│   └── Scripts/               # SQL scripts
-└── Documentation/
-    └── Sprint1/               # Sprint 1 artifacts
+Accessorial_Cost_Detection_Engine/
+├── app.py                  # Entry point — login page
+├── auth_utils.py           # Session auth helpers
+├── requirements.txt
+├── pages/
+│   ├── 1_Dashboard.py      # Risk dashboard
+│   ├── 2_Upload.py         # CSV upload & scoring
+│   └── 3_Shipments.py      # Shipment list + detail view
+└── utils/
+    ├── database.py         # Azure SQL connection utility
+    ├── mock_data.py        # Synthetic data generator
+    └── styling.py          # Shared CSS and theme tokens
 ```
 
-## Setup Instructions
+---
+
+## Setup
 
 ### Prerequisites
-- .NET 8 SDK
-- SQL Server 2019+ (or SQL Server Express)
-- Visual Studio 2022 or VS Code
-- Git
+- Python 3.10+
+- An Azure SQL (or compatible SQL Server) database
+- ODBC Driver 17+ for SQL Server
 
-### Database Setup
+### Install dependencies
 
-1. Update connection string in `appsettings.json`:
-```json
-"ConnectionStrings": {
-  "DefaultConnection": "Server=localhost;Database=PACE_DB;Trusted_Connection=True;TrustServerCertificate=True;"
-}
-```
-
-2. Run database migrations:
 ```bash
-cd Backend/PACE.API
-dotnet ef database update
+pip install -r requirements.txt
 ```
 
-Or manually run the SQL script:
+### Configure environment
+
+Create a `.env` file in the project root:
+
+```env
+DB_SERVER=your-server.database.windows.net
+DB_NAME=your-database
+DB_USER=your-username
+DB_PASSWORD=your-password
+```
+
+### Run the app
+
 ```bash
-sqlcmd -S localhost -i Database/Scripts/01_InitialSchema.sql
+streamlit run app.py
 ```
 
-### Running the Application
+The app will be available at `http://localhost:8501`.
 
-1. **Start the API**:
-```bash
-cd Backend/PACE.API
-dotnet run
-```
-API will be available at: `https://localhost:7001`
+---
 
-2. **Start the Blazor UI**:
-```bash
-cd Frontend/PACE.Blazor
-dotnet run
-```
-UI will be available at: `https://localhost:7002`
+## CSV Format
 
-### Default Test Account
-- **Username**: admin@pace.com
-- **Password**: Admin@123
+Upload historical shipment data using the following schema:
 
-## Features Implemented
+| Column | Type | Constraints |
+|---|---|---|
+| `shipment_id` | string | Required, unique |
+| `ship_date` | date | Required, `YYYY-MM-DD` |
+| `carrier` | string | Required |
+| `facility` | string | Required |
+| `weight_lbs` | float | Required, 0 – 200,000 |
+| `miles` | float | Required, 0 – 5,000 |
+| `base_freight_usd` | float | Required, ≥ 0 |
+| `accessorial_charge_usd` | float | Required, ≥ 0 |
 
-### Authentication & Security
-- User registration with email validation
-- Secure password hashing (ASP.NET Identity)
-- Session-based authentication
-- Secure logout with session cleanup
+Maximum file size: **10 MB**. Only `.csv` format is accepted.
 
-### Data Management
-- CSV file upload with validation
-- Manual shipment entry form
-- Shipment listing with pagination
-- Detailed shipment view
-- Basic data validation
+---
 
-### Data Model
-- Users (Authentication)
-- Shipments (Core entity)
-- Carriers, Facilities, Lanes (Reference data)
+## Edge Cases & Known Limitations
 
-## Sample CSV Format
+See [EDGE_CASES.md](EDGE_CASES.md) for a full catalog of handled edge cases, validation rules, and known system limitations.
 
-Upload shipment data using this format:
-
-```csv
-ShipmentID,OriginCity,OriginState,DestinationCity,DestinationState,CarrierName,FacilityType,AppointmentType,AppointmentDate,AppointmentTime,Distance,Weight,Pallets,EquipmentType,AccessorialOccurred,AccessorialCost
-SH001,Memphis,TN,Dallas,TX,Carrier A,Grocery DC,Live Load,2024-01-15,14:00,450,42000,20,Dry Van,Yes,250.00
-SH002,Chicago,IL,Indianapolis,IN,Carrier B,Manufacturing,Drop,2024-01-16,08:00,185,38000,18,Dry Van,No,0.00
-```
-
-## Team Members
-
-| Name | Role | Responsibilities |
-|------|------|-----------------|
-| Clayton Josef | Scrum Master | ... |
-| Tyler Connolly | Product Owner | ... |
-| Bui Vu | Developer | ... |
-| Anna Diggs | Developer | ... |
-| Kirsten Capangpangan | Developer | ... |
-
-## Sprint 2 Preview
-
-Next sprint will focus on:
-- **PB-7**: Update shipment records (3 pts)
-- **PB-11**: Data cleaning and standardization (8 pts)
-- **PB-12**: Predictive model training - Phase 1 (13 pts)
-
-## Known Issues / Technical Debt
-- CSV validation needs enhancement (file size limits, malformed data handling)
-- Password complexity requirements could be stronger
-- Need to add user role assignment (Admin/Analyst/Viewer)
-- API error responses need standardization
+---
 
 ## Contributing
 
-1. Create a feature branch: `git checkout -b feature/PB-XX-description`
-2. Make your changes
-3. Test locally
-4. Submit pull request to `dev` branch
-5. After code review, merge to `main`
-
-## License
-
-Academic project for ISYS 43603 - University of Arkansas
-
-## Contact
-
-For questions or issues, contact Team Alpha via course communication channels.
+1. Branch from `main`: `git checkout -b feature/your-description`
+2. Make changes and test locally with `streamlit run app.py`
+3. Open a pull request — use the PR template and link any relevant issues
 
 ---
-**Last Updated**: February 24, 2026  
-**Sprint**: 1 of 9  
-**Status**: ✅ Sprint 1 Complete
+
+## Team
+
+**Team Alpha — University of Arkansas, ISYS 43603**
+
+| Name | Role |
+|---|---|
+| Clayton Josef | Scrum Master |
+| Tyler Connolly | Product Owner |
+| Bui Vu | Developer |
+| Anna Diggs | Developer |
+| Kirsten Capangpangan | Developer |
+
+---
+
+*Academic project — Spring 2026*

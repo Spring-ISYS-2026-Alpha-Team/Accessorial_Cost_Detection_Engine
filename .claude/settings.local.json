@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh auth status)",
+      "Bash(git config --global user.name)",
+      "Bash(git config --global user.email)",
+      "Bash(git config --global credential.helper)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(git credential-manager --version)",
+      "Bash(git credential-manager-core --version)",
+      "Bash(git config --global credential.helper manager)",
+      "Bash(pip install python-dotenv plotly)"
+    ]
+  }
+}

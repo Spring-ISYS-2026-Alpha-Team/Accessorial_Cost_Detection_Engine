@@ -1,5 +1,6 @@
 # Credentials — never commit
 .env
+.streamlit/secrets.toml
 
 # Virtual environment
 venv/
@@ -12,6 +13,9 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+
+# Claude Code
+.claude/
 
 # VS Code
 .vscode/

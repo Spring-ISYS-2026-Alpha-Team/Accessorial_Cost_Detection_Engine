@@ -3,21 +3,14 @@ import streamlit as st
 
 def logout():
     """
-    PB-4: Securely terminates the user session.
-    Clears all Streamlit session state variables to protect data access.
+    PB-4: Securely terminates the user session and redirects to login.
+    Clears all session state and cached data.
     """
-    # Clear authentication flags
-    if 'authenticated' in st.session_state:
-        del st.session_state['authenticated']
-    if 'username' in st.session_state:
-        del st.session_state['username']
-    
-    # Clear any cached data that might persist
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
     st.cache_data.clear()
     st.cache_resource.clear()
-    
-    # Force rerun to redirect to login screen immediately
-    st.rerun()
+    st.switch_page("app.py")
 
 def check_auth():
     """
