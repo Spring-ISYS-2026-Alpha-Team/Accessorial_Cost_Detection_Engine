@@ -8,12 +8,18 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from auth_utils import check_auth
 from utils.mock_data import generate_mock_shipments
-from utils.styling import inject_css, top_nav, NAVY_900, NAVY_500, NAVY_100
+from utils.styling import (
+    inject_css, top_nav,
+    NAVY_BG, CARD_BG, BORDER,
+    TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
+    BRIGHT_TEAL, CORAL, LAVENDER, GOLD,
+    DARK_LAYOUT,
+)
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="PACE — Dashboard",
-    page_icon="📊",
+    page_icon="P",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -22,176 +28,20 @@ inject_css()
 # ── Auth guard ────────────────────────────────────────────────────────────────
 if not check_auth():
     st.warning("Please sign in to access this page.")
-    st.page_link("app.py", label="Go to Sign In", icon="🔑")
+    st.page_link("app.py", label="Go to Sign In")
     st.stop()
 
 username = st.session_state.get("username", "User")
 top_nav(username)
 
-# ── Dark theme color palette ──────────────────────────────────────────────────
-DARK_BG = "#0B1120"          # deep navy-black background
-DARK_CARD = "#111827"        # slightly lighter card background
-DARK_SURFACE = "#1F2937"     # borders, hover states
-GRID_COLOR = "#1F2937"       # subtle grid lines
-TEXT_PRIMARY = "#F9FAFB"     # bright white text
-TEXT_SECONDARY = "#9CA3AF"   # muted gray text
-TEXT_MUTED = "#6B7280"       # very muted text
+# ── Risk tier accent colors ───────────────────────────────────────────────────
+ACCENT_GREEN  = "#2DD4BF"   # low risk
+ACCENT_AMBER  = "#FBBF24"   # medium risk
+ACCENT_RED    = "#FF6B6B"   # high risk
+ACCENT_BLUE   = "#A78BFA"   # trend line
+ACCENT_CYAN   = "#38BDF8"
 
-ACCENT_BLUE = "#3B82F6"      # primary accent
-ACCENT_CYAN = "#06B6D4"      # secondary accent
-ACCENT_GREEN = "#10B981"     # low risk / positive
-ACCENT_AMBER = "#F59E0B"     # medium risk / warning
-ACCENT_RED = "#EF4444"       # high risk / danger
-ACCENT_PURPLE = "#8B5CF6"    # additional accent
-
-# ── Shared Plotly layout ─────────────────────────────────────────────────────
-DARK_LAYOUT = dict(
-    plot_bgcolor=DARK_CARD,
-    paper_bgcolor=DARK_CARD,
-    font=dict(color=TEXT_PRIMARY, size=12),
-    xaxis=dict(
-        gridcolor=DARK_SURFACE,
-        tickfont=dict(color=TEXT_SECONDARY, size=11),
-        title_font=dict(color=TEXT_SECONDARY, size=12),
-        zeroline=False,
-    ),
-    yaxis=dict(
-        gridcolor=DARK_SURFACE,
-        tickfont=dict(color=TEXT_SECONDARY, size=11),
-        title_font=dict(color=TEXT_SECONDARY, size=12),
-        zeroline=False,
-    ),
-)
-
-# ── Dark theme CSS override ───────────────────────────────────────────────────
-st.markdown(f"""
-<style>
-/* ── Dark background for the entire page ─────────────────── */
-.stApp {{
-    background-color: {DARK_BG} !important;
-}}
-
-/* ── All text defaults to light ──────────────────────────── */
-.stApp, .stApp p, .stApp span, .stApp label,
-.stApp .stMarkdown, .stApp [data-testid="stText"] {{
-    color: {TEXT_PRIMARY} !important;
-}}
-
-/* ── Headings ────────────────────────────────────────────── */
-.stApp h1, .stApp h2 {{
-    color: {TEXT_PRIMARY} !important;
-}}
-.stApp h3, .stApp h4 {{
-    color: {TEXT_PRIMARY} !important;
-}}
-
-/* ── Captions / small text ───────────────────────────────── */
-.stApp .stCaption, .stApp small,
-.stApp [data-testid="stCaptionContainer"] {{
-    color: {TEXT_SECONDARY} !important;
-}}
-
-/* ── Metric cards ────────────────────────────────────────── */
-[data-testid="stMetric"] {{
-    background: {DARK_CARD} !important;
-    border: 1px solid {DARK_SURFACE} !important;
-    border-radius: 12px !important;
-    padding: 20px 24px !important;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3) !important;
-}}
-[data-testid="stMetricLabel"] > div {{
-    color: {TEXT_SECONDARY} !important;
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.8px !important;
-    text-transform: uppercase !important;
-}}
-[data-testid="stMetricValue"] > div {{
-    color: {TEXT_PRIMARY} !important;
-    font-size: 26px !important;
-    font-weight: 700 !important;
-}}
-[data-testid="stMetricDelta"] > div {{
-    font-size: 12px !important;
-}}
-
-/* ── Container borders (chart cards) ─────────────────────── */
-[data-testid="stVerticalBlock"] > div[data-testid="element-container"]
-> div > div > div[data-testid="stVerticalBlockBorderWrapper"] {{
-    background: {DARK_CARD} !important;
-    border: 1px solid {DARK_SURFACE} !important;
-    border-radius: 12px !important;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.25) !important;
-}}
-
-/* ── Bordered containers ─────────────────────────────────── */
-div:has(> [data-testid="stVerticalBlockBorderWrapper"]) {{
-    border-color: {DARK_SURFACE} !important;
-}}
-
-/* ── Expander ────────────────────────────────────────────── */
-.streamlit-expanderHeader {{
-    background: {DARK_CARD} !important;
-    color: {TEXT_PRIMARY} !important;
-    border-color: {DARK_SURFACE} !important;
-}}
-[data-testid="stExpander"] {{
-    background: {DARK_CARD} !important;
-    border-color: {DARK_SURFACE} !important;
-    border-radius: 8px !important;
-}}
-[data-testid="stExpander"] details {{
-    background: {DARK_CARD} !important;
-    border-color: {DARK_SURFACE} !important;
-}}
-[data-testid="stExpander"] summary {{
-    color: {TEXT_PRIMARY} !important;
-}}
-
-/* ── Dividers ────────────────────────────────────────────── */
-hr {{
-    border-color: {DARK_SURFACE} !important;
-}}
-
-/* ── Multiselect and date inputs ─────────────────────────── */
-[data-testid="stMultiSelect"],
-[data-testid="stDateInput"] {{
-    color: {TEXT_PRIMARY} !important;
-}}
-.stMultiSelect > div > div {{
-    background: {DARK_SURFACE} !important;
-    border-color: {DARK_SURFACE} !important;
-    color: {TEXT_PRIMARY} !important;
-}}
-.stDateInput > div > div > input {{
-    background: {DARK_SURFACE} !important;
-    color: {TEXT_PRIMARY} !important;
-}}
-
-/* ── Search input ────────────────────────────────────────── */
-.stTextInput > div > div > input {{
-    background: {DARK_SURFACE} !important;
-    color: {TEXT_PRIMARY} !important;
-    border-color: {DARK_SURFACE} !important;
-}}
-.stTextInput > div > div > input::placeholder {{
-    color: {TEXT_MUTED} !important;
-}}
-
-/* ── Dataframe ───────────────────────────────────────────── */
-[data-testid="stDataFrame"] {{
-    border: 1px solid {DARK_SURFACE} !important;
-    border-radius: 8px !important;
-}}
-
-/* ── Block container padding ─────────────────────────────── */
-.block-container {{
-    padding-top: 1rem !important;
-}}
-</style>
-""", unsafe_allow_html=True)
-
-# ── Load data (cached) ────────────────────────────────────────────────────────
+# ── Load data ─────────────────────────────────────────────────────────────────
 @st.cache_data
 def load_data():
     return generate_mock_shipments(300)
@@ -199,13 +49,13 @@ def load_data():
 df_all = load_data()
 df_all["ship_date_dt"] = pd.to_datetime(df_all["ship_date"])
 
-# ── Inline filters ────────────────────────────────────────────────────────────
+# ── Filters ───────────────────────────────────────────────────────────────────
 min_date = df_all["ship_date_dt"].min().date()
 max_date = df_all["ship_date_dt"].max().date()
-carriers = sorted(df_all["carrier"].unique())
+carriers   = sorted(df_all["carrier"].unique())
 facilities = sorted(df_all["facility"].unique())
 
-with st.expander("⚙️ Filters", expanded=False):
+with st.expander("Filters", expanded=False):
     f1, f2, f3, f4 = st.columns(4)
     with f1:
         date_range = st.date_input(
@@ -213,9 +63,13 @@ with st.expander("⚙️ Filters", expanded=False):
             min_value=min_date, max_value=max_date, key="dash_date"
         )
     with f2:
-        sel_carriers = st.multiselect("Carrier", carriers, default=carriers, key="dash_carriers")
+        sel_carriers = st.multiselect(
+            "Carrier", carriers, default=carriers, key="dash_carriers"
+        )
     with f3:
-        sel_facilities = st.multiselect("Facility", facilities, default=facilities, key="dash_facilities")
+        sel_facilities = st.multiselect(
+            "Facility", facilities, default=facilities, key="dash_facilities"
+        )
     with f4:
         sel_tiers = st.multiselect(
             "Risk Tier", ["Low", "Medium", "High"],
@@ -235,7 +89,7 @@ if sel_tiers:
     df = df[df["risk_tier"].isin(sel_tiers)]
 
 # ── Page header ───────────────────────────────────────────────────────────────
-st.markdown("## Risk Dashboard")
+st.markdown(f"## Risk Dashboard")
 st.caption(f"Showing {len(df):,} shipments matching current filters")
 st.divider()
 
@@ -252,23 +106,23 @@ est_cost_delta  = est_cost - df_all["accessorial_charge_usd"].sum()
 
 c1, c2, c3, c4 = st.columns(4)
 with c1:
-    st.metric("Total Shipments",     f"{total:,}",            delta=f"{total_delta:+,} vs all")
+    st.metric("Total Shipments",       f"{total:,}",           delta=f"{total_delta:+,} vs all")
 with c2:
-    st.metric("Avg Risk Score",      f"{avg_risk:.1f}%",      delta=f"{avg_risk_delta:+.1f}%")
+    st.metric("Avg Risk Score",        f"{avg_risk:.1f}%",     delta=f"{avg_risk_delta:+.1f}%")
 with c3:
-    st.metric("High-Risk Shipments", f"{high_risk:,}",        delta=f"{high_risk_delta:+,} vs all")
+    st.metric("High-Risk Shipments",   f"{high_risk:,}",       delta=f"{high_risk_delta:+,} vs all")
 with c4:
-    st.metric("Est. Accessorial Cost", f"${est_cost:,.0f}",  delta=f"${est_cost_delta:+,.0f}")
+    st.metric("Est. Accessorial Cost", f"${est_cost:,.0f}",    delta=f"${est_cost_delta:+,.0f}")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ── Charts Row 1: Distribution + Carrier Risk ────────────────────────────────
+# ── Row 1: Distribution + Carrier Risk ───────────────────────────────────────
 col_left, col_right = st.columns(2, gap="medium")
 
 with col_left:
     with st.container(border=True):
         st.markdown("#### Risk Score Distribution")
-        st.caption("Number of shipments by risk score bracket")
+        st.caption("Count of shipments per risk score bracket — red bars indicate high-risk concentration requiring attention")
 
         if total > 0:
             hist_df = df.copy()
@@ -283,7 +137,7 @@ with col_left:
             bucket_counts.columns = ["Bracket", "Count"]
 
             def bucket_color(label):
-                pct = int(label.split("–")[0])
+                pct = int(str(label).split("–")[0])
                 if pct >= 67:
                     return ACCENT_RED
                 if pct >= 34:
@@ -302,10 +156,7 @@ with col_left:
                 textfont=dict(color=TEXT_SECONDARY, size=11),
                 hovertemplate="<b>%{x}</b><br>%{y} shipments<extra></extra>",
             ))
-            fig.update_layout(
-                **DARK_LAYOUT,
-                margin=dict(l=0, r=0, t=8, b=0), height=280,
-            )
+            fig.update_layout(**DARK_LAYOUT, margin=dict(l=0, r=0, t=8, b=0), height=280)
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("No data matches the current filters.")
@@ -313,24 +164,22 @@ with col_left:
 with col_right:
     with st.container(border=True):
         st.markdown("#### Avg Risk Score by Carrier")
-        st.caption("Carriers ranked by average predicted risk")
+        st.caption("Carriers ranked by average predicted risk — red bars exceed 67% and warrant closer monitoring")
 
         if total > 0:
             carrier_risk = (
                 df.groupby("carrier")["risk_score"]
-                .mean()
-                .reset_index()
+                .mean().reset_index()
                 .sort_values("risk_score", ascending=True)
             )
             carrier_risk["risk_pct"] = (carrier_risk["risk_score"] * 100).round(1)
 
-            # Gradient from cyan (low risk) to red (high risk)
             def carrier_bar_color(pct):
                 if pct >= 67:
                     return ACCENT_RED
                 if pct >= 50:
                     return ACCENT_AMBER
-                return ACCENT_BLUE
+                return ACCENT_GREEN
 
             c_colors = [carrier_bar_color(p) for p in carrier_risk["risk_pct"]]
 
@@ -345,10 +194,7 @@ with col_right:
                 textfont=dict(color=TEXT_SECONDARY, size=11),
                 hovertemplate="<b>%{y}</b><br>Avg Risk: %{x:.1f}%<extra></extra>",
             ))
-            fig2.update_layout(
-                **DARK_LAYOUT,
-                margin=dict(l=0, r=50, t=8, b=0), height=280,
-            )
+            fig2.update_layout(**DARK_LAYOUT, margin=dict(l=0, r=50, t=8, b=0), height=280)
             fig2.update_xaxes(title_text="Avg Risk Score (%)", range=[0, 100])
             fig2.update_yaxes(tickfont=dict(color=TEXT_PRIMARY, size=12))
             st.plotly_chart(fig2, use_container_width=True)
@@ -357,27 +203,22 @@ with col_right:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ── Charts Row 2 (PB-19): Donut + Facility Risk ──────────────────────────────
+# ── Row 2: Donut + Facility Risk ─────────────────────────────────────────────
 chart_a, chart_b = st.columns(2, gap="medium")
 
 with chart_a:
     with st.container(border=True):
         st.markdown("#### Risk Tier Breakdown")
-        st.caption("Proportion of shipments in each risk category")
+        st.caption("Proportion of shipments in each risk category — a growing High segment signals systemic issues across lanes or carriers")
 
         if total > 0:
             tier_counts = df["risk_tier"].value_counts().reset_index()
             tier_counts.columns = ["Tier", "Count"]
-
             tier_order = {"Low": 0, "Medium": 1, "High": 2}
             tier_counts["sort"] = tier_counts["Tier"].map(tier_order)
             tier_counts = tier_counts.sort_values("sort").drop(columns="sort")
 
-            tier_colors = {
-                "Low": ACCENT_GREEN,
-                "Medium": ACCENT_AMBER,
-                "High": ACCENT_RED,
-            }
+            tier_colors = {"Low": ACCENT_GREEN, "Medium": ACCENT_AMBER, "High": ACCENT_RED}
 
             fig_donut = go.Figure(go.Pie(
                 labels=tier_counts["Tier"],
@@ -385,21 +226,20 @@ with chart_a:
                 hole=0.6,
                 marker=dict(
                     colors=[tier_colors[t] for t in tier_counts["Tier"]],
-                    line=dict(color=DARK_CARD, width=3),
+                    line=dict(color=CARD_BG, width=3),
                 ),
                 textinfo="label+percent",
                 textfont=dict(color=TEXT_PRIMARY, size=13),
                 hovertemplate="<b>%{label}</b><br>%{value} shipments<br>%{percent}<extra></extra>",
             ))
             fig_donut.add_annotation(
-                text=f"<b>{total:,}</b><br><span style='font-size:11px;color:{TEXT_SECONDARY}'>shipments</span>",
-                x=0.5, y=0.5, font_size=20, font_color=TEXT_PRIMARY,
-                showarrow=False,
+                text=f"<b>{total:,}</b><br>"
+                     f"<span style='font-size:11px;color:{TEXT_SECONDARY}'>shipments</span>",
+                x=0.5, y=0.5, font_size=20, font_color=TEXT_PRIMARY, showarrow=False,
             )
             fig_donut.update_layout(
                 margin=dict(l=0, r=0, t=8, b=0), height=320,
-                paper_bgcolor=DARK_CARD,
-                plot_bgcolor=DARK_CARD,
+                paper_bgcolor=CARD_BG, plot_bgcolor=CARD_BG,
                 font=dict(color=TEXT_PRIMARY),
                 showlegend=True,
                 legend=dict(
@@ -414,7 +254,7 @@ with chart_a:
 with chart_b:
     with st.container(border=True):
         st.markdown("#### Risk by Facility")
-        st.caption("Which facilities have the highest average risk scores")
+        st.caption("Which facilities have the highest average risk scores — hover for shipment count and high-risk percentage")
 
         if total > 0:
             facility_risk = (
@@ -437,7 +277,7 @@ with chart_b:
                     return ACCENT_RED
                 if pct >= 45:
                     return ACCENT_AMBER
-                return ACCENT_CYAN
+                return BRIGHT_TEAL
 
             fac_colors = [fac_color(p) for p in facility_risk["risk_pct"]]
 
@@ -458,10 +298,7 @@ with chart_b:
                     "High-Risk: %{customdata[1]:.1f}%<extra></extra>"
                 ),
             ))
-            fig_fac.update_layout(
-                **DARK_LAYOUT,
-                margin=dict(l=0, r=60, t=8, b=0), height=320,
-            )
+            fig_fac.update_layout(**DARK_LAYOUT, margin=dict(l=0, r=60, t=8, b=0), height=320)
             fig_fac.update_xaxes(title_text="Avg Risk Score (%)", range=[0, 100])
             fig_fac.update_yaxes(tickfont=dict(color=TEXT_PRIMARY, size=11))
             st.plotly_chart(fig_fac, use_container_width=True)
@@ -470,10 +307,10 @@ with chart_b:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ── Chart C (PB-19): Risk Trend Over Time ─────────────────────────────────────
+# ── Risk Trend Over Time ──────────────────────────────────────────────────────
 with st.container(border=True):
     st.markdown("#### Risk Trend Over Time")
-    st.caption("Weekly average risk score — see if risk is increasing or decreasing")
+    st.caption("Weekly average risk score — dotted line shows the overall fleet average; weeks above it carry elevated exposure")
 
     if total > 0:
         trend_df = df.copy()
@@ -494,17 +331,15 @@ with st.container(border=True):
         ).round(1)
 
         fig_trend = go.Figure()
-
-        # Gradient fill area
         fig_trend.add_trace(go.Scatter(
             x=weekly_risk["week"],
             y=weekly_risk["avg_risk_pct"],
             mode="lines+markers",
             name="Avg Risk Score",
             line=dict(color=ACCENT_BLUE, width=3),
-            marker=dict(color=ACCENT_BLUE, size=7, line=dict(color=DARK_CARD, width=2)),
+            marker=dict(color=ACCENT_BLUE, size=7, line=dict(color=CARD_BG, width=2)),
             fill="tozeroy",
-            fillcolor="rgba(59, 130, 246, 0.12)",
+            fillcolor="rgba(167, 139, 250, 0.12)",
             customdata=weekly_risk[["shipments", "high_pct"]].values,
             hovertemplate=(
                 "<b>Week of %{x|%b %d}</b><br>"
@@ -514,22 +349,17 @@ with st.container(border=True):
             ),
         ))
 
-        # Overall average reference line
         overall_avg = df["risk_score"].mean() * 100
         fig_trend.add_hline(
             y=overall_avg,
-            line_dash="dot",
-            line_color=TEXT_MUTED,
-            line_width=1,
+            line_dash="dot", line_color=TEXT_MUTED, line_width=1,
             annotation_text=f"Overall Avg: {overall_avg:.1f}%",
             annotation_position="top right",
             annotation_font_color=TEXT_SECONDARY,
             annotation_font_size=11,
         )
-
         fig_trend.update_layout(
-            **DARK_LAYOUT,
-            margin=dict(l=0, r=0, t=8, b=0), height=280,
+            **DARK_LAYOUT, margin=dict(l=0, r=0, t=8, b=0), height=280,
             showlegend=False,
         )
         fig_trend.update_yaxes(title_text="Avg Risk Score (%)", range=[0, 100])
@@ -544,8 +374,11 @@ with st.container(border=True):
     th_col, search_col = st.columns([3, 1])
     with th_col:
         st.markdown("#### Recent Shipments")
+        st.caption("Full shipment log with risk scores and estimated accessorial charges — click a row on the Shipments page for detail view")
     with search_col:
-        search = st.text_input("", placeholder="🔍 Search shipment ID…", label_visibility="collapsed")
+        search = st.text_input(
+            "", placeholder="Search shipment ID…", label_visibility="collapsed"
+        )
 
     table_df = df.copy()
     if search:
