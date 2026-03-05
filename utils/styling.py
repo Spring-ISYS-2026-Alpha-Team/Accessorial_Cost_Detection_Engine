@@ -1,23 +1,39 @@
 """
 utils/styling.py
-Shared CSS theme and fixed top navigation bar for all PACE pages.
+Unified dark theme CSS and top navigation bar for all PACE pages.
 """
 import streamlit as st
 
-# ── Color tokens ─────────────────────────────────────────────────────────────
-NAVY_900  = "#0F2B4A"
-NAVY_700  = "#1A3F6F"
-NAVY_500  = "#2563A8"
-NAVY_100  = "#DBEAFE"
+# ── Color tokens ──────────────────────────────────────────────────────────────
+NAVY_BG    = "#161638"
+CARD_BG    = "#1B435E"
+BORDER     = "#38667E"
+PLUM       = "#563457"
+DEEP_PLUM  = "#3A2B50"
 
-RISK_LOW_BG   = "#D1FAE5"
-RISK_LOW_FG   = "#059669"
-RISK_MED_BG   = "#FEF3C7"
-RISK_MED_FG   = "#D97706"
-RISK_HIGH_BG  = "#FEE2E2"
-RISK_HIGH_FG  = "#DC2626"
+TEXT_PRIMARY   = "#F1F5F9"
+TEXT_SECONDARY = "#94A3B8"
+TEXT_MUTED     = "#64748B"
 
-# ── Navigation pages (file paths for st.page_link — preserves session state) ──
+BRIGHT_TEAL = "#2DD4BF"
+CORAL       = "#FF6B6B"
+LAVENDER    = "#A78BFA"
+GOLD        = "#FBBF24"
+
+# Legacy aliases
+NAVY_900 = NAVY_BG
+NAVY_700 = CARD_BG
+NAVY_500 = BORDER
+NAVY_100 = DEEP_PLUM
+
+RISK_LOW_BG  = "#1A3A2E"
+RISK_LOW_FG  = BRIGHT_TEAL
+RISK_MED_BG  = "#3A2B1A"
+RISK_MED_FG  = GOLD
+RISK_HIGH_BG = "#3D1A1A"
+RISK_HIGH_FG = CORAL
+
+# ── Navigation pages (text labels only — no emojis) ───────────────────────────
 _NAV_PAGES = [
     ("Home",        "pages/0_Home.py"),
     ("Dashboard",   "pages/1_Dashboard.py"),
@@ -29,50 +45,139 @@ _NAV_PAGES = [
     ("Accessorial", "pages/7_Accessorial_Tracker.py"),
 ]
 
-# ── Base page CSS (injected on every page) ────────────────────────────────────
+# ── Inline SVG icons ──────────────────────────────────────────────────────────
+# Package / box icon (Feather-style) — used as PACE logo
+_SVG_PACKAGE = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" '
+    'viewBox="0 0 24 24" fill="none" stroke="#2DD4BF" stroke-width="2" '
+    'stroke-linecap="round" stroke-linejoin="round" '
+    'style="display:inline-block;vertical-align:middle;">'
+    '<line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/>'
+    '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8'
+    'a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>'
+    '<polyline points="3.27 6.96 12 12.01 20.73 6.96"/>'
+    '<line x1="12" y1="22.08" x2="12" y2="12"/>'
+    '</svg>'
+)
+
+# User icon — shown next to username in nav
+_SVG_USER = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" '
+    'viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" '
+    'stroke-linecap="round" stroke-linejoin="round" '
+    'style="display:inline-block;vertical-align:middle;margin-right:4px;">'
+    '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>'
+    '<circle cx="12" cy="7" r="4"/>'
+    '</svg>'
+)
+
+# Check / warning / error icons for validation feedback
+SVG_CHECK = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" '
+    'viewBox="0 0 24 24" fill="none" stroke="#2DD4BF" stroke-width="2.5" '
+    'stroke-linecap="round" stroke-linejoin="round" '
+    'style="display:inline-block;vertical-align:middle;margin-right:6px;">'
+    '<polyline points="20 6 9 17 4 12"/>'
+    '</svg>'
+)
+SVG_WARN = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" '
+    'viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="2.5" '
+    'stroke-linecap="round" stroke-linejoin="round" '
+    'style="display:inline-block;vertical-align:middle;margin-right:6px;">'
+    '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94'
+    'a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>'
+    '<line x1="12" y1="9" x2="12" y2="13"/>'
+    '<line x1="12" y1="17" x2="12.01" y2="17"/>'
+    '</svg>'
+)
+SVG_ERROR = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" '
+    'viewBox="0 0 24 24" fill="none" stroke="#FF6B6B" stroke-width="2.5" '
+    'stroke-linecap="round" stroke-linejoin="round" '
+    'style="display:inline-block;vertical-align:middle;margin-right:6px;">'
+    '<circle cx="12" cy="12" r="10"/>'
+    '<line x1="15" y1="9" x2="9" y2="15"/>'
+    '<line x1="9" y1="9" x2="15" y2="15"/>'
+    '</svg>'
+)
+
+# ── Shared Plotly dark layout ─────────────────────────────────────────────────
+DARK_LAYOUT = dict(
+    plot_bgcolor=CARD_BG,
+    paper_bgcolor=CARD_BG,
+    font=dict(
+        color=TEXT_PRIMARY,
+        family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+        size=12,
+    ),
+    xaxis=dict(
+        gridcolor=BORDER,
+        tickfont=dict(color=TEXT_SECONDARY, size=11),
+        title_font=dict(color=TEXT_SECONDARY, size=12),
+        zeroline=False,
+    ),
+    yaxis=dict(
+        gridcolor=BORDER,
+        tickfont=dict(color=TEXT_SECONDARY, size=11),
+        title_font=dict(color=TEXT_SECONDARY, size=12),
+        zeroline=False,
+    ),
+)
+
+# ── Base page CSS ─────────────────────────────────────────────────────────────
 _BASE_CSS = f"""
 <style>
-/* ── Global ───────────────────────────────────────── */
 .stApp {{
-    background-color: #F9FAFB;
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+    background-color: {NAVY_BG} !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif !important;
 }}
-
-/* ── Hide Streamlit chrome and sidebar ────────────── */
 #MainMenu, header, footer {{ visibility: hidden; }}
 [data-testid="stSidebar"],
 [data-testid="collapsedControl"],
 section[data-testid="stSidebarNav"] {{
     display: none !important;
 }}
-
-/* ── Page content padding ──────────────────────────── */
 .block-container {{
     padding-top: 1rem !important;
     padding-left: 2.5rem !important;
     padding-right: 2.5rem !important;
     max-width: 1400px !important;
 }}
+.stApp, .stApp p, .stApp span, .stApp label,
+.stApp .stMarkdown, .stApp [data-testid="stText"] {{
+    color: {TEXT_PRIMARY} !important;
+}}
+.stApp h1, .stApp h2, .stApp h3, .stApp h4 {{
+    color: {TEXT_PRIMARY} !important;
+}}
+.stApp .stCaption, .stApp small,
+.stApp [data-testid="stCaptionContainer"] {{
+    color: {TEXT_SECONDARY} !important;
+}}
+h1 {{ color: {TEXT_PRIMARY} !important; font-weight: 700 !important; }}
+h2 {{ color: {TEXT_PRIMARY} !important; font-weight: 600 !important; }}
+h3 {{ color: {TEXT_PRIMARY} !important; font-weight: 600 !important; }}
+hr {{ border-color: {BORDER} !important; }}
 
-/* ── Nav bar: style the columns row that contains page links ── */
+/* ── Nav bar ── */
 [data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"]) {{
-    background: {NAVY_900} !important;
-    border-bottom: 2px solid {NAVY_700} !important;
+    background: {NAVY_BG} !important;
+    border-bottom: 2px solid {CARD_BG} !important;
     padding: 5px 16px !important;
     margin-bottom: 1.5rem !important;
     border-radius: 6px !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.5) !important;
     align-items: center !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 999 !important;
 }}
-
-/* Tighten column padding inside nav */
 [data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
 > div[data-testid="stColumn"] > div {{
     padding: 0 2px !important;
     gap: 0 !important;
 }}
-
-/* Reset default page link card styling */
 [data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
 [data-testid="stPageLink"] {{
     background: transparent !important;
@@ -81,8 +186,6 @@ section[data-testid="stSidebarNav"] {{
     padding: 0 !important;
     min-height: unset !important;
 }}
-
-/* Nav link text — target a, p, span to cover all Streamlit versions */
 [data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
 [data-testid="stPageLink"] a,
 [data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
@@ -91,18 +194,18 @@ section[data-testid="stSidebarNav"] {{
 [data-testid="stPageLink"] a span,
 [data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
 [data-testid="stPageLink"] a div {{
-    color: #FFFFFF !important;
-    font-size: 15px !important;
-    font-weight: 700 !important;
+    color: {TEXT_PRIMARY} !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
     text-decoration: none !important;
     white-space: nowrap !important;
 }}
 [data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
 [data-testid="stPageLink"] a {{
-    padding: 4px 7px !important;
-    border-radius: 4px !important;
+    padding: 4px 8px !important;
+    border-radius: 6px !important;
     display: inline-block !important;
-    transition: background 0.15s !important;
+    transition: background 0.2s ease, color 0.2s ease !important;
 }}
 [data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
 [data-testid="stPageLink"] a:hover,
@@ -110,114 +213,204 @@ section[data-testid="stSidebarNav"] {{
 [data-testid="stPageLink"] a:hover p,
 [data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
 [data-testid="stPageLink"] a:hover span {{
-    color: #FFFFFF !important;
-    background: rgba(255,255,255,0.12) !important;
+    color: {BRIGHT_TEAL} !important;
+    background: rgba(56, 102, 126, 0.35) !important;
 }}
-
-/* Sign Out button inside nav */
 [data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
 .stButton > button {{
-    background: transparent !important;
-    color: rgba(255,255,255,0.7) !important;
-    border: 1px solid rgba(255,255,255,0.25) !important;
-    font-size: 11px !important;
-    padding: 2px 8px !important;
+    background: {PLUM} !important;
+    color: {TEXT_PRIMARY} !important;
+    border: 1px solid {PLUM} !important;
+    font-size: 10px !important;
+    padding: 2px 10px !important;
     min-height: unset !important;
     height: 26px !important;
     line-height: 1 !important;
     white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 80px !important;
+    border-radius: 4px !important;
+    transition: background 0.2s ease !important;
 }}
 [data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
 .stButton > button:hover {{
-    color: #FFFFFF !important;
-    border-color: rgba(255,255,255,0.5) !important;
-    background: rgba(255,255,255,0.1) !important;
+    background: {DEEP_PLUM} !important;
+    border-color: {LAVENDER} !important;
 }}
 
-/* ── Metric Cards ─────────────────────────────────── */
+/* ── Metric cards ── */
 [data-testid="stMetric"] {{
-    background-color: #FFFFFF;
-    border: 1px solid #E5E7EB;
-    border-radius: 12px;
+    background-color: {CARD_BG} !important;
+    border: 1px solid {BORDER} !important;
+    border-radius: 14px !important;
     padding: 20px 24px !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 16px rgba(0,0,0,0.3) !important;
+    transition: transform 0.2s ease, border-color 0.2s ease !important;
+}}
+[data-testid="stMetric"]:hover {{
+    transform: translateY(-2px) !important;
+    border-color: {BRIGHT_TEAL} !important;
 }}
 [data-testid="stMetricLabel"] > div {{
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.6px;
-    color: #6B7280 !important;
-    text-transform: uppercase;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    letter-spacing: 1px !important;
+    color: {TEXT_SECONDARY} !important;
+    text-transform: uppercase !important;
 }}
 [data-testid="stMetricValue"] > div {{
     font-size: 26px !important;
     font-weight: 700 !important;
-    color: #111827 !important;
+    color: {TEXT_PRIMARY} !important;
+}}
+[data-testid="stMetricDelta"] > div {{ font-size: 12px !important; }}
+
+/* ── Card containers ── */
+[data-testid="stVerticalBlock"] > div[data-testid="element-container"]
+> div > div > div[data-testid="stVerticalBlockBorderWrapper"] {{
+    background: {CARD_BG} !important;
+    border: 1px solid {BORDER} !important;
+    border-radius: 14px !important;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.3) !important;
+    transition: border-color 0.2s ease !important;
+}}
+[data-testid="stVerticalBlock"] > div[data-testid="element-container"]
+> div > div > div[data-testid="stVerticalBlockBorderWrapper"]:hover {{
+    border-color: {BRIGHT_TEAL} !important;
+}}
+div:has(> [data-testid="stVerticalBlockBorderWrapper"]) {{
+    border-color: {BORDER} !important;
 }}
 
-/* ── Primary Buttons ─────────────────────────────── */
+/* ── Buttons ── */
 .stButton > button[kind="primary"] {{
-    background-color: {NAVY_900} !important;
-    color: #FFFFFF !important;
+    background-color: {PLUM} !important;
+    color: {TEXT_PRIMARY} !important;
     border: none !important;
     border-radius: 8px !important;
     font-weight: 600 !important;
+    transition: background 0.2s ease, transform 0.2s ease !important;
 }}
 .stButton > button[kind="primary"]:hover {{
-    background-color: {NAVY_700} !important;
-    border: none !important;
+    background-color: {DEEP_PLUM} !important;
+    transform: translateY(-1px) !important;
+}}
+.stButton > button {{
+    background-color: {CARD_BG} !important;
+    color: {TEXT_PRIMARY} !important;
+    border: 1px solid {BORDER} !important;
+    border-radius: 8px !important;
+    transition: background 0.2s ease, border-color 0.2s ease !important;
+}}
+.stButton > button:hover {{
+    background-color: {BORDER} !important;
+    border-color: {BRIGHT_TEAL} !important;
 }}
 
-/* ── Headings ────────────────────────────────────── */
-h1 {{ color: #111827 !important; font-weight: 700 !important; }}
-h2 {{ color: #1F2937 !important; font-weight: 600 !important; }}
-h3 {{ color: #374151 !important; font-weight: 600 !important; }}
-
-/* ── Dataframe ───────────────────────────────────── */
+/* ── Dataframe ── */
 [data-testid="stDataFrame"] {{
-    border: 1px solid #E5E7EB !important;
-    border-radius: 8px;
-    overflow: hidden;
+    border: 1px solid {BORDER} !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
 }}
 
-/* ── File uploader ───────────────────────────────── */
+/* ── File uploader ── */
 [data-testid="stFileUploader"] {{
-    border: 2px dashed #D1D5DB;
-    border-radius: 12px;
-    background-color: #F9FAFB;
-    padding: 16px;
+    border: 2px dashed {BORDER} !important;
+    border-radius: 12px !important;
+    background-color: {CARD_BG} !important;
+    padding: 16px !important;
+    transition: border-color 0.2s ease !important;
 }}
 [data-testid="stFileUploader"]:hover {{
-    border-color: {NAVY_500};
-    background-color: {NAVY_100};
+    border-color: {BRIGHT_TEAL} !important;
 }}
 
-/* ── Alerts ──────────────────────────────────────── */
+/* ── Alerts ── */
 [data-testid="stAlert"] {{ border-radius: 8px !important; }}
+
+/* ── Expander ── */
+[data-testid="stExpander"] {{
+    background: {CARD_BG} !important;
+    border: 1px solid {BORDER} !important;
+    border-radius: 8px !important;
+}}
+[data-testid="stExpander"] details,
+.streamlit-expanderHeader {{
+    background: {CARD_BG} !important;
+    border-color: {BORDER} !important;
+    color: {TEXT_PRIMARY} !important;
+}}
+[data-testid="stExpander"] summary {{ color: {TEXT_PRIMARY} !important; }}
+[data-testid="stExpander"] details summary span {{
+    color: {TEXT_PRIMARY} !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    overflow: visible !important;
+}}
+
+/* ── Inputs ── */
+.stTextInput > div > div > input,
+.stNumberInput > div > div > input,
+.stDateInput > div > div > input,
+.stTextArea > div > div > textarea {{
+    background: {CARD_BG} !important;
+    color: {TEXT_PRIMARY} !important;
+    border-color: {BORDER} !important;
+    border-radius: 8px !important;
+    transition: border-color 0.2s ease !important;
+}}
+.stTextInput > div > div > input:focus,
+.stNumberInput > div > div > input:focus {{
+    border-color: {BRIGHT_TEAL} !important;
+    box-shadow: 0 0 0 2px rgba(45,212,191,0.15) !important;
+}}
+.stTextInput > div > div > input::placeholder,
+.stTextArea > div > div > textarea::placeholder {{
+    color: {TEXT_MUTED} !important;
+}}
+.stSelectbox > div > div,
+.stMultiSelect > div > div {{
+    background: {CARD_BG} !important;
+    border-color: {BORDER} !important;
+    color: {TEXT_PRIMARY} !important;
+    border-radius: 8px !important;
+}}
+[data-testid="stMultiSelect"],
+[data-testid="stDateInput"] {{ color: {TEXT_PRIMARY} !important; }}
+.stDateInput > div > div > input {{
+    background: {CARD_BG} !important;
+    color: {TEXT_PRIMARY} !important;
+    border-color: {BORDER} !important;
+}}
+
+/* ── Controls ── */
+[data-testid="stToggle"] label {{ color: {TEXT_PRIMARY} !important; }}
+[data-testid="stRadio"] label {{ color: {TEXT_PRIMARY} !important; }}
+[data-testid="stSlider"] label {{ color: {TEXT_PRIMARY} !important; }}
+.stProgress > div > div > div {{ background-color: {BRIGHT_TEAL} !important; }}
+.stSpinner > div {{ border-top-color: {BRIGHT_TEAL} !important; }}
 </style>
 """
 
 
 def inject_css() -> None:
-    """Inject PACE base CSS. Call at the top of every page."""
     st.markdown(_BASE_CSS, unsafe_allow_html=True)
 
 
 def top_nav(username: str) -> None:
-    """
-    Render the top navigation bar using st.page_link() so that navigation
-    stays within the existing WebSocket session (no page reload, no auth loss).
-    Call this at the top of every authenticated page, after inject_css().
-    """
-    # Logo | nav links × 8 | user label | sign-out button
     logo_col, *page_cols, user_col, out_col = st.columns(
-        [1.4] + [1.0] * 8 + [1.0, 0.7]
+        [1.2] + [1.1] * 8 + [1.0, 0.7]
     )
 
     with logo_col:
         st.markdown(
-            f"<div style='color:#FFFFFF; font-size:15px; font-weight:700; "
-            f"letter-spacing:1px; padding:4px 0;'>📦 PACE</div>",
+            f"<div style='display:flex; align-items:center; gap:8px; padding:4px 0;'>"
+            f"{_SVG_PACKAGE}"
+            f"<span style='color:{BRIGHT_TEAL}; font-size:15px; font-weight:700; "
+            f"letter-spacing:1px;'>PACE</span>"
+            f"</div>",
             unsafe_allow_html=True,
         )
 
@@ -227,8 +420,9 @@ def top_nav(username: str) -> None:
 
     with user_col:
         st.markdown(
-            f"<div style='color:rgba(255,255,255,0.7); font-size:11px; "
-            f"text-align:right; padding:5px 4px 0;'>👤 {username}</div>",
+            f"<div style='color:{TEXT_SECONDARY}; font-size:11px; "
+            f"text-align:right; padding:5px 4px 0;'>"
+            f"{_SVG_USER}{username}</div>",
             unsafe_allow_html=True,
         )
 
@@ -239,19 +433,17 @@ def top_nav(username: str) -> None:
 
 
 def risk_badge_html(tier: str) -> str:
-    """Return an HTML badge string for a risk tier label."""
     colors = {
         "High":   (RISK_HIGH_BG, RISK_HIGH_FG),
         "Medium": (RISK_MED_BG,  RISK_MED_FG),
         "Low":    (RISK_LOW_BG,  RISK_LOW_FG),
     }
-    bg, fg = colors.get(tier, ("#F3F4F6", "#6B7280"))
+    bg, fg = colors.get(tier, (CARD_BG, TEXT_MUTED))
     return (
         f'<span style="background:{bg}; color:{fg}; padding:3px 10px; '
         f'border-radius:4px; font-size:11px; font-weight:600;">{tier}</span>'
     )
 
 
-# Keep for backwards compatibility — now a no-op
 def sidebar_header(username: str) -> None:
     pass
