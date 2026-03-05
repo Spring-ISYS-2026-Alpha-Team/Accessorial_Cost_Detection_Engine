@@ -10,13 +10,16 @@ from auth_utils import check_auth
 from utils.mock_data import generate_mock_shipments
 from utils.styling import (
     inject_css, top_nav,
-    NAVY_500, NAVY_900, NAVY_100,
+    CARD_BG, BORDER, PLUM,
+    TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
+    BRIGHT_TEAL, CORAL, LAVENDER, GOLD,
     RISK_HIGH_FG, RISK_MED_FG, RISK_LOW_FG,
+    DARK_LAYOUT,
 )
 
 st.set_page_config(
     page_title="PACE — Accessorial Tracker",
-    page_icon="📋",
+    page_icon="P",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -24,25 +27,27 @@ inject_css()
 
 if not check_auth():
     st.warning("Please sign in to access this page.")
-    st.page_link("app.py", label="Go to Sign In", icon="🔑")
+    st.page_link("app.py", label="Go to Sign In")
     st.stop()
 
 username = st.session_state.get("username", "User")
 top_nav(username)
 
+
 @st.cache_data
 def load_data():
     return generate_mock_shipments(300)
 
+
 df_all = load_data()
 df_all["ship_date_dt"] = pd.to_datetime(df_all["ship_date"])
 
-# ── Inline filters ────────────────────────────────────────────────────────────
+# ── Filters ───────────────────────────────────────────────────────────────────
 acc_types = sorted([t for t in df_all["accessorial_type"].unique() if t != "None"])
 min_date  = df_all["ship_date_dt"].min().date()
 max_date  = df_all["ship_date_dt"].max().date()
 
-with st.expander("⚙️ Filters", expanded=False):
+with st.expander("Filters", expanded=False):
     f1, f2, f3 = st.columns(3)
     with f1:
         sel_types = st.multiselect("Accessorial Type", acc_types, default=acc_types)
@@ -71,7 +76,10 @@ df_with_acc = df[df["accessorial_charge_usd"] > 0].copy()
 
 # ── Header ────────────────────────────────────────────────────────────────────
 st.markdown("## Accessorial Cost Tracker")
-st.caption("Understand where unexpected charges come from, which lanes carry the most risk, and why costs vary.")
+st.caption(
+    "Track where unexpected charges come from, which lanes and carriers carry the most risk, "
+    "and how accessorial costs correlate with risk tier."
+)
 st.divider()
 
 # ── KPI row ───────────────────────────────────────────────────────────────────
@@ -85,26 +93,28 @@ pct_of_total    = (total_acc / df["total_cost_usd"].sum() * 100) if df["total_co
 
 k1, k2, k3, k4, k5 = st.columns(5)
 with k1:
-    st.metric("Total Accessorial", f"${total_acc:,.0f}")
+    st.metric("Total Accessorial",        f"${total_acc:,.0f}")
 with k2:
-    st.metric("Affected Shipments", f"{shipments_w_acc:,} of {total_shipments:,}")
+    st.metric("Affected Shipments",       f"{shipments_w_acc:,} of {total_shipments:,}")
 with k3:
-    st.metric("Accessorial Rate", f"{acc_rate:.1f}%")
+    st.metric("Accessorial Rate",         f"{acc_rate:.1f}%")
 with k4:
     st.metric("Avg per Affected Shipment", f"${avg_acc:,.2f}")
 with k5:
-    st.metric("% of Total Spend", f"{pct_of_total:.1f}%")
+    st.metric("% of Total Spend",         f"{pct_of_total:.1f}%")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ── Breakdown by type (donut) + by carrier (bar) ──────────────────────────────
+# ── Breakdown by type + carrier ───────────────────────────────────────────────
 col_l, col_r = st.columns(2, gap="medium")
 
 with col_l:
     with st.container(border=True):
         st.markdown("#### Accessorial Costs by Type")
-        st.caption("Which charges are costing the most?")
-
+        st.caption(
+            "Which charge categories are costing the most — "
+            "Detention and Lumper Fees are the most common culprits"
+        )
         type_data = (
             df_with_acc.groupby("accessorial_type")["accessorial_charge_usd"]
             .agg(total="sum", count="count")
@@ -112,22 +122,29 @@ with col_l:
             .sort_values("total", ascending=False)
         )
         if not type_data.empty:
+            donut_colors = [CORAL, GOLD, BRIGHT_TEAL, LAVENDER]
             donut_fig = go.Figure(go.Pie(
                 labels=type_data["accessorial_type"],
                 values=type_data["total"],
                 hole=0.55,
-                marker_colors=[RISK_HIGH_FG, RISK_MED_FG, NAVY_500, "#7C3AED"],
+                marker_colors=donut_colors[:len(type_data)],
                 textinfo="label+percent",
+                textfont=dict(color=TEXT_PRIMARY, size=12),
                 hovertemplate="<b>%{label}</b><br>Total: $%{value:,.0f}<br>Share: %{percent}<extra></extra>",
             ))
             donut_fig.add_annotation(
                 text=f"${total_acc:,.0f}", x=0.5, y=0.5,
-                font_size=16, font_color="#111827", showarrow=False, font_family="Inter",
+                font_size=16, font_color=TEXT_PRIMARY, showarrow=False,
             )
             donut_fig.update_layout(
                 margin=dict(l=0, r=0, t=8, b=0), height=280,
-                paper_bgcolor="white", showlegend=True,
-                legend=dict(orientation="v", x=1.0, y=0.5),
+                paper_bgcolor=CARD_BG,
+                showlegend=True,
+                legend=dict(
+                    orientation="v", x=1.0, y=0.5,
+                    font=dict(color=TEXT_SECONDARY, size=11),
+                ),
+                font=dict(color=TEXT_PRIMARY),
             )
             st.plotly_chart(donut_fig, use_container_width=True)
 
@@ -149,8 +166,10 @@ with col_l:
 with col_r:
     with st.container(border=True):
         st.markdown("#### Accessorial Costs by Carrier")
-        st.caption("Which carriers generate the most unexpected charges?")
-
+        st.caption(
+            "Which carriers generate the most unexpected charges — "
+            "high totals may indicate systemic detention or lumper fee issues"
+        )
         carrier_acc = (
             df_with_acc.groupby("carrier")
             .agg(total=("accessorial_charge_usd", "sum"),
@@ -164,9 +183,11 @@ with col_r:
                 x=carrier_acc["total"],
                 y=carrier_acc["carrier"],
                 orientation="h",
-                marker_color=NAVY_500,
+                marker_color=LAVENDER,
+                marker_line_width=0,
                 text=carrier_acc["total"].apply(lambda v: f"${v:,.0f}"),
                 textposition="outside",
+                textfont=dict(color=TEXT_SECONDARY, size=11),
                 customdata=carrier_acc[["count", "avg"]].values,
                 hovertemplate=(
                     "<b>%{y}</b><br>"
@@ -175,26 +196,24 @@ with col_r:
                     "Avg per shipment: $%{customdata[1]:,.2f}<extra></extra>"
                 ),
             ))
-            fig_c.update_layout(
-                margin=dict(l=0, r=80, t=8, b=0), height=280,
-                plot_bgcolor="white", paper_bgcolor="white",
-                xaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-                yaxis=dict(gridcolor="#F3F4F6"),
-            )
+            fig_c.update_layout(**DARK_LAYOUT, margin=dict(l=0, r=80, t=8, b=0), height=280)
+            fig_c.update_xaxes(tickprefix="$")
             st.plotly_chart(fig_c, use_container_width=True)
         else:
             st.info("No data for the current filter selection.")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ── By facility + trend over time ─────────────────────────────────────────────
+# ── By facility + trend ───────────────────────────────────────────────────────
 col_a, col_b = st.columns(2, gap="medium")
 
 with col_a:
     with st.container(border=True):
         st.markdown("#### Accessorial Costs by Facility")
-        st.caption("Which facilities trigger the most charges?")
-
+        st.caption(
+            "Which facilities trigger the most charges — "
+            "facilities with limited dock availability or strict appointment windows often rank highest"
+        )
         fac_acc = (
             df_with_acc.groupby("facility")
             .agg(total=("accessorial_charge_usd", "sum"),
@@ -208,16 +227,14 @@ with col_a:
                 x=fac_acc["total"],
                 y=fac_acc["facility"].apply(lambda v: v if len(v) <= 30 else v[:27] + "…"),
                 orientation="h",
-                marker_color=RISK_HIGH_FG,
+                marker_color=CORAL,
+                marker_line_width=0,
                 text=fac_acc["total"].apply(lambda v: f"${v:,.0f}"),
                 textposition="outside",
+                textfont=dict(color=TEXT_SECONDARY, size=11),
             ))
-            fac_fig.update_layout(
-                margin=dict(l=0, r=80, t=8, b=0), height=260,
-                plot_bgcolor="white", paper_bgcolor="white",
-                xaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-                yaxis=dict(gridcolor="#F3F4F6"),
-            )
+            fac_fig.update_layout(**DARK_LAYOUT, margin=dict(l=0, r=80, t=8, b=0), height=260)
+            fac_fig.update_xaxes(tickprefix="$")
             st.plotly_chart(fac_fig, use_container_width=True)
         else:
             st.info("No data for the current filter selection.")
@@ -225,42 +242,39 @@ with col_a:
 with col_b:
     with st.container(border=True):
         st.markdown("#### Accessorial Cost Trend")
-        st.caption("Weekly accessorial spend over time")
-
+        st.caption(
+            "Weekly accessorial spend over time — "
+            "spikes often align with weather events, peak shipping seasons, or carrier staffing gaps"
+        )
         df_with_acc["week"] = df_with_acc["ship_date_dt"].dt.to_period("W").dt.start_time
         weekly_acc = (
             df_with_acc.groupby("week")["accessorial_charge_usd"]
-            .sum()
-            .reset_index()
+            .sum().reset_index()
             .rename(columns={"accessorial_charge_usd": "total"})
         )
         if not weekly_acc.empty:
             trend_fig = go.Figure(go.Scatter(
                 x=weekly_acc["week"], y=weekly_acc["total"],
                 mode="lines+markers",
-                line=dict(color=RISK_HIGH_FG, width=2),
-                marker=dict(color=RISK_HIGH_FG, size=6),
+                line=dict(color=GOLD, width=2),
+                marker=dict(color=GOLD, size=6, line=dict(color=CARD_BG, width=1)),
                 fill="tozeroy",
-                fillcolor="rgba(220,38,38,0.08)",
+                fillcolor="rgba(251, 191, 36, 0.10)",
             ))
-            trend_fig.update_layout(
-                margin=dict(l=0, r=0, t=8, b=0), height=260,
-                plot_bgcolor="white", paper_bgcolor="white",
-                xaxis=dict(gridcolor="#F3F4F6"),
-                yaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-            )
+            trend_fig.update_layout(**DARK_LAYOUT, margin=dict(l=0, r=0, t=8, b=0), height=260)
+            trend_fig.update_yaxes(tickprefix="$")
             st.plotly_chart(trend_fig, use_container_width=True)
         else:
             st.info("No trend data available for this filter.")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ── Why costs vary: risk tier analysis ───────────────────────────────────────
+# ── Risk tier analysis ─────────────────────────────────────────────────────────
 with st.container(border=True):
     st.markdown("#### Why Do Some Shipments Cost So Much More?")
     st.caption(
-        "Shipments with high risk scores consistently have higher accessorial charges. "
-        "This table compares cost outcomes by risk tier."
+        "Shipments with high risk scores consistently incur higher accessorial charges. "
+        "This breakdown shows how cost outcomes differ across risk tiers."
     )
 
     tier_analysis = (
@@ -269,8 +283,7 @@ with st.container(border=True):
             count        =("shipment_id",            "count"),
             avg_acc      =("accessorial_charge_usd", "mean"),
             total_acc    =("accessorial_charge_usd", "sum"),
-            pct_with_acc =("accessorial_charge_usd",
-                           lambda x: (x > 0).mean() * 100),
+            pct_with_acc =("accessorial_charge_usd", lambda x: (x > 0).mean() * 100),
             avg_base     =("base_freight_usd",       "mean"),
             avg_total    =("total_cost_usd",         "mean"),
         )
@@ -284,30 +297,35 @@ with st.container(border=True):
     for col_widget, (_, row) in zip([t1, t2, t3], tier_analysis.iterrows()):
         tier  = row["risk_tier"]
         color = {"High": RISK_HIGH_FG, "Medium": RISK_MED_FG, "Low": RISK_LOW_FG}[tier]
+        bg    = {"High": "rgba(255,107,107,0.08)",
+                 "Medium": "rgba(251,191,36,0.08)",
+                 "Low": "rgba(45,212,191,0.08)"}[tier]
         with col_widget:
             st.markdown(
                 f"<div style='border-left:4px solid {color}; padding:12px 16px; "
-                f"background:#FAFAFA; border-radius:0 8px 8px 0; margin-bottom:8px;'>"
+                f"background:{bg}; border-radius:0 8px 8px 0; margin-bottom:8px;'>"
                 f"<div style='font-size:13px; font-weight:700; color:{color}; "
                 f"text-transform:uppercase; letter-spacing:0.5px;'>{tier} Risk</div>"
-                f"<div style='font-size:22px; font-weight:700; color:#111827; margin:6px 0;'>"
-                f"${row['avg_acc']:,.2f}</div>"
-                f"<div style='font-size:12px; color:#6B7280;'>avg accessorial charge</div>"
-                f"<hr style='border:none; border-top:1px solid #E5E7EB; margin:10px 0;'>"
-                f"<div style='font-size:12px; color:#374151;'>"
-                f"<b>{row['pct_with_acc']:.0f}%</b> of shipments charged<br>"
-                f"<b>{row['count']:.0f}</b> total shipments<br>"
-                f"Avg total cost: <b>${row['avg_total']:,.2f}</b>"
+                f"<div style='font-size:22px; font-weight:700; color:{TEXT_PRIMARY}; "
+                f"margin:6px 0;'>${row['avg_acc']:,.2f}</div>"
+                f"<div style='font-size:12px; color:{TEXT_SECONDARY};'>"
+                f"avg accessorial charge</div>"
+                f"<hr style='border:none; border-top:1px solid {BORDER}; margin:10px 0;'>"
+                f"<div style='font-size:12px; color:{TEXT_SECONDARY};'>"
+                f"<b style='color:{TEXT_PRIMARY};'>{row['pct_with_acc']:.0f}%</b> "
+                f"of shipments charged<br>"
+                f"<b style='color:{TEXT_PRIMARY};'>{row['count']:.0f}</b> total shipments<br>"
+                f"Avg total cost: <b style='color:{TEXT_PRIMARY};'>${row['avg_total']:,.2f}</b>"
                 f"</div></div>",
                 unsafe_allow_html=True,
             )
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ── Top 15 most expensive shipments ──────────────────────────────────────────
+# ── Top 15 most expensive ──────────────────────────────────────────────────────
 with st.container(border=True):
     st.markdown("#### Top 15 Most Expensive Accessorial Shipments")
-    st.caption("Individual shipments with the highest unexpected charges")
+    st.caption("Individual shipments with the highest unexpected charges — use these to identify patterns in carrier, facility, or lane")
 
     top15 = (
         df_with_acc.nlargest(15, "accessorial_charge_usd")
