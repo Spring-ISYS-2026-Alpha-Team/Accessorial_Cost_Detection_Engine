@@ -2,7 +2,10 @@
 
 ![CI](https://github.com/Spring-ISYS-2026-Alpha-Team/Accessorial_Cost_Detection_Engine/actions/workflows/ci.yml/badge.svg)
 
-**PACE** is a decision-support tool for freight logistics teams. It ingests historical shipment data, validates it, assigns ML-based risk scores, and surfaces actionable recommendations to help prevent unexpected accessorial charges — detention fees, lumper fees, layovers — before they occur.
+**PACE** PACE is a decision-support tool for freight logistics teams. It ingests historical shipment data, validates it, assigns ML-based risk scores, and surfaces actionable recommendations to help prevent unexpected accessorial charges — detention fees, lumper fees, layovers — before they occur.
+Accessorial charges are not random. They are the downstream result of identifiable, repeatable operational patterns — carriers that consistently run late, facilities that routinely cause delays, or lane combinations that carry elevated risk. The problem is that without a system to surface these patterns at the right time, logistics teams are forced to operate reactively, absorbing costs that were, in hindsight, entirely predictable. PACE shifts that point of insight from invoice reconciliation to pre-dispatch decision-making.
+The system ingests and validates historical shipment records, engineers the features necessary for machine learning, and trains a classification model that outputs calibrated probability scores — not binary flags, but a quantified likelihood that a given shipment will incur a specific charge. Those scores are surfaced through an operational dashboard alongside actionable recommendations: swap carriers, adjust appointment windows, apply pricing buffers, or flag loads for additional attention before they're executed.
+The goal of PACE is not to eliminate accessorial charges entirely — some are unavoidable. The goal is to give logistics teams the right information at the moment they can still act on it, so that avoidable costs are avoided and unavoidable ones are anticipated and priced correctly.
 
 ---
 
