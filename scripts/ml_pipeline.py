@@ -33,8 +33,8 @@ from sklearn.model_selection import train_test_split
 # ---------------------------------------------------------------------------
 DB_SERVER = "essql1.database.windows.net"
 DB_NAME = "ISYS43603_Spring2026_Sec02_Alice_db"
-DB_USERNAME = "YOUR_USERNAME_HERE"
-DB_PASSWORD = "YOUR_PASSWORD_HERE"
+DB_USERNAME = "Alice"
+DB_PASSWORD = "ISYSPass12345678!"
 DB_DRIVER = "ODBC Driver 18 for SQL Server"
 
 # ---------------------------------------------------------------------------
