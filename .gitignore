@@ -23,3 +23,9 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# ML Pipeline outputs
+outputs/*.png
+
+# Credentials
+*.env

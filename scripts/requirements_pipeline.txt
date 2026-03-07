@@ -1,0 +1,5 @@
+pyodbc
+pandas
+numpy
+scikit-learn
+matplotlib
