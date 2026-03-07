@@ -152,8 +152,8 @@ st.markdown(
 use_sample = st.button("Use sample data", type="secondary")
 
 if use_sample:
-    from utils.mock_data import generate_mock_shipments
-    sample = generate_mock_shipments(50)
+    from utils.database import load_shipments
+    sample = load_shipments().head(50)
     st.session_state["upload_df"]       = sample.drop(
         columns=["risk_score", "risk_tier", "accessorial_type"], errors="ignore"
     )

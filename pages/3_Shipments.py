@@ -6,7 +6,7 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from auth_utils import check_auth
-from utils.mock_data import generate_mock_shipments, CARRIERS, FACILITIES
+from utils.database import load_shipments
 from utils.styling import (
     inject_css, top_nav,
     CARD_BG, BORDER, PLUM,
@@ -36,22 +36,20 @@ username = st.session_state.get("username", "User")
 top_nav(username)
 
 # ── Load data ─────────────────────────────────────────────────────────────────
-@st.cache_data
-def load_data():
-    return generate_mock_shipments(300)
-
-df_all = load_data()
+df_all = load_shipments()
+_all_carriers  = sorted(df_all["carrier"].dropna().unique())
+_all_facilities = sorted(df_all["facility"].dropna().unique())
 
 # ── Filters ───────────────────────────────────────────────────────────────────
 with st.expander("Filters", expanded=False):
     f1, f2, f3 = st.columns(3)
     with f1:
         sel_carriers = st.multiselect(
-            "Carrier", sorted(CARRIERS), default=sorted(CARRIERS), key="ship_carriers"
+            "Carrier", _all_carriers, default=_all_carriers, key="ship_carriers"
         )
     with f2:
         sel_facilities = st.multiselect(
-            "Facility", sorted(FACILITIES), default=sorted(FACILITIES), key="ship_facilities"
+            "Facility", _all_facilities, default=_all_facilities, key="ship_facilities"
         )
     with f3:
         sel_tiers = st.multiselect(

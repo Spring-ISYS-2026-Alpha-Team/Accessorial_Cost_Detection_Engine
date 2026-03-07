@@ -7,7 +7,7 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from auth_utils import check_auth
-from utils.mock_data import generate_mock_shipments, CARRIERS
+from utils.database import load_shipments
 from utils.styling import (
     inject_css, top_nav,
     NAVY_BG, CARD_BG, BORDER, PLUM,
@@ -33,23 +33,19 @@ username = st.session_state.get("username", "User")
 top_nav(username)
 
 
-@st.cache_data
-def load_data():
-    return generate_mock_shipments(300)
-
-
-df_all = load_data()
+df_all = load_shipments()
+_all_carriers = sorted(df_all["carrier"].dropna().unique())
 
 # ── Carrier selector ──────────────────────────────────────────────────────────
 if "active_carriers" not in st.session_state:
-    st.session_state["active_carriers"] = sorted(CARRIERS)
+    st.session_state["active_carriers"] = _all_carriers
 
 with st.expander("Manage Carriers", expanded=False):
     f1, f2 = st.columns([5, 1])
     with f1:
         selected = st.multiselect(
             "Active Carriers",
-            options=sorted(CARRIERS),
+            options=_all_carriers,
             default=st.session_state["active_carriers"],
         )
         st.session_state["active_carriers"] = selected
@@ -58,7 +54,7 @@ with st.expander("Manage Carriers", expanded=False):
         col_a, col_b = st.columns(2)
         with col_a:
             if st.button("All", use_container_width=True):
-                st.session_state["active_carriers"] = sorted(CARRIERS)
+                st.session_state["active_carriers"] = _all_carriers
                 st.rerun()
         with col_b:
             if st.button("Clear", use_container_width=True):
@@ -84,7 +80,7 @@ st.divider()
 # ── Carrier color map ─────────────────────────────────────────────────────────
 CARRIER_COLORS = [BRIGHT_TEAL, LAVENDER, CORAL, GOLD, BORDER, PLUM, "#38BDF8", "#FB7185"]
 color_map = {c: CARRIER_COLORS[i % len(CARRIER_COLORS)]
-             for i, c in enumerate(sorted(CARRIERS))}
+             for i, c in enumerate(_all_carriers)}
 
 # ── Carrier metrics ───────────────────────────────────────────────────────────
 metrics = (

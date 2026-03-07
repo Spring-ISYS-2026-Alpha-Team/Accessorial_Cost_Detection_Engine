@@ -8,7 +8,7 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from auth_utils import check_auth
-from utils.mock_data import generate_mock_shipments, CARRIERS, FACILITIES
+from utils.database import load_shipments
 from utils.styling import (
     inject_css, top_nav,
     CARD_BG, BORDER, PLUM,
@@ -42,8 +42,9 @@ def train_model():
     from sklearn.preprocessing import OneHotEncoder
     from sklearn.pipeline import Pipeline
 
-    df = generate_mock_shipments(300)
-    df["total_cost_usd"] = df["base_freight_usd"] + df["accessorial_charge_usd"]
+    df = load_shipments()
+    if df.empty:
+        return None, df
 
     cat_cols = ["carrier", "facility"]
     num_cols = ["weight_lbs", "miles"]
@@ -62,13 +63,15 @@ def train_model():
     return model, df
 
 
-@st.cache_data
-def load_data():
-    return generate_mock_shipments(300)
-
-
 model, df_train = train_model()
-df = load_data()
+df = load_shipments()
+
+if model is None:
+    st.warning("Database unavailable — the cost model could not be trained. Please check your database connection.")
+    st.stop()
+
+_all_carriers  = sorted(df["carrier"].dropna().unique())
+_all_facilities = sorted(df["facility"].dropna().unique())
 
 # ── Header ────────────────────────────────────────────────────────────────────
 st.markdown("## Cost Estimator")
@@ -85,8 +88,8 @@ with form_col:
     with st.container(border=True):
         st.markdown("#### Shipment Details")
         st.caption("Enter shipment parameters to generate a cost prediction with confidence interval")
-        carrier  = st.selectbox("Carrier",  sorted(CARRIERS))
-        facility = st.selectbox("Facility", sorted(FACILITIES))
+        carrier  = st.selectbox("Carrier",  _all_carriers)
+        facility = st.selectbox("Facility", _all_facilities)
         weight   = st.number_input("Weight (lbs)", min_value=100, max_value=44_000,
                                    value=10_000, step=500)
         miles    = st.number_input("Miles", min_value=50, max_value=2_400,

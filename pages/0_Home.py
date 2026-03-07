@@ -7,7 +7,7 @@ import sys, os, base64
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from auth_utils import check_auth
-from utils.mock_data import generate_mock_shipments
+from utils.database import load_shipments
 from utils.styling import (
     inject_css, top_nav,
     NAVY_BG, CARD_BG, BORDER, PLUM,
@@ -61,11 +61,7 @@ def load_hero_image():
 hero_b64 = load_hero_image()
 
 # ── Load data ─────────────────────────────────────────────────────────────────
-@st.cache_data
-def load_data():
-    return generate_mock_shipments(300)
-
-df_all = load_data()
+df_all = load_shipments()
 df_all["ship_date_dt"] = pd.to_datetime(df_all["ship_date"])
 
 # ── Hero Section ──────────────────────────────────────────────────────────────

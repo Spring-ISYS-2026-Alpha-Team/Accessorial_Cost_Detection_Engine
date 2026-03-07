@@ -7,7 +7,7 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from auth_utils import check_auth
-from utils.mock_data import generate_mock_shipments
+from utils.database import load_shipments
 from utils.styling import (
     inject_css, top_nav,
     CARD_BG, BORDER, PLUM,
@@ -34,12 +34,7 @@ username = st.session_state.get("username", "User")
 top_nav(username)
 
 
-@st.cache_data
-def load_data():
-    return generate_mock_shipments(300)
-
-
-df_all = load_data()
+df_all = load_shipments()
 df_all["ship_date_dt"] = pd.to_datetime(df_all["ship_date"])
 
 # ── Filters ───────────────────────────────────────────────────────────────────
