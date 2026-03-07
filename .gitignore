@@ -29,3 +29,6 @@ outputs/*.png
 
 # Credentials
 *.env
+
+# Saved ML models (too large for Git)
+models/*.joblib
