@@ -104,16 +104,16 @@ def get_connection():
 
     try:
         sec      = st.secrets["azure_sql"]
-        server   = sec.get("server",   _DB_SERVER)
-        database = sec.get("database", _DB_NAME)
-        username = sec.get("username", "")
-        password = sec.get("password", "")
+        server   = sec["server"]
+        database = sec["database"]
+        username = sec["username"]
+        password = sec["password"]
     except (KeyError, FileNotFoundError, AttributeError):
         server   = os.getenv("AZURE_SQL_SERVER",   _DB_SERVER)
         database = os.getenv("AZURE_SQL_DATABASE", _DB_NAME)
-        username = os.getenv("AZURE_SQL_USERNAME", "YOUR_USERNAME_HERE")
-        password = os.getenv("AZURE_SQL_PASSWORD", "YOUR_PASSWORD_HERE")
-
+        username = os.getenv("AZURE_SQL_USERNAME", "")
+        password = os.getenv("AZURE_SQL_PASSWORD", "")
+        
     # Return None (not an error) when credentials are not yet filled in
     if not username or username == "YOUR_USERNAME_HERE":
         return None
