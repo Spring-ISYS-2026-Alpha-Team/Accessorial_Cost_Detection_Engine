@@ -29,10 +29,197 @@ username = st.session_state.get("username", "User")
 top_nav(username)
 
 conn = get_connection()
-df = get_shipments(conn) if conn is not None else pd.DataFrame()
-if df.empty:
-    df = generate_mock_shipments(300)
+df_raw = get_shipments(conn) if conn is not None else pd.DataFrame()
+if df_raw.empty:
+    df_raw = generate_mock_shipments(300)
     st.info("Live database unavailable — showing demo data.", icon="ℹ️")
+df_raw["ship_date_dt"] = pd.to_datetime(df_raw["ship_date"])
+df_all = df_raw  # module-level alias used by dialogs
+
+
+# ── Date-range filter helpers ─────────────────────────────────────────────────
+def _filter_by_range(df: pd.DataFrame, sel: str) -> pd.DataFrame:
+    days_map = {"1M": 30, "3M": 90, "6M": 180, "1Y": 365}
+    if sel not in days_map:
+        return df
+    cutoff = df["ship_date_dt"].max() - pd.Timedelta(days=days_map[sel])
+    return df[df["ship_date_dt"] >= cutoff]
+
+
+def _range_buttons(chart_key: str):
+    opts = ["1M", "3M", "6M", "1Y", "All"]
+    skey = f"popup_range_{chart_key}"
+    if skey not in st.session_state:
+        st.session_state[skey] = "All"
+    cols = st.columns(len(opts))
+    for col, lbl in zip(cols, opts):
+        with col:
+            kind = "primary" if st.session_state[skey] == lbl else "secondary"
+            if st.button(lbl, key=f"rb_{chart_key}_{lbl}", type=kind,
+                         use_container_width=True):
+                st.session_state[skey] = lbl
+    return st.session_state[skey]
+
+
+# ── Lane metrics builder (shared by page and dialogs) ─────────────────────────
+def _build_lane_metrics(df: pd.DataFrame, group_col: str, label: str,
+                        min_vol: int = 1) -> pd.DataFrame:
+    lm = (
+        df.groupby(group_col)
+        .agg(
+            shipments        =("shipment_id",           "count"),
+            avg_cost         =("total_cost_usd",         "mean"),
+            total_cost       =("total_cost_usd",         "sum"),
+            avg_cpm          =("cost_per_mile",          "mean"),
+            avg_miles        =("miles",                  "mean"),
+            avg_risk         =("risk_score",             "mean"),
+            accessorial_cost =("accessorial_charge_usd", "sum"),
+            high_risk_count  =("risk_tier",
+                               lambda x: (x == "High").sum()),
+        )
+        .reset_index()
+        .rename(columns={group_col: label})
+    )
+    lm = lm[lm["shipments"] >= min_vol].copy()
+    lm["accessorial_rate"] = (
+        lm["accessorial_cost"] / lm["total_cost"] * 100
+    ).round(1)
+    lm["high_risk_pct"] = (
+        lm["high_risk_count"] / lm["shipments"] * 100
+    ).round(1)
+    return lm
+
+
+# ── Chart-builder functions ───────────────────────────────────────────────────
+def _build_expensive_fig(lane_metrics: pd.DataFrame, label: str,
+                         height=300) -> go.Figure:
+    top_exp = lane_metrics.nlargest(8, "avg_cpm").sort_values("avg_cpm")
+    fig = go.Figure(go.Bar(
+        x=top_exp["avg_cpm"],
+        y=top_exp[label].apply(lambda v: v if len(v) <= 28 else v[:25] + "…"),
+        orientation="h",
+        marker_color="#DC2626",
+        text=top_exp["avg_cpm"].apply(lambda v: f"${v:.2f}/mi"),
+        textposition="outside",
+    ))
+    fig.update_layout(
+        margin=dict(l=0, r=160, t=8, b=0), height=height,
+        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+        font=dict(color="#A78BFA"),
+        xaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)",
+                   color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+        yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8",
+                   linecolor="rgba(150,50,200,0.2)"),
+    )
+    return fig
+
+
+def _build_efficient_fig(lane_metrics: pd.DataFrame, label: str,
+                         height=300) -> go.Figure:
+    top_cheap = lane_metrics.nsmallest(8, "avg_cpm").sort_values("avg_cpm", ascending=False)
+    fig = go.Figure(go.Bar(
+        x=top_cheap["avg_cpm"],
+        y=top_cheap[label].apply(lambda v: v if len(v) <= 28 else v[:25] + "…"),
+        orientation="h",
+        marker_color="#059669",
+        text=top_cheap["avg_cpm"].apply(lambda v: f"${v:.2f}/mi"),
+        textposition="outside",
+    ))
+    fig.update_layout(
+        margin=dict(l=0, r=160, t=8, b=0), height=height,
+        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+        font=dict(color="#A78BFA"),
+        xaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)",
+                   color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+        yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8",
+                   linecolor="rgba(150,50,200,0.2)"),
+    )
+    return fig
+
+
+def _build_scatter_fig(lane_metrics: pd.DataFrame, label: str,
+                       height=320) -> go.Figure:
+    scatter_fig = px.scatter(
+        lane_metrics,
+        x="shipments",
+        y="avg_cost",
+        size="total_cost",
+        color="avg_risk",
+        hover_name=label,
+        color_continuous_scale=["#059669", "#D97706", "#DC2626"],
+        labels={
+            "shipments": "Shipment Volume",
+            "avg_cost":  "Avg Total Cost ($)",
+            "avg_risk":  "Avg Risk Score",
+            "total_cost": "Total Spend",
+        },
+        hover_data={"avg_cpm": ":.2f", "accessorial_rate": ":.1f"},
+    )
+    scatter_fig.update_layout(
+        margin=dict(l=0, r=0, t=8, b=0), height=height,
+        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+        font=dict(color="#A78BFA"),
+        xaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8",
+                   linecolor="rgba(150,50,200,0.2)"),
+        yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8",
+                   linecolor="rgba(150,50,200,0.2)", tickprefix="$"),
+    )
+    return scatter_fig
+
+
+# ── Helper: resolve group_col + label from session state ─────────────────────
+def _resolve_group():
+    view_by = st.session_state.get("route_view_by", "Lane (Origin → Dest)")
+    if view_by == "Lane (Origin → Dest)":
+        return "lane", "Lane"
+    elif "Origin" in view_by:
+        return "origin_city", "Origin"
+    else:
+        return "destination_city", "Destination"
+
+
+# ── Expand dialogs (module-level) ─────────────────────────────────────────────
+@st.dialog("Most Expensive Lanes", width="large")
+def _popup_expensive():
+    sel = _range_buttons("expensive")
+    df_f = _filter_by_range(df_all, sel)
+    group_col, label = _resolve_group()
+    lm = _build_lane_metrics(df_f, group_col, label, min_vol=1)
+    st.caption(f"{len(df_f):,} shipments · {sel} view")
+    if lm.empty:
+        st.info("No data for the selected range.")
+    else:
+        st.plotly_chart(_build_expensive_fig(lm, label, height=480),
+                        use_container_width=True)
+
+
+@st.dialog("Most Efficient Lanes", width="large")
+def _popup_efficient():
+    sel = _range_buttons("efficient")
+    df_f = _filter_by_range(df_all, sel)
+    group_col, label = _resolve_group()
+    lm = _build_lane_metrics(df_f, group_col, label, min_vol=1)
+    st.caption(f"{len(df_f):,} shipments · {sel} view")
+    if lm.empty:
+        st.info("No data for the selected range.")
+    else:
+        st.plotly_chart(_build_efficient_fig(lm, label, height=480),
+                        use_container_width=True)
+
+
+@st.dialog("Lane Volume vs Avg Cost", width="large")
+def _popup_scatter():
+    sel = _range_buttons("scatter")
+    df_f = _filter_by_range(df_all, sel)
+    group_col, label = _resolve_group()
+    lm = _build_lane_metrics(df_f, group_col, label, min_vol=1)
+    st.caption(f"{len(df_f):,} shipments · {sel} view")
+    if lm.empty:
+        st.info("No data for the selected range.")
+    else:
+        st.plotly_chart(_build_scatter_fig(lm, label, height=500),
+                        use_container_width=True)
+
 
 # ── Inline filters ────────────────────────────────────────────────────────────
 with st.expander("⚙️ Filters", expanded=False):
@@ -43,7 +230,7 @@ with st.expander("⚙️ Filters", expanded=False):
     with f2:
         view_by = st.radio("Analyze by",
                            ["Lane (Origin → Dest)", "Origin City", "Destination City"],
-                           horizontal=True)
+                           horizontal=True, key="route_view_by")
 
 # ── Header ────────────────────────────────────────────────────────────────────
 st.markdown("## Route Analysis")
@@ -58,30 +245,8 @@ else:
     group_col = "origin_city" if "Origin" in view_by else "destination_city"
     label     = "Origin" if "Origin" in view_by else "Destination"
 
-lane_metrics = (
-    df.groupby(group_col)
-    .agg(
-        shipments       =("shipment_id",           "count"),
-        avg_cost        =("total_cost_usd",         "mean"),
-        total_cost      =("total_cost_usd",         "sum"),
-        avg_cpm         =("cost_per_mile",          "mean"),
-        avg_miles       =("miles",                  "mean"),
-        avg_risk        =("risk_score",             "mean"),
-        accessorial_cost=("accessorial_charge_usd", "sum"),
-        high_risk_count =("risk_tier",
-                          lambda x: (x == "High").sum()),
-    )
-    .reset_index()
-    .rename(columns={group_col: label})
-)
-
-lane_metrics = lane_metrics[lane_metrics["shipments"] >= min_vol].copy()
-lane_metrics["accessorial_rate"] = (
-    lane_metrics["accessorial_cost"] / lane_metrics["total_cost"] * 100
-).round(1)
-lane_metrics["high_risk_pct"] = (
-    lane_metrics["high_risk_count"] / lane_metrics["shipments"] * 100
-).round(1)
+df = df_raw.copy()
+lane_metrics = _build_lane_metrics(df, group_col, label, min_vol=min_vol)
 
 # ── KPI row ───────────────────────────────────────────────────────────────────
 total_lanes   = len(lane_metrics)
@@ -106,6 +271,7 @@ chart_l, chart_r = st.columns(2, gap="medium")
 
 with chart_l:
     with st.container(border=True):
+<<<<<<< Updated upstream
         st.markdown("#### Most Expensive Lanes")
         st.caption("Top 8 by average cost per mile")
         top_exp = lane_metrics.nlargest(8, "avg_cpm").sort_values("avg_cpm")
@@ -145,11 +311,35 @@ with chart_r:
             yaxis=dict(gridcolor="#F3F4F6"),
         )
         st.plotly_chart(fig2, use_container_width=True)
+=======
+        hdr, btn = st.columns([9, 1])
+        with hdr:
+            st.markdown("#### Most Expensive Lanes")
+            st.caption("Top 8 by average cost per mile")
+        with btn:
+            if st.button("⤢", key="exp_expensive", help="Expand chart"):
+                _popup_expensive()
+        st.plotly_chart(_build_expensive_fig(lane_metrics, label),
+                        use_container_width=True)
+
+with chart_r:
+    with st.container(border=True):
+        hdr, btn = st.columns([9, 1])
+        with hdr:
+            st.markdown("#### Most Efficient Lanes")
+            st.caption("Top 8 by lowest average cost per mile")
+        with btn:
+            if st.button("⤢", key="exp_efficient", help="Expand chart"):
+                _popup_efficient()
+        st.plotly_chart(_build_efficient_fig(lane_metrics, label),
+                        use_container_width=True)
+>>>>>>> Stashed changes
 
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ── Volume vs cost scatter ────────────────────────────────────────────────────
 with st.container(border=True):
+<<<<<<< Updated upstream
     st.markdown("#### Lane Volume vs Avg Cost")
     st.caption("Identify high-volume expensive lanes — biggest opportunity for savings")
     scatter_fig = px.scatter(
@@ -175,6 +365,17 @@ with st.container(border=True):
         yaxis=dict(gridcolor="#F3F4F6", tickprefix="$"),
     )
     st.plotly_chart(scatter_fig, use_container_width=True)
+=======
+    hdr, btn = st.columns([9, 1])
+    with hdr:
+        st.markdown("#### Lane Volume vs Avg Cost")
+        st.caption("Identify high-volume expensive lanes — biggest opportunity for savings")
+    with btn:
+        if st.button("⤢", key="exp_scatter", help="Expand chart"):
+            _popup_scatter()
+    st.plotly_chart(_build_scatter_fig(lane_metrics, label),
+                    use_container_width=True)
+>>>>>>> Stashed changes
 
 st.markdown("<br>", unsafe_allow_html=True)
 

@@ -37,6 +37,7 @@ if _df_raw.empty:
 
 df = _df_raw.copy()
 
+<<<<<<< Updated upstream
 # ── Train model (cached so it only runs once) ─────────────────────────────────
 @st.cache_resource
 def train_model(_data_hash):
@@ -62,6 +63,10 @@ def train_model(_data_hash):
     return model
 
 model = train_model(len(df))
+=======
+with st.spinner("Preparing cost model…"):
+    model = get_cost_model(len(df), df)
+>>>>>>> Stashed changes
 
 # ── Header ────────────────────────────────────────────────────────────────────
 st.markdown("## Cost Estimator")
@@ -163,15 +168,22 @@ with result_col:
                 x=["ML Prediction", f"Avg Cost/Mile\n(${avg_cpm:.2f}/mi × {e['miles']} mi)",
                    "Fleet Avg Total"],
                 y=[pred, simple_est, avg_total],
-                marker_color=[NAVY_500, "#9CA3AF", "#D1D5DB"],
+                marker_color=["#9333EA", "#6D28D9", "#4C1D95"],
                 text=[f"${v:,.0f}" for v in [pred, simple_est, avg_total]],
                 textposition="outside",
             ))
             comp_fig.update_layout(
                 margin=dict(l=0, r=0, t=8, b=0), height=220,
+<<<<<<< Updated upstream
                 plot_bgcolor="white", paper_bgcolor="white",
                 yaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
                 xaxis=dict(gridcolor="#F3F4F6"),
+=======
+                plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+                font=dict(color="#A78BFA"),
+                yaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+                xaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+>>>>>>> Stashed changes
                 showlegend=False,
             )
             st.plotly_chart(comp_fig, use_container_width=True)
@@ -217,15 +229,22 @@ with st.container(border=True):
         x=importance["Importance"],
         y=importance["Feature"],
         orientation="h",
-        marker_color=NAVY_500,
+        marker_color="#9333EA",
         text=importance["Importance"].apply(lambda v: f"{v:.1%}"),
         textposition="outside",
     ))
     fi_fig.update_layout(
         margin=dict(l=0, r=60, t=8, b=0), height=340,
+<<<<<<< Updated upstream
         plot_bgcolor="white", paper_bgcolor="white",
         xaxis=dict(tickformat=".0%", gridcolor="#F3F4F6"),
         yaxis=dict(gridcolor="#F3F4F6"),
+=======
+        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+        font=dict(color="#A78BFA"),
+        xaxis=dict(tickformat=".0%", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+        yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+>>>>>>> Stashed changes
     )
     st.plotly_chart(fi_fig, use_container_width=True)
 
@@ -237,7 +256,7 @@ with st.container(border=True):
     hist_fig = go.Figure()
     hist_fig.add_trace(go.Histogram(
         x=df["total_cost_usd"], nbinsx=30,
-        marker_color=NAVY_100, marker_line_color=NAVY_500, marker_line_width=1,
+        marker_color="#2D1B4E", marker_line_color=NAVY_500, marker_line_width=1,
         name="Historical",
     ))
 
@@ -252,9 +271,16 @@ with st.container(border=True):
 
     hist_fig.update_layout(
         margin=dict(l=0, r=0, t=8, b=0), height=220,
+<<<<<<< Updated upstream
         plot_bgcolor="white", paper_bgcolor="white",
         xaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
         yaxis=dict(gridcolor="#F3F4F6"),
+=======
+        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+        font=dict(color="#A78BFA"),
+        xaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+        yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+>>>>>>> Stashed changes
         showlegend=False,
     )
     st.plotly_chart(hist_fig, use_container_width=True)

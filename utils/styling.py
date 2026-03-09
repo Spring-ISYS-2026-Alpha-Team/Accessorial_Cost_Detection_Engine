@@ -1,14 +1,52 @@
 """
 utils/styling.py
+<<<<<<< Updated upstream
 Shared CSS theme and fixed top navigation bar for all PACE pages.
+=======
+Dark glass theme — PACE Predictive Accessorial Cost Engine.
+Purple-magenta background image, glass cards, glowing accents.
+>>>>>>> Stashed changes
 """
+import os
+import base64
 import streamlit as st
 
+<<<<<<< Updated upstream
 # ── Color tokens ─────────────────────────────────────────────────────────────
 NAVY_900  = "#0F2B4A"
 NAVY_700  = "#1A3F6F"
 NAVY_500  = "#2563A8"
 NAVY_100  = "#DBEAFE"
+=======
+def _bg_css() -> str:
+    """Load background image as base64 CSS, fall back to gradient if missing."""
+    _root = os.path.dirname(os.path.dirname(__file__))
+    img_path = os.path.join(_root, "assets", "background.png")
+    if os.path.exists(img_path):
+        with open(img_path, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode()
+        return (
+            f"background-image: url('data:image/png;base64,{b64}');"
+            "background-size: cover;"
+            "background-position: center center;"
+            "background-attachment: fixed;"
+        )
+    return (
+        "background: "
+        "radial-gradient(ellipse 65% 55% at 8% 62%, rgba(120,20,180,0.45) 0%, transparent 58%),"
+        "radial-gradient(ellipse 55% 45% at 92% 18%, rgba(200,20,100,0.38) 0%, transparent 52%),"
+        "linear-gradient(155deg, #060012 0%, #09021a 40%, #06010f 100%);"
+        "background-attachment: fixed;"
+    )
+
+# ── Color tokens ──────────────────────────────────────────────────────────────
+# Background / structure
+DARK_BASE   = "#060012"
+DARK_MID    = "#09021a"
+GLASS_BG    = "rgba(12, 6, 30, 0.82)"
+GLASS_BORDER = "rgba(180, 80, 220, 0.28)"
+GLASS_GLOW  = "rgba(150, 50, 200, 0.18)"
+>>>>>>> Stashed changes
 
 RISK_LOW_BG   = "#D1FAE5"
 RISK_LOW_FG   = "#059669"
@@ -17,7 +55,59 @@ RISK_MED_FG   = "#D97706"
 RISK_HIGH_BG  = "#FEE2E2"
 RISK_HIGH_FG  = "#DC2626"
 
+<<<<<<< Updated upstream
 # ── Navigation pages (file paths for st.page_link — preserves session state) ──
+=======
+# Text
+TEXT_PRIMARY  = "#F1F5F9"
+TEXT_SECONDARY = "#94A3B8"
+TEXT_MUTED    = "#64748B"
+
+# Legacy color tokens — kept so existing pages don't break
+NAVY_900 = "#0A0520"
+NAVY_700 = "#1A0A40"
+NAVY_500 = ACCENT_PURPLE    # purple (was blue)
+NAVY_100 = "#2D1B4E"        # dark purple fill
+
+# Risk tier colors — glowing on dark bg
+RISK_HIGH_BG  = "rgba(220, 38, 38, 0.18)"
+RISK_HIGH_FG  = "#F87171"
+RISK_MED_BG   = "rgba(217, 119, 6, 0.18)"
+RISK_MED_FG   = "#FCD34D"
+RISK_LOW_BG   = "rgba(5, 150, 105, 0.18)"
+RISK_LOW_FG   = "#34D399"
+
+# Chart theme defaults (pass as **chart_theme() in update_layout)
+CHART_BG   = "#0f0a1e"   # dark purple — actual chart plot area
+CHART_GRID = "rgba(150,50,200,0.18)"
+CHART_AXIS = "#A78BFA"
+
+# Chart palette — use these for marker_color across pages
+CHART_PURPLE  = "#9333EA"
+CHART_BLUE    = "#38BDF8"
+CHART_RED     = "#EF4444"
+CHART_BURGUNDY = "#9F1239"
+CHART_LAVENDER = "#C4B5FD"
+
+def chart_theme(**overrides) -> dict:
+    """Dark-themed Plotly layout defaults. Merge with page-specific layout kwargs."""
+    base = {
+        "plot_bgcolor":  CHART_BG,
+        "paper_bgcolor": "#0f0a1e",
+        "font":   {"color": CHART_AXIS, "family": "Inter, Segoe UI, sans-serif"},
+        "xaxis":  {"gridcolor": CHART_GRID, "color": CHART_AXIS,
+                   "linecolor": "rgba(150,50,200,0.25)", "zerolinecolor": "rgba(150,50,200,0.2)"},
+        "yaxis":  {"gridcolor": CHART_GRID, "color": CHART_AXIS,
+                   "linecolor": "rgba(150,50,200,0.25)", "zerolinecolor": "rgba(150,50,200,0.2)"},
+        "legend": {"bgcolor": "rgba(15,10,30,0.7)", "font": {"color": "#FFFFFF"},
+                   "bordercolor": "rgba(150,50,200,0.3)", "borderwidth": 1},
+    }
+    base.update(overrides)
+    return base
+
+
+# ── Navigation pages ──────────────────────────────────────────────────────────
+>>>>>>> Stashed changes
 _NAV_PAGES = [
     ("Home",        "pages/0_Home.py"),
     ("Dashboard",   "pages/1_Dashboard.py"),
@@ -32,10 +122,20 @@ _NAV_PAGES = [
 # ── Base page CSS (injected on every page) ────────────────────────────────────
 _BASE_CSS = f"""
 <style>
+<<<<<<< Updated upstream
 /* ── Global ───────────────────────────────────────── */
 .stApp {{
     background-color: #F9FAFB;
     font-family: 'Inter', 'Segoe UI', sans-serif;
+=======
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ── Global background ── */
+.stApp {{
+    {_bg_css()}
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    color: {TEXT_PRIMARY};
+>>>>>>> Stashed changes
 }}
 
 /* ── Hide Streamlit chrome and sidebar ────────────── */
@@ -117,6 +217,7 @@ section[data-testid="stSidebarNav"] {{
 /* Sign Out button inside nav */
 [data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
 .stButton > button {{
+<<<<<<< Updated upstream
     background: transparent !important;
     color: rgba(255,255,255,0.7) !important;
     border: 1px solid rgba(255,255,255,0.25) !important;
@@ -125,6 +226,17 @@ section[data-testid="stSidebarNav"] {{
     min-height: unset !important;
     height: 26px !important;
     line-height: 1 !important;
+=======
+    background: rgba(147,51,234,0.15) !important;
+    color: rgba(220,200,255,0.8) !important;
+    border: 1px solid rgba(180,80,220,0.4) !important;
+    font-size: 12px !important;
+    padding: 4px 14px !important;
+    min-height: unset !important;
+    height: auto !important;
+    line-height: 1.4 !important;
+    border-radius: 5px !important;
+>>>>>>> Stashed changes
     white-space: nowrap !important;
 }}
 [data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
@@ -164,7 +276,107 @@ section[data-testid="stSidebarNav"] {{
     font-weight: 600 !important;
 }}
 .stButton > button[kind="primary"]:hover {{
+<<<<<<< Updated upstream
     background-color: {NAVY_700} !important;
+=======
+    box-shadow: 0 0 28px rgba(147,51,234,0.65) !important;
+    background: linear-gradient(135deg, #A855F7, #E91E8C) !important;
+}}
+
+/* Secondary buttons */
+.stButton > button:not([kind="primary"]) {{
+    background: rgba(30,10,60,0.7) !important;
+    color: {TEXT_PRIMARY} !important;
+    border: 1px solid rgba(180,80,220,0.35) !important;
+    border-radius: 8px !important;
+}}
+.stButton > button:not([kind="primary"]):hover {{
+    background: rgba(60,20,100,0.7) !important;
+    border-color: rgba(224,64,251,0.55) !important;
+}}
+
+/* ── Headings ── */
+h1 {{ color: #FFFFFF !important; font-weight: 700 !important; text-shadow: 0 0 30px rgba(180,80,220,0.4); }}
+h2 {{ color: #F1F5F9 !important; font-weight: 600 !important; }}
+h3 {{ color: #E2E8F0 !important; font-weight: 600 !important; }}
+h4, h5, h6 {{ color: #CBD5E1 !important; font-weight: 600 !important; }}
+p, .stMarkdown p {{ color: {TEXT_SECONDARY} !important; }}
+.stCaption, [data-testid="stCaptionContainer"] p {{ color: #A78BFA !important; font-size: 13px !important; }}
+.stDivider hr {{ border-color: rgba(180,80,220,0.25) !important; }}
+
+/* ── Plotly chart containers — remove white bg ── */
+[data-testid="stPlotlyChart"] {{
+    background: transparent !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+}}
+[data-testid="stPlotlyChart"] > div {{
+    background: transparent !important;
+}}
+
+/* ── Hide Plotly hover toolbar (modebar) ── */
+.modebar-container {{
+    display: none !important;
+}}
+
+/* ── Hide "Running..." status widget ── */
+[data-testid="stStatusWidget"] {{
+    display: none !important;
+}}
+
+/* ── Expand (⤢) buttons inside chart containers ── */
+[data-testid="stVerticalBlockBorderWrapper"] [data-testid="baseButton-secondary"] {{
+    background: rgba(20, 8, 50, 0.7) !important;
+    border: 1px solid rgba(180,80,220,0.3) !important;
+    border-radius: 10px !important;
+    color: {ACCENT_SOFT} !important;
+    font-size: 16px !important;
+    padding: 6px 10px !important;
+    line-height: 1 !important;
+    box-shadow: 0 0 12px rgba(150,50,200,0.12) !important;
+    backdrop-filter: blur(10px) !important;
+    transition: box-shadow 0.2s, border-color 0.2s, color 0.2s !important;
+}}
+[data-testid="stVerticalBlockBorderWrapper"] [data-testid="baseButton-secondary"]:hover {{
+    background: rgba(30, 10, 70, 0.85) !important;
+    border-color: rgba(180,80,220,0.6) !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 0 20px rgba(150,50,200,0.35) !important;
+}}
+
+/* ── Chart containers — float elevation + hover grow ── */
+[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stPlotlyChart"]) > div {{
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1),
+                box-shadow 0.3s ease !important;
+    cursor: pointer;
+}}
+[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stPlotlyChart"]) > div:hover {{
+    transform: translateY(-6px) scale(1.012) !important;
+    box-shadow: 0 20px 60px rgba(150,50,200,0.5),
+                0 0 40px rgba(150,50,200,0.3),
+                0 0 0 1px rgba(180,80,220,0.45) !important;
+}}
+
+/* ── Inputs & Forms ── */
+[data-testid="stTextInput"] input,
+[data-testid="stNumberInput"] input,
+[data-testid="stSelectbox"] > div > div,
+[data-testid="stMultiSelect"] > div > div,
+[data-baseweb="input"],
+[data-baseweb="select"] {{
+    background: rgba(20,8,50,0.75) !important;
+    border: 1px solid rgba(180,80,220,0.35) !important;
+    border-radius: 8px !important;
+    color: {TEXT_PRIMARY} !important;
+}}
+[data-testid="stTextInput"] input:focus,
+[data-testid="stNumberInput"] input:focus {{
+    border-color: {ACCENT_PURPLE} !important;
+    box-shadow: 0 0 12px rgba(147,51,234,0.3) !important;
+}}
+[data-testid="stForm"] {{
+    background: transparent !important;
+>>>>>>> Stashed changes
     border: none !important;
 }}
 
@@ -175,9 +387,27 @@ h3 {{ color: #374151 !important; font-weight: 600 !important; }}
 
 /* ── Dataframe ───────────────────────────────────── */
 [data-testid="stDataFrame"] {{
+<<<<<<< Updated upstream
     border: 1px solid #E5E7EB !important;
     border-radius: 8px;
     overflow: hidden;
+=======
+    border: 1px solid rgba(180,80,220,0.3) !important;
+    border-radius: 0 !important;
+    overflow: hidden !important;
+}}
+/* Scrollbar in dataframe */
+[data-testid="stDataFrame"] ::-webkit-scrollbar {{
+    width: 6px !important;
+    height: 6px !important;
+}}
+[data-testid="stDataFrame"] ::-webkit-scrollbar-track {{
+    background: #0f0a1e !important;
+}}
+[data-testid="stDataFrame"] ::-webkit-scrollbar-thumb {{
+    background: rgba(147,51,234,0.5) !important;
+    border-radius: 0 !important;
+>>>>>>> Stashed changes
 }}
 
 /* ── File uploader ───────────────────────────────── */

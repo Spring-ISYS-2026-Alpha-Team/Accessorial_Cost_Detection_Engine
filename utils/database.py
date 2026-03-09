@@ -35,7 +35,6 @@ def get_connection():
     Returns None and shows an error if connection fails.
     """
     if not PYODBC_AVAILABLE:
-        st.error("pyodbc is not installed. Run: pip install pyodbc")
         return None
 
     server   = _get_secret("DB_SERVER")
@@ -60,8 +59,7 @@ def get_connection():
 
     try:
         return pyodbc.connect(conn_str)
-    except Exception as e:
-        st.error(f"Azure SQL connection failed: {e}")
+    except Exception:
         return None
 
 
@@ -93,13 +91,19 @@ def get_table_data(_conn, table_name: str, row_limit: int = 500) -> pd.DataFrame
         return pd.DataFrame()
 
 
+<<<<<<< Updated upstream
 @st.cache_data
 def get_shipments(_conn, row_limit: int = 1000) -> pd.DataFrame:
     """Fetch shipment records joined with carrier name."""
+=======
+@st.cache_data(ttl=300)
+def get_shipments(_conn) -> pd.DataFrame:
+    """Fetch all shipment records joined with carrier name."""
+>>>>>>> Stashed changes
     if _conn is None:
         return pd.DataFrame()
-    query = f"""
-        SELECT TOP {row_limit}
+    query = """
+        SELECT
             s.ShipmentId       AS shipment_id,
             s.ShipDate         AS ship_date,
             c.carrier_name     AS carrier,

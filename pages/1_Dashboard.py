@@ -9,7 +9,11 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from auth_utils import check_auth
 from utils.database import get_connection, get_shipments
 from utils.mock_data import generate_mock_shipments
+<<<<<<< Updated upstream
 from utils.styling import inject_css, top_nav, NAVY_900, NAVY_500
+=======
+from utils.styling import inject_css, top_nav, NAVY_900, NAVY_500, chart_theme, risk_badge_html
+>>>>>>> Stashed changes
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -31,12 +35,122 @@ top_nav(username)
 
 # ── Load data (live DB with mock fallback) ────────────────────────────────────
 conn = get_connection()
-df_all = get_shipments(conn) if conn is not None else pd.DataFrame()
-using_live = not df_all.empty
+df_raw = get_shipments(conn) if conn is not None else pd.DataFrame()
+using_live = not df_raw.empty
 if not using_live:
-    df_all = generate_mock_shipments(300)
+    df_raw = generate_mock_shipments(300)
     st.info("Live database unavailable — showing demo data.", icon="ℹ️")
-df_all["ship_date_dt"] = pd.to_datetime(df_all["ship_date"])
+df_raw["ship_date_dt"] = pd.to_datetime(df_raw["ship_date"])
+df_all = df_raw  # module-level alias used by dialogs
+
+# ── Shared chart style constants ──────────────────────────────────────────────
+_DARK = dict(plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+             font=dict(color="#A78BFA"))
+_GRID = dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8",
+             linecolor="rgba(150,50,200,0.2)")
+
+
+
+def _sort_buttons(chart_key: str):
+    opts = ["Value ↑", "Value ↓", "A-Z"]
+    skey = f"sort_{chart_key}"
+    if skey not in st.session_state:
+        st.session_state[skey] = "Value ↓"
+    cols = st.columns(len(opts))
+    for col, lbl in zip(cols, opts):
+        with col:
+            kind = "primary" if st.session_state[skey] == lbl else "secondary"
+            if st.button(lbl, key=f"sb_{chart_key}_{lbl}", type=kind,
+                         use_container_width=True):
+                st.session_state[skey] = lbl
+    return st.session_state[skey]
+
+
+# ── Chart-builder functions ───────────────────────────────────────────────────
+def _build_risk_dist_fig(df: pd.DataFrame, height=260) -> go.Figure:
+    if len(df) == 0:
+        return go.Figure()
+    hist_df = df.copy()
+    hist_df["bucket"] = pd.cut(
+        hist_df["risk_score"],
+        bins=[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+        labels=["0–10%", "10–20%", "20–30%", "30–40%", "40–50%",
+                "50–60%", "60–70%", "70–80%", "80–90%", "90–100%"],
+        include_lowest=True,
+    )
+    bucket_counts = hist_df["bucket"].value_counts().sort_index().reset_index()
+    bucket_counts.columns = ["Bracket", "Count"]
+
+    def bucket_color(label):
+        pct = int(label.split("–")[0])
+        if pct >= 67: return "#EF4444"    # high risk — red
+        if pct >= 34: return "#A855F7"    # medium risk — purple
+        return "#34D399"                  # low risk — green
+
+    bar_colors = [bucket_color(b) for b in bucket_counts["Bracket"].astype(str)]
+    fig = go.Figure(go.Bar(
+        x=bucket_counts["Bracket"].astype(str),
+        y=bucket_counts["Count"],
+        marker_color=bar_colors,
+        hovertemplate="<b>%{x}</b><br>%{y} shipments<extra></extra>",
+    ))
+    fig.update_layout(
+        **_DARK, height=height,
+        margin=dict(l=0, r=0, t=8, b=0),
+        xaxis=dict(tickfont=dict(size=11), **_GRID),
+        yaxis=dict(tickfont=dict(size=11), **_GRID),
+    )
+    return fig
+
+
+def _build_carrier_risk_fig(df: pd.DataFrame, height=260, sort_by="Value ↓") -> go.Figure:
+    if len(df) == 0:
+        return go.Figure()
+    carrier_risk = df.groupby("carrier")["risk_score"].mean().reset_index()
+    carrier_risk["risk_pct"] = (carrier_risk["risk_score"] * 100).round(1)
+    if sort_by == "Value ↑":
+        carrier_risk = carrier_risk.sort_values("risk_score", ascending=False)
+    elif sort_by == "Value ↓":
+        carrier_risk = carrier_risk.sort_values("risk_score", ascending=True)
+    else:
+        carrier_risk = carrier_risk.sort_values("carrier", ascending=False)
+    fig = go.Figure(go.Bar(
+        x=carrier_risk["risk_pct"],
+        y=carrier_risk["carrier"],
+        orientation="h",
+        marker_color="#9333EA",
+        text=carrier_risk["risk_pct"].apply(lambda v: f"{v:.1f}%"),
+        textposition="outside",
+        hovertemplate="<b>%{y}</b><br>Avg Risk: %{x:.1f}%<extra></extra>",
+    ))
+    fig.update_layout(
+        **_DARK, height=height,
+        margin=dict(l=0, r=80, t=8, b=0),
+        xaxis=dict(title="Avg Risk Score (%)", range=[0, 100],
+                   tickfont=dict(size=11), **_GRID),
+        yaxis=dict(tickfont=dict(size=11), color="#94A3B8"),
+    )
+    return fig
+
+
+# ── Expand dialogs (module-level) ─────────────────────────────────────────────
+@st.dialog("Risk Score Distribution", width="large")
+def _popup_risk_dist():
+    st.caption(f"{len(df_all):,} shipments · all time")
+    st.plotly_chart(_build_risk_dist_fig(df_all, height=480),
+                    use_container_width=True)
+
+
+@st.dialog("Avg Risk Score by Carrier", width="large")
+def _popup_carrier_risk():
+    sort_by = _sort_buttons("carrier_risk")
+    st.caption(f"{len(df_all):,} shipments · all carriers")
+    if len(df_all) == 0:
+        st.info("No data available.")
+    else:
+        st.plotly_chart(_build_carrier_risk_fig(df_all, height=480, sort_by=sort_by),
+                        use_container_width=True)
+
 
 # ── Inline filters ────────────────────────────────────────────────────────────
 min_date = df_all["ship_date_dt"].min().date()
@@ -101,10 +215,16 @@ col_left, col_right = st.columns(2, gap="medium")
 
 with col_left:
     with st.container(border=True):
-        st.markdown("#### Risk Score Distribution")
-        st.caption("Number of shipments by risk score bracket")
+        hdr, btn = st.columns([9, 1])
+        with hdr:
+            st.markdown("#### Risk Score Distribution")
+            st.caption("Number of shipments by risk score bracket")
+        with btn:
+            if st.button("⤢", key="exp_risk_dist", help="Expand chart"):
+                _popup_risk_dist()
 
         if total > 0:
+<<<<<<< Updated upstream
             hist_df = df.copy()
             hist_df["bucket"] = pd.cut(
                 hist_df["risk_score"],
@@ -137,15 +257,24 @@ with col_left:
                 yaxis=dict(tickfont=dict(size=11), gridcolor="#F3F4F6"),
             )
             st.plotly_chart(fig, use_container_width=True)
+=======
+            st.plotly_chart(_build_risk_dist_fig(df), use_container_width=True)
+>>>>>>> Stashed changes
         else:
             st.info("No data matches the current filters.")
 
 with col_right:
     with st.container(border=True):
-        st.markdown("#### Avg Risk Score by Carrier")
-        st.caption("Carriers ranked by average predicted risk")
+        hdr, btn = st.columns([9, 1])
+        with hdr:
+            st.markdown("#### Avg Risk Score by Carrier")
+            st.caption("Carriers ranked by average predicted risk")
+        with btn:
+            if st.button("⤢", key="exp_carrier_risk", help="Expand chart"):
+                _popup_carrier_risk()
 
         if total > 0:
+<<<<<<< Updated upstream
             carrier_risk = (
                 df.groupby("carrier")["risk_score"]
                 .mean()
@@ -171,8 +300,37 @@ with col_right:
                 yaxis=dict(tickfont=dict(size=11)),
             )
             st.plotly_chart(fig2, use_container_width=True)
+=======
+            st.plotly_chart(_build_carrier_risk_fig(df), use_container_width=True)
+>>>>>>> Stashed changes
         else:
             st.info("No data matches the current filters.")
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ── Risk tier summary row ──────────────────────────────────────────────────────
+with st.container(border=True):
+    st.markdown("#### Risk Tier Breakdown")
+    st.caption("Shipment counts and accessorial exposure by tier")
+    t1, t2, t3 = st.columns(3)
+    for col, tier, bg, fg in [
+        (t1, "Low",    "rgba(5,150,105,0.85)",   "#34D399"),
+        (t2, "Medium", "rgba(80,20,160,0.85)",    "#A78BFA"),
+        (t3, "High",   "rgba(180,20,20,0.85)",    "#F87171"),
+    ]:
+        tier_df = df[df["risk_tier"] == tier]
+        with col:
+            st.markdown(
+                f"<div style='background:{bg};border:1px solid {fg}33;border-radius:10px;"
+                f"padding:16px 20px;text-align:center;'>"
+                f"<div style='font-size:11px;font-weight:600;letter-spacing:0.8px;"
+                f"color:{fg};text-transform:uppercase;margin-bottom:6px;'>{tier} Risk</div>"
+                f"<div style='font-size:28px;font-weight:700;color:#FFFFFF;'>{len(tier_df):,}</div>"
+                f"<div style='font-size:12px;color:{fg};margin-top:4px;'>"
+                f"${tier_df['accessorial_charge_usd'].sum():,.0f} accessorial</div>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
 
 st.markdown("<br>", unsafe_allow_html=True)
 
