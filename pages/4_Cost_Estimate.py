@@ -8,10 +8,10 @@ from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from auth_utils import check_auth
-from utils.database import get_connection, get_shipments, get_carriers
+from utils.database import get_connection, get_shipments
 from utils.mock_data import generate_mock_shipments
-from utils.styling import inject_css, top_nav, NAVY_500, NAVY_100
-from utils import ml
+from utils.styling import inject_css, top_nav, NAVY_500, NAVY_100, chart_theme
+from utils.cost_model import get_cost_model
 
 st.set_page_config(
     page_title="PACE — Cost Estimate",
@@ -29,17 +29,16 @@ if not check_auth():
 username = st.session_state.get("username", "User")
 top_nav(username)
 
-# ── Load data ─────────────────────────────────────────────────────────────────
+# ── Load data (live DB with mock fallback) ────────────────────────────────────
 _conn = get_connection()
 _df_raw = get_shipments(_conn) if _conn is not None else pd.DataFrame()
 if _df_raw.empty:
-    _df_raw = generate_mock_shipments(300)
+    _df_raw = generate_mock_shipments(1000)
     st.info("Live database unavailable — showing demo data.", icon="ℹ️")
 
 df = _df_raw.copy()
 
-# ── Load saved model ───────────────────────────────────────────────────────────
-model, metrics = ml.load_model()
+model = get_cost_model(len(df), df)
 
 # ── Header ────────────────────────────────────────────────────────────────────
 st.markdown("## Cost Estimator")
@@ -106,43 +105,24 @@ form_col, result_col = st.columns([2, 3], gap="large")
 with form_col:
     with st.container(border=True):
         st.markdown("#### Shipment Details")
-        carrier_name  = st.selectbox("Carrier", list(carrier_options.keys()))
-        facility_type = st.selectbox("Facility Type", facility_types)
-        appt_type     = st.selectbox("Appointment Type", appt_types)
-        distance      = st.number_input("Distance (miles)", min_value=50, max_value=3000, value=500, step=50)
-        weight        = st.number_input("Weight (lbs)", min_value=500, max_value=44000, value=10000, step=500)
-
-        with st.expander("Advanced", expanded=False):
-            dwell     = st.number_input(
-                "Avg Dwell Time (hrs)", min_value=0.5, max_value=24.0,
-                value=dwell_defaults.get(facility_type, 4.0), step=0.5,
-            )
-            ship_month = st.selectbox(
-                "Ship Month", list(range(1, 13)), index=now.month - 1,
-                format_func=lambda m: datetime(2024, m, 1).strftime("%B"),
-            )
-            ship_dow = st.selectbox(
-                "Day of Week", list(range(7)), index=now.weekday(),
-                format_func=lambda d: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][d],
-            )
-
-        estimate_clicked = st.button(
-            "Estimate Cost →", type="primary",
-            use_container_width=True, disabled=model is None,
-        )
-        if model is None:
-            st.caption("Train the model above first.")
+        carriers_list  = sorted(df["carrier"].dropna().unique())
+        facilities_list = sorted(df["facility"].dropna().unique())
+        carrier  = st.selectbox("Carrier",  carriers_list)
+        facility = st.selectbox("Facility", facilities_list)
+        weight   = st.number_input("Weight (lbs)", min_value=100, max_value=44_000,
+                                   value=10_000, step=500)
+        miles    = st.number_input("Miles", min_value=50, max_value=2_400,
+                                   value=500, step=50)
+        estimate_clicked = st.button("Estimate Cost →", type="primary",
+                                     use_container_width=True)
 
     with st.expander("ℹ️ Model Info", expanded=False):
-        if metrics:
-            st.markdown(f"""
-**Algorithm:** LightGBM Gradient Boosting
-**Features:** Carrier, Facility Type, Appointment Type, Distance, Weight, Dwell Time, Month, Day of Week
-**Target:** Total Cost (Linehaul + Accessorial)
-**Training rows:** {metrics['n_train']:,} &nbsp;|&nbsp; **Test rows:** {metrics['n_test']:,}
-            """)
-        else:
-            st.markdown("Model not yet trained.")
+        st.markdown("""
+**Algorithm:** Random Forest Regressor
+**Training samples:** {len(df):,}
+**Features:** Carrier, Facility, Weight, Miles
+**Target:** Total Shipment Cost
+        """)
 
 with result_col:
     avg_total  = df["total_cost_usd"].mean() if not df.empty else 0
@@ -206,9 +186,10 @@ with result_col:
             ))
             comp_fig.update_layout(
                 margin=dict(l=0, r=0, t=8, b=0), height=220,
-                plot_bgcolor="white", paper_bgcolor="white",
-                yaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-                xaxis=dict(gridcolor="#F3F4F6"),
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#94A3B8"),
+                yaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+                xaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
                 showlegend=False,
             )
             st.plotly_chart(comp_fig, use_container_width=True)
@@ -227,27 +208,45 @@ with result_col:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ── Feature importance ────────────────────────────────────────────────────────
-if model is not None:
-    with st.container(border=True):
-        st.markdown("#### What Drives Cost — Feature Importance")
-        st.caption("Relative contribution of each input to the model's predictions")
+with st.container(border=True):
+    st.markdown("#### What Drives Cost — Feature Importance")
+    st.caption("Relative contribution of each input to the model's predictions")
 
-        importance = ml.get_feature_importance(model)
-        fi_fig = go.Figure(go.Bar(
-            x=importance["Importance"],
-            y=importance["Feature"],
-            orientation="h",
-            marker_color=NAVY_500,
-            text=importance["Importance"].apply(lambda v: f"{v:,.0f}"),
-            textposition="outside",
-        ))
-        fi_fig.update_layout(
-            margin=dict(l=0, r=80, t=8, b=0), height=300,
-            plot_bgcolor="white", paper_bgcolor="white",
-            xaxis=dict(gridcolor="#F3F4F6"),
-            yaxis=dict(gridcolor="#F3F4F6"),
-        )
-        st.plotly_chart(fi_fig, use_container_width=True)
+    rf      = model.named_steps["rf"]
+    pre     = model.named_steps["pre"]
+    enc     = pre.named_transformers_["cat"]
+    cat_names = list(enc.get_feature_names_out(["carrier", "facility"]))
+    all_names = cat_names + ["weight_lbs", "miles"]
+
+    importance = pd.DataFrame({
+        "Feature":    all_names,
+        "Importance": rf.feature_importances_,
+    }).sort_values("Importance", ascending=True).tail(12)
+
+    importance["Feature"] = (
+        importance["Feature"]
+        .str.replace("carrier_", "Carrier: ", regex=False)
+        .str.replace("facility_", "Facility: ", regex=False)
+        .str.replace("weight_lbs", "Weight (lbs)", regex=False)
+        .str.replace("miles", "Miles", regex=False)
+    )
+
+    fi_fig = go.Figure(go.Bar(
+        x=importance["Importance"],
+        y=importance["Feature"],
+        orientation="h",
+        marker_color=NAVY_500,
+        text=importance["Importance"].apply(lambda v: f"{v:.1%}"),
+        textposition="outside",
+    ))
+    fi_fig.update_layout(
+        margin=dict(l=0, r=60, t=8, b=0), height=340,
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#94A3B8"),
+        xaxis=dict(tickformat=".0%", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+        yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+    )
+    st.plotly_chart(fi_fig, use_container_width=True)
 
 # ── Historical distribution ───────────────────────────────────────────────────
 with st.container(border=True):
@@ -271,9 +270,10 @@ with st.container(border=True):
 
     hist_fig.update_layout(
         margin=dict(l=0, r=0, t=8, b=0), height=220,
-        plot_bgcolor="white", paper_bgcolor="white",
-        xaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-        yaxis=dict(gridcolor="#F3F4F6"),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#94A3B8"),
+        xaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+        yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
         showlegend=False,
     )
     st.plotly_chart(hist_fig, use_container_width=True)
