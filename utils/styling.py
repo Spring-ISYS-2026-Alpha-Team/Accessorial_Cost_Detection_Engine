@@ -1,23 +1,13 @@
 """
 utils/styling.py
-<<<<<<< Updated upstream
-Shared CSS theme and fixed top navigation bar for all PACE pages.
-=======
 Dark glass theme — PACE Predictive Accessorial Cost Engine.
 Purple-magenta background image, glass cards, glowing accents.
->>>>>>> Stashed changes
 """
 import os
 import base64
 import streamlit as st
 
-<<<<<<< Updated upstream
-# ── Color tokens ─────────────────────────────────────────────────────────────
-NAVY_900  = "#0F2B4A"
-NAVY_700  = "#1A3F6F"
-NAVY_500  = "#2563A8"
-NAVY_100  = "#DBEAFE"
-=======
+
 def _bg_css() -> str:
     """Load background image as base64 CSS, fall back to gradient if missing."""
     _root = os.path.dirname(os.path.dirname(__file__))
@@ -39,29 +29,23 @@ def _bg_css() -> str:
         "background-attachment: fixed;"
     )
 
+
 # ── Color tokens ──────────────────────────────────────────────────────────────
 # Background / structure
-DARK_BASE   = "#060012"
-DARK_MID    = "#09021a"
-GLASS_BG    = "rgba(12, 6, 30, 0.82)"
+DARK_BASE    = "#060012"
+DARK_MID     = "#09021a"
+GLASS_BG     = "rgba(12, 6, 30, 0.82)"
 GLASS_BORDER = "rgba(180, 80, 220, 0.28)"
-GLASS_GLOW  = "rgba(150, 50, 200, 0.18)"
->>>>>>> Stashed changes
+GLASS_GLOW   = "rgba(150, 50, 200, 0.18)"
 
-RISK_LOW_BG   = "#D1FAE5"
-RISK_LOW_FG   = "#059669"
-RISK_MED_BG   = "#FEF3C7"
-RISK_MED_FG   = "#D97706"
-RISK_HIGH_BG  = "#FEE2E2"
-RISK_HIGH_FG  = "#DC2626"
+# Accent colors
+ACCENT_PURPLE = "#9333EA"
+ACCENT_SOFT   = "#A78BFA"
 
-<<<<<<< Updated upstream
-# ── Navigation pages (file paths for st.page_link — preserves session state) ──
-=======
 # Text
-TEXT_PRIMARY  = "#F1F5F9"
+TEXT_PRIMARY   = "#F1F5F9"
 TEXT_SECONDARY = "#94A3B8"
-TEXT_MUTED    = "#64748B"
+TEXT_MUTED     = "#64748B"
 
 # Legacy color tokens — kept so existing pages don't break
 NAVY_900 = "#0A0520"
@@ -77,17 +61,18 @@ RISK_MED_FG   = "#FCD34D"
 RISK_LOW_BG   = "rgba(5, 150, 105, 0.18)"
 RISK_LOW_FG   = "#34D399"
 
-# Chart theme defaults (pass as **chart_theme() in update_layout)
-CHART_BG   = "#0f0a1e"   # dark purple — actual chart plot area
-CHART_GRID = "rgba(150,50,200,0.18)"
-CHART_AXIS = "#A78BFA"
+# Chart theme defaults
+CHART_BG      = "#0f0a1e"
+CHART_GRID    = "rgba(150,50,200,0.18)"
+CHART_AXIS    = "#A78BFA"
 
-# Chart palette — use these for marker_color across pages
-CHART_PURPLE  = "#9333EA"
-CHART_BLUE    = "#38BDF8"
-CHART_RED     = "#EF4444"
+# Chart palette
+CHART_PURPLE   = "#9333EA"
+CHART_BLUE     = "#38BDF8"
+CHART_RED      = "#EF4444"
 CHART_BURGUNDY = "#9F1239"
 CHART_LAVENDER = "#C4B5FD"
+
 
 def chart_theme(**overrides) -> dict:
     """Dark-themed Plotly layout defaults. Merge with page-specific layout kwargs."""
@@ -107,7 +92,6 @@ def chart_theme(**overrides) -> dict:
 
 
 # ── Navigation pages ──────────────────────────────────────────────────────────
->>>>>>> Stashed changes
 _NAV_PAGES = [
     ("Home",        "pages/0_Home.py"),
     ("Dashboard",   "pages/1_Dashboard.py"),
@@ -122,12 +106,6 @@ _NAV_PAGES = [
 # ── Base page CSS (injected on every page) ────────────────────────────────────
 _BASE_CSS = f"""
 <style>
-<<<<<<< Updated upstream
-/* ── Global ───────────────────────────────────────── */
-.stApp {{
-    background-color: #F9FAFB;
-    font-family: 'Inter', 'Segoe UI', sans-serif;
-=======
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 /* ── Global background ── */
@@ -135,10 +113,9 @@ _BASE_CSS = f"""
     {_bg_css()}
     font-family: 'Inter', 'Segoe UI', sans-serif;
     color: {TEXT_PRIMARY};
->>>>>>> Stashed changes
 }}
 
-/* ── Hide Streamlit chrome and sidebar ────────────── */
+/* ── Hide Streamlit chrome and sidebar ── */
 #MainMenu, header, footer {{ visibility: hidden; }}
 [data-testid="stSidebar"],
 [data-testid="collapsedControl"],
@@ -146,7 +123,7 @@ section[data-testid="stSidebarNav"] {{
     display: none !important;
 }}
 
-/* ── Page content padding ──────────────────────────── */
+/* ── Page content padding ── */
 .block-container {{
     padding-top: 1rem !important;
     padding-left: 2.5rem !important;
@@ -154,7 +131,7 @@ section[data-testid="stSidebarNav"] {{
     max-width: 1400px !important;
 }}
 
-/* ── Nav bar: style the columns row that contains page links ── */
+/* ── Nav bar ── */
 [data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"]) {{
     background: {NAVY_900} !important;
     border-bottom: 2px solid {NAVY_700} !important;
@@ -164,15 +141,11 @@ section[data-testid="stSidebarNav"] {{
     box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
     align-items: center !important;
 }}
-
-/* Tighten column padding inside nav */
 [data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
 > div[data-testid="stColumn"] > div {{
     padding: 0 2px !important;
     gap: 0 !important;
 }}
-
-/* Reset default page link card styling */
 [data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
 [data-testid="stPageLink"] {{
     background: transparent !important;
@@ -181,8 +154,6 @@ section[data-testid="stSidebarNav"] {{
     padding: 0 !important;
     min-height: unset !important;
 }}
-
-/* Nav link text — target a, p, span to cover all Streamlit versions */
 [data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
 [data-testid="stPageLink"] a,
 [data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
@@ -213,20 +184,8 @@ section[data-testid="stSidebarNav"] {{
     color: #FFFFFF !important;
     background: rgba(255,255,255,0.12) !important;
 }}
-
-/* Sign Out button inside nav */
 [data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
 .stButton > button {{
-<<<<<<< Updated upstream
-    background: transparent !important;
-    color: rgba(255,255,255,0.7) !important;
-    border: 1px solid rgba(255,255,255,0.25) !important;
-    font-size: 11px !important;
-    padding: 2px 8px !important;
-    min-height: unset !important;
-    height: 26px !important;
-    line-height: 1 !important;
-=======
     background: rgba(147,51,234,0.15) !important;
     color: rgba(220,200,255,0.8) !important;
     border: 1px solid rgba(180,80,220,0.4) !important;
@@ -236,7 +195,6 @@ section[data-testid="stSidebarNav"] {{
     height: auto !important;
     line-height: 1.4 !important;
     border-radius: 5px !important;
->>>>>>> Stashed changes
     white-space: nowrap !important;
 }}
 [data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
@@ -246,28 +204,34 @@ section[data-testid="stSidebarNav"] {{
     background: rgba(255,255,255,0.1) !important;
 }}
 
-/* ── Metric Cards ─────────────────────────────────── */
+/* ── Metric Cards ── */
 [data-testid="stMetric"] {{
-    background-color: #FFFFFF;
-    border: 1px solid #E5E7EB;
-    border-radius: 12px;
+    background: rgba(12, 6, 30, 0.82) !important;
+    border: 1px solid rgba(180, 80, 220, 0.28) !important;
+    border-radius: 12px !important;
     padding: 20px 24px !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    box-shadow: 0 0 18px rgba(150,50,200,0.12), 0 4px 16px rgba(0,0,0,0.35) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
 }}
 [data-testid="stMetricLabel"] > div {{
     font-size: 11px !important;
     font-weight: 600 !important;
-    letter-spacing: 0.6px;
-    color: #6B7280 !important;
-    text-transform: uppercase;
+    letter-spacing: 0.8px !important;
+    color: {ACCENT_SOFT} !important;
+    text-transform: uppercase !important;
 }}
 [data-testid="stMetricValue"] > div {{
     font-size: 26px !important;
     font-weight: 700 !important;
-    color: #111827 !important;
+    color: {TEXT_PRIMARY} !important;
+}}
+[data-testid="stMetricDelta"] > div {{
+    font-size: 12px !important;
+    color: {TEXT_SECONDARY} !important;
 }}
 
-/* ── Primary Buttons ─────────────────────────────── */
+/* ── Buttons ── */
 .stButton > button[kind="primary"] {{
     background-color: {NAVY_900} !important;
     color: #FFFFFF !important;
@@ -276,14 +240,9 @@ section[data-testid="stSidebarNav"] {{
     font-weight: 600 !important;
 }}
 .stButton > button[kind="primary"]:hover {{
-<<<<<<< Updated upstream
-    background-color: {NAVY_700} !important;
-=======
     box-shadow: 0 0 28px rgba(147,51,234,0.65) !important;
     background: linear-gradient(135deg, #A855F7, #E91E8C) !important;
 }}
-
-/* Secondary buttons */
 .stButton > button:not([kind="primary"]) {{
     background: rgba(30,10,60,0.7) !important;
     color: {TEXT_PRIMARY} !important;
@@ -304,7 +263,7 @@ p, .stMarkdown p {{ color: {TEXT_SECONDARY} !important; }}
 .stCaption, [data-testid="stCaptionContainer"] p {{ color: #A78BFA !important; font-size: 13px !important; }}
 .stDivider hr {{ border-color: rgba(180,80,220,0.25) !important; }}
 
-/* ── Plotly chart containers — remove white bg ── */
+/* ── Plotly chart containers ── */
 [data-testid="stPlotlyChart"] {{
     background: transparent !important;
     border-radius: 8px !important;
@@ -314,17 +273,13 @@ p, .stMarkdown p {{ color: {TEXT_SECONDARY} !important; }}
     background: transparent !important;
 }}
 
-/* ── Hide Plotly hover toolbar (modebar) ── */
-.modebar-container {{
-    display: none !important;
-}}
+/* ── Hide Plotly modebar ── */
+.modebar-container {{ display: none !important; }}
 
 /* ── Hide "Running..." status widget ── */
-[data-testid="stStatusWidget"] {{
-    display: none !important;
-}}
+[data-testid="stStatusWidget"] {{ display: none !important; }}
 
-/* ── Expand (⤢) buttons inside chart containers ── */
+/* ── Expand (⤢) buttons ── */
 [data-testid="stVerticalBlockBorderWrapper"] [data-testid="baseButton-secondary"] {{
     background: rgba(20, 8, 50, 0.7) !important;
     border: 1px solid rgba(180,80,220,0.3) !important;
@@ -344,7 +299,7 @@ p, .stMarkdown p {{ color: {TEXT_SECONDARY} !important; }}
     box-shadow: 0 0 20px rgba(150,50,200,0.35) !important;
 }}
 
-/* ── Chart containers — float elevation + hover grow ── */
+/* ── Chart container hover elevation ── */
 [data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stPlotlyChart"]) > div {{
     transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1),
                 box-shadow 0.3s ease !important;
@@ -376,27 +331,15 @@ p, .stMarkdown p {{ color: {TEXT_SECONDARY} !important; }}
 }}
 [data-testid="stForm"] {{
     background: transparent !important;
->>>>>>> Stashed changes
     border: none !important;
 }}
 
-/* ── Headings ────────────────────────────────────── */
-h1 {{ color: #111827 !important; font-weight: 700 !important; }}
-h2 {{ color: #1F2937 !important; font-weight: 600 !important; }}
-h3 {{ color: #374151 !important; font-weight: 600 !important; }}
-
-/* ── Dataframe ───────────────────────────────────── */
+/* ── Dataframe ── */
 [data-testid="stDataFrame"] {{
-<<<<<<< Updated upstream
-    border: 1px solid #E5E7EB !important;
-    border-radius: 8px;
-    overflow: hidden;
-=======
     border: 1px solid rgba(180,80,220,0.3) !important;
     border-radius: 0 !important;
     overflow: hidden !important;
 }}
-/* Scrollbar in dataframe */
 [data-testid="stDataFrame"] ::-webkit-scrollbar {{
     width: 6px !important;
     height: 6px !important;
@@ -407,22 +350,9 @@ h3 {{ color: #374151 !important; font-weight: 600 !important; }}
 [data-testid="stDataFrame"] ::-webkit-scrollbar-thumb {{
     background: rgba(147,51,234,0.5) !important;
     border-radius: 0 !important;
->>>>>>> Stashed changes
 }}
 
-/* ── File uploader ───────────────────────────────── */
-[data-testid="stFileUploader"] {{
-    border: 2px dashed #D1D5DB;
-    border-radius: 12px;
-    background-color: #F9FAFB;
-    padding: 16px;
-}}
-[data-testid="stFileUploader"]:hover {{
-    border-color: {NAVY_500};
-    background-color: {NAVY_100};
-}}
-
-/* ── Alerts ──────────────────────────────────────── */
+/* ── Alerts ── */
 [data-testid="stAlert"] {{ border-radius: 8px !important; }}
 </style>
 """
@@ -439,7 +369,6 @@ def top_nav(username: str) -> None:
     stays within the existing WebSocket session (no page reload, no auth loss).
     Call this at the top of every authenticated page, after inject_css().
     """
-    # Logo | nav links × 8 | user label | sign-out button
     logo_col, *page_cols, user_col, out_col = st.columns(
         [1.4] + [1.0] * 8 + [1.0, 0.7]
     )

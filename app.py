@@ -1,8 +1,4 @@
 # File: app.py
-<<<<<<< Updated upstream
-import streamlit as st
-from auth_utils import check_auth
-=======
 import os
 import base64
 import streamlit as st
@@ -24,7 +20,6 @@ _FALLBACK = {
     "admin": {"password": "admin", "role": "admin"},
     "user":  {"password": "user",  "role": "user"},
 }
->>>>>>> Stashed changes
 
 st.set_page_config(
     page_title="PACE — Sign In",
@@ -33,33 +28,8 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# Hide sidebar entirely on the login page
 st.markdown("""
 <style>
-<<<<<<< Updated upstream
-[data-testid="stSidebar"]       { display: none; }
-[data-testid="collapsedControl"] { display: none; }
-</style>
-""", unsafe_allow_html=True)
-
-# Already logged in → go straight to home
-if check_auth():
-    st.switch_page("pages/0_Home.py")
-
-# ── Page layout ───────────────────────────────────────────────────────────────
-st.markdown("""
-<div style="text-align:center; padding:48px 0 28px;">
-    <div style="font-size:48px; line-height:1;">📦</div>
-    <h1 style="font-size:34px; font-weight:700; color:#0F2B4A;
-               margin:10px 0 4px; letter-spacing:2px;">PACE</h1>
-    <p style="color:#6B7280; font-size:14px; margin:0; letter-spacing:0.3px;">
-        Predictive Accessorial Cost Engine
-    </p>
-</div>
-""", unsafe_allow_html=True)
-
-# ── Login card ────────────────────────────────────────────────────────────────
-=======
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 .stApp {
@@ -192,7 +162,6 @@ else:
     """, unsafe_allow_html=True)
 
 # ── Login card ─────────────────────────────────────────────────────────────────
->>>>>>> Stashed changes
 with st.container(border=True):
     st.markdown("""
     <div style="margin:-4px -4px 16px -4px;">
@@ -214,40 +183,30 @@ with st.container(border=True):
         submitted = st.form_submit_button(
             "Sign In", use_container_width=True, type="primary"
         )
-
-    if submitted:
-        if username and password:
-            st.session_state["authenticated"] = True
-            st.session_state["username"] = username
-            st.switch_page("pages/0_Home.py")
-        else:
-<<<<<<< Updated upstream
-            st.error("Please enter both username and password.")
-=======
-            conn = get_connection()
-            role = verify_pace_user(conn, u, p)
-            if role is None and u in _FALLBACK and p == _FALLBACK[u]["password"]:
-                role = _FALLBACK[u]["role"]
-            if role:
-                st.session_state["authenticated"] = True
-                st.session_state["username"] = u
-                st.session_state["role"] = role
-                st.session_state["_data_preloaded"] = False
-                st.session_state["post_load_dest"] = (
-                    "pages/8_Admin.py" if role == "admin" else "pages/0_Home.py"
-                )
-                st.switch_page("pages/loading.py")
+        if submitted:
+            if username and password:
+                u, p = username.strip(), password
+                conn = get_connection()
+                role = verify_pace_user(conn, u, p)
+                if role is None and u in _FALLBACK and p == _FALLBACK[u]["password"]:
+                    role = _FALLBACK[u]["role"]
+                if role:
+                    st.session_state["authenticated"] = True
+                    st.session_state["username"] = u
+                    st.session_state["role"] = role
+                    st.session_state["_data_preloaded"] = False
+                    st.session_state["post_load_dest"] = (
+                        "pages/8_Admin.py" if role == "admin" else "pages/0_Home.py"
+                    )
+                    st.switch_page("pages/loading.py")
+                else:
+                    st.error("Invalid username or password.")
             else:
-                st.error("Invalid username or password.")
->>>>>>> Stashed changes
+                st.error("Please enter both username and password.")
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("""
-<<<<<<< Updated upstream
-<p style="text-align:center; color:#9CA3AF; font-size:11px; margin-top:40px;">
-=======
 <p style="text-align:center; color:#475569; font-size:11px; margin-top:28px; letter-spacing:0.3px;">
->>>>>>> Stashed changes
     © 2026 PACE &nbsp;·&nbsp; University of Arkansas &nbsp;·&nbsp; ISYS 43603
 </p>
 """, unsafe_allow_html=True)

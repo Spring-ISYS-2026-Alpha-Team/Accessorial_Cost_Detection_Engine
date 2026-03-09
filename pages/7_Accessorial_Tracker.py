@@ -154,15 +154,20 @@ def _build_carrier_acc_fig(df_with_acc: pd.DataFrame, height=280, sort_by="Value
     return fig
 
 
-def _build_facility_fig(df_with_acc: pd.DataFrame, height=260) -> go.Figure:
+def _build_facility_fig(df_with_acc: pd.DataFrame, height=260, sort_by="Value ↓") -> go.Figure:
     fac_acc = (
         df_with_acc.groupby("facility")
         .agg(total=("accessorial_charge_usd", "sum"),
              avg  =("accessorial_charge_usd", "mean"),
              count=("accessorial_charge_usd", "count"))
         .reset_index()
-        .sort_values("total", ascending=True)
     )
+    if sort_by == "Value ↑":
+        fac_acc = fac_acc.sort_values("total", ascending=False)
+    elif sort_by == "Value ↓":
+        fac_acc = fac_acc.sort_values("total", ascending=True)
+    else:
+        fac_acc = fac_acc.sort_values("facility", ascending=False)
     fig = go.Figure(go.Bar(
         x=fac_acc["total"],
         y=fac_acc["facility"].apply(lambda v: v if len(v) <= 30 else v[:27] + "…"),
@@ -215,41 +220,37 @@ def _build_trend_fig(df_with_acc: pd.DataFrame, height=260) -> go.Figure:
 # ── Expand dialogs (module-level) ─────────────────────────────────────────────
 @st.dialog("Accessorial Costs by Type", width="large")
 def _popup_donut():
-    sel = _range_buttons("donut")
-    df_f = _filter_by_range(df_all, sel)
-    df_f_acc = df_f[df_f["accessorial_charge_usd"] > 0].copy()
-    total = df_f_acc["accessorial_charge_usd"].sum()
-    st.caption(f"{len(df_f):,} shipments · {sel} view")
-    if df_f_acc.empty:
-        st.info("No accessorial charges for the selected range.")
+    df_acc = df_all[df_all["accessorial_charge_usd"] > 0].copy()
+    total = df_acc["accessorial_charge_usd"].sum()
+    st.caption(f"{len(df_acc):,} shipments with accessorial charges")
+    if df_acc.empty:
+        st.info("No accessorial charges available.")
     else:
-        st.plotly_chart(_build_donut_fig(df_f_acc, total, height=480),
+        st.plotly_chart(_build_donut_fig(df_acc, total, height=480),
                         use_container_width=True)
 
 
 @st.dialog("Accessorial Costs by Carrier", width="large")
 def _popup_carrier_acc():
-    sel = _range_buttons("carrier_acc")
-    df_f = _filter_by_range(df_all, sel)
-    df_f_acc = df_f[df_f["accessorial_charge_usd"] > 0].copy()
-    st.caption(f"{len(df_f):,} shipments · {sel} view")
-    if df_f_acc.empty:
-        st.info("No data for the selected range.")
+    sort_by = _sort_buttons("carrier_acc")
+    df_acc = df_all[df_all["accessorial_charge_usd"] > 0].copy()
+    st.caption(f"{len(df_acc):,} shipments with accessorial charges")
+    if df_acc.empty:
+        st.info("No data available.")
     else:
-        st.plotly_chart(_build_carrier_acc_fig(df_f_acc, height=480),
+        st.plotly_chart(_build_carrier_acc_fig(df_acc, height=480, sort_by=sort_by),
                         use_container_width=True)
 
 
 @st.dialog("Accessorial Costs by Facility", width="large")
 def _popup_facility():
-    sel = _range_buttons("facility")
-    df_f = _filter_by_range(df_all, sel)
-    df_f_acc = df_f[df_f["accessorial_charge_usd"] > 0].copy()
-    st.caption(f"{len(df_f):,} shipments · {sel} view")
-    if df_f_acc.empty:
-        st.info("No data for the selected range.")
+    sort_by = _sort_buttons("facility")
+    df_acc = df_all[df_all["accessorial_charge_usd"] > 0].copy()
+    st.caption(f"{len(df_acc):,} shipments with accessorial charges")
+    if df_acc.empty:
+        st.info("No data available.")
     else:
-        st.plotly_chart(_build_facility_fig(df_f_acc, height=480),
+        st.plotly_chart(_build_facility_fig(df_acc, height=480, sort_by=sort_by),
                         use_container_width=True)
 
 
@@ -346,30 +347,8 @@ with col_l:
             .sort_values("total", ascending=False)
         )
         if not type_data.empty:
-<<<<<<< Updated upstream
-            donut_fig = go.Figure(go.Pie(
-                labels=type_data["accessorial_type"],
-                values=type_data["total"],
-                hole=0.55,
-                marker_colors=[RISK_HIGH_FG, RISK_MED_FG, NAVY_500, "#7C3AED"],
-                textinfo="label+percent",
-                hovertemplate="<b>%{label}</b><br>Total: $%{value:,.0f}<br>Share: %{percent}<extra></extra>",
-            ))
-            donut_fig.add_annotation(
-                text=f"${total_acc:,.0f}", x=0.5, y=0.5,
-                font_size=16, font_color="#111827", showarrow=False, font_family="Inter",
-            )
-            donut_fig.update_layout(
-                margin=dict(l=0, r=0, t=8, b=0), height=280,
-                paper_bgcolor="white", showlegend=True,
-                legend=dict(orientation="v", x=1.0, y=0.5),
-            )
-            st.plotly_chart(donut_fig, use_container_width=True)
-
-=======
             st.plotly_chart(_build_donut_fig(df_with_acc, total_acc),
                             use_container_width=True)
->>>>>>> Stashed changes
             st.dataframe(
                 type_data.rename(columns={
                     "accessorial_type": "Type",
@@ -395,43 +374,9 @@ with col_r:
             if st.button("⤢", key="exp_carrier_acc", help="Expand chart"):
                 _popup_carrier_acc()
 
-<<<<<<< Updated upstream
-        carrier_acc = (
-            df_with_acc.groupby("carrier")
-            .agg(total=("accessorial_charge_usd", "sum"),
-                 count=("accessorial_charge_usd", "count"),
-                 avg  =("accessorial_charge_usd", "mean"))
-            .reset_index()
-            .sort_values("total", ascending=True)
-        )
-        if not carrier_acc.empty:
-            fig_c = go.Figure(go.Bar(
-                x=carrier_acc["total"],
-                y=carrier_acc["carrier"],
-                orientation="h",
-                marker_color=NAVY_500,
-                text=carrier_acc["total"].apply(lambda v: f"${v:,.0f}"),
-                textposition="outside",
-                customdata=carrier_acc[["count", "avg"]].values,
-                hovertemplate=(
-                    "<b>%{y}</b><br>"
-                    "Total: $%{x:,.0f}<br>"
-                    "Occurrences: %{customdata[0]}<br>"
-                    "Avg per shipment: $%{customdata[1]:,.2f}<extra></extra>"
-                ),
-            ))
-            fig_c.update_layout(
-                margin=dict(l=0, r=80, t=8, b=0), height=280,
-                plot_bgcolor="white", paper_bgcolor="white",
-                xaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-                yaxis=dict(gridcolor="#F3F4F6"),
-            )
-            st.plotly_chart(fig_c, use_container_width=True)
-=======
         if not df_with_acc.empty:
             st.plotly_chart(_build_carrier_acc_fig(df_with_acc),
                             use_container_width=True)
->>>>>>> Stashed changes
         else:
             st.info("No data for the current filter selection.")
 
@@ -450,36 +395,9 @@ with col_a:
             if st.button("⤢", key="exp_facility", help="Expand chart"):
                 _popup_facility()
 
-<<<<<<< Updated upstream
-        fac_acc = (
-            df_with_acc.groupby("facility")
-            .agg(total=("accessorial_charge_usd", "sum"),
-                 avg  =("accessorial_charge_usd", "mean"),
-                 count=("accessorial_charge_usd", "count"))
-            .reset_index()
-            .sort_values("total", ascending=True)
-        )
-        if not fac_acc.empty:
-            fac_fig = go.Figure(go.Bar(
-                x=fac_acc["total"],
-                y=fac_acc["facility"].apply(lambda v: v if len(v) <= 30 else v[:27] + "…"),
-                orientation="h",
-                marker_color=RISK_HIGH_FG,
-                text=fac_acc["total"].apply(lambda v: f"${v:,.0f}"),
-                textposition="outside",
-            ))
-            fac_fig.update_layout(
-                margin=dict(l=0, r=80, t=8, b=0), height=260,
-                plot_bgcolor="white", paper_bgcolor="white",
-                xaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-                yaxis=dict(gridcolor="#F3F4F6"),
-            )
-            st.plotly_chart(fac_fig, use_container_width=True)
-=======
         if not df_with_acc.empty:
             st.plotly_chart(_build_facility_fig(df_with_acc),
                             use_container_width=True)
->>>>>>> Stashed changes
         else:
             st.info("No data for the current filter selection.")
 
@@ -493,35 +411,9 @@ with col_b:
             if st.button("⤢", key="exp_trend", help="Expand chart"):
                 _popup_trend()
 
-<<<<<<< Updated upstream
-        df_with_acc["week"] = df_with_acc["ship_date_dt"].dt.to_period("W").dt.start_time
-        weekly_acc = (
-            df_with_acc.groupby("week")["accessorial_charge_usd"]
-            .sum()
-            .reset_index()
-            .rename(columns={"accessorial_charge_usd": "total"})
-        )
-        if not weekly_acc.empty:
-            trend_fig = go.Figure(go.Scatter(
-                x=weekly_acc["week"], y=weekly_acc["total"],
-                mode="lines+markers",
-                line=dict(color=RISK_HIGH_FG, width=2),
-                marker=dict(color=RISK_HIGH_FG, size=6),
-                fill="tozeroy",
-                fillcolor="rgba(220,38,38,0.08)",
-            ))
-            trend_fig.update_layout(
-                margin=dict(l=0, r=0, t=8, b=0), height=260,
-                plot_bgcolor="white", paper_bgcolor="white",
-                xaxis=dict(gridcolor="#F3F4F6"),
-                yaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-            )
-            st.plotly_chart(trend_fig, use_container_width=True)
-=======
         if not df_with_acc.empty:
             st.plotly_chart(_build_trend_fig(df_with_acc),
                             use_container_width=True)
->>>>>>> Stashed changes
         else:
             st.info("No trend data available for this filter.")
 
@@ -610,8 +502,6 @@ with st.container(border=True):
             "Total Cost ($)":   st.column_config.NumberColumn(format="$%.2f"),
         },
     )
-<<<<<<< Updated upstream
-=======
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -779,4 +669,3 @@ else:
         if selected_rows:
             row_data = filtered_risk.iloc[selected_rows[0]].to_dict()
             _show_risk_detail(row_data)
->>>>>>> Stashed changes

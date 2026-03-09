@@ -4,6 +4,7 @@ Azure SQL database connection for PACE.
 Reads credentials from .env (local) or st.secrets (Streamlit Cloud).
 """
 import os
+import hashlib
 import streamlit as st
 import pandas as pd
 
@@ -91,15 +92,9 @@ def get_table_data(_conn, table_name: str, row_limit: int = 500) -> pd.DataFrame
         return pd.DataFrame()
 
 
-<<<<<<< Updated upstream
-@st.cache_data
-def get_shipments(_conn, row_limit: int = 1000) -> pd.DataFrame:
-    """Fetch shipment records joined with carrier name."""
-=======
 @st.cache_data(ttl=300)
 def get_shipments(_conn) -> pd.DataFrame:
     """Fetch all shipment records joined with carrier name."""
->>>>>>> Stashed changes
     if _conn is None:
         return pd.DataFrame()
     query = """
@@ -182,6 +177,74 @@ def get_facilities(_conn) -> pd.DataFrame:
         return pd.read_sql("SELECT * FROM Facilities ORDER BY facility_name", _conn)
     except Exception:
         return pd.DataFrame()
+
+
+def verify_pace_user(_conn, username: str, password: str):
+    """
+    Verify a username/password against the PaceUsers table.
+    Passwords are stored as SHA-256 hex digests.
+    Returns the user's role string on success, None on failure.
+    """
+    if _conn is None:
+        return None
+    pw_hash = hashlib.sha256(password.encode()).hexdigest()
+    try:
+        row = pd.read_sql(
+            "SELECT role FROM PaceUsers WHERE username = ? AND password_hash = ?",
+            _conn,
+            params=(username, pw_hash),
+        )
+        if not row.empty:
+            return str(row.iloc[0]["role"])
+    except Exception:
+        pass
+    return None
+
+
+def get_pace_users(_conn) -> pd.DataFrame:
+    """Return all PaceUsers rows (no password_hash)."""
+    if _conn is None:
+        return pd.DataFrame()
+    try:
+        return pd.read_sql(
+            "SELECT username, role, created_at FROM PaceUsers ORDER BY username",
+            _conn,
+        )
+    except Exception:
+        try:
+            return pd.read_sql("SELECT username, role FROM PaceUsers ORDER BY username", _conn)
+        except Exception:
+            return pd.DataFrame()
+
+
+def create_pace_user(_conn, username: str, password: str, role: str) -> tuple[bool, str]:
+    """Insert a new user into PaceUsers. Returns (success, message)."""
+    if _conn is None:
+        return False, "No database connection."
+    pw_hash = hashlib.sha256(password.encode()).hexdigest()
+    try:
+        cursor = _conn.cursor()
+        cursor.execute(
+            "INSERT INTO PaceUsers (username, password_hash, role) VALUES (?, ?, ?)",
+            (username.strip(), pw_hash, role),
+        )
+        _conn.commit()
+        return True, f"User '{username}' created successfully."
+    except Exception as e:
+        return False, str(e)
+
+
+def delete_pace_user(_conn, username: str) -> tuple[bool, str]:
+    """Delete a user from PaceUsers by username."""
+    if _conn is None:
+        return False, "No database connection."
+    try:
+        cursor = _conn.cursor()
+        cursor.execute("DELETE FROM PaceUsers WHERE username = ?", (username,))
+        _conn.commit()
+        return True, f"User '{username}' deleted."
+    except Exception as e:
+        return False, str(e)
 
 
 @st.cache_data

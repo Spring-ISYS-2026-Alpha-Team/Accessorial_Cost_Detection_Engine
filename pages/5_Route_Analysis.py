@@ -271,47 +271,6 @@ chart_l, chart_r = st.columns(2, gap="medium")
 
 with chart_l:
     with st.container(border=True):
-<<<<<<< Updated upstream
-        st.markdown("#### Most Expensive Lanes")
-        st.caption("Top 8 by average cost per mile")
-        top_exp = lane_metrics.nlargest(8, "avg_cpm").sort_values("avg_cpm")
-        fig = go.Figure(go.Bar(
-            x=top_exp["avg_cpm"],
-            y=top_exp[label].apply(lambda v: v if len(v) <= 28 else v[:25] + "…"),
-            orientation="h",
-            marker_color="#DC2626",
-            text=top_exp["avg_cpm"].apply(lambda v: f"${v:.2f}/mi"),
-            textposition="outside",
-        ))
-        fig.update_layout(
-            margin=dict(l=0, r=80, t=8, b=0), height=300,
-            plot_bgcolor="white", paper_bgcolor="white",
-            xaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-            yaxis=dict(gridcolor="#F3F4F6"),
-        )
-        st.plotly_chart(fig, use_container_width=True)
-
-with chart_r:
-    with st.container(border=True):
-        st.markdown("#### Most Efficient Lanes")
-        st.caption("Top 8 by lowest average cost per mile")
-        top_cheap = lane_metrics.nsmallest(8, "avg_cpm").sort_values("avg_cpm", ascending=False)
-        fig2 = go.Figure(go.Bar(
-            x=top_cheap["avg_cpm"],
-            y=top_cheap[label].apply(lambda v: v if len(v) <= 28 else v[:25] + "…"),
-            orientation="h",
-            marker_color="#059669",
-            text=top_cheap["avg_cpm"].apply(lambda v: f"${v:.2f}/mi"),
-            textposition="outside",
-        ))
-        fig2.update_layout(
-            margin=dict(l=0, r=80, t=8, b=0), height=300,
-            plot_bgcolor="white", paper_bgcolor="white",
-            xaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-            yaxis=dict(gridcolor="#F3F4F6"),
-        )
-        st.plotly_chart(fig2, use_container_width=True)
-=======
         hdr, btn = st.columns([9, 1])
         with hdr:
             st.markdown("#### Most Expensive Lanes")
@@ -333,39 +292,11 @@ with chart_r:
                 _popup_efficient()
         st.plotly_chart(_build_efficient_fig(lane_metrics, label),
                         use_container_width=True)
->>>>>>> Stashed changes
 
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ── Volume vs cost scatter ────────────────────────────────────────────────────
 with st.container(border=True):
-<<<<<<< Updated upstream
-    st.markdown("#### Lane Volume vs Avg Cost")
-    st.caption("Identify high-volume expensive lanes — biggest opportunity for savings")
-    scatter_fig = px.scatter(
-        lane_metrics,
-        x="shipments",
-        y="avg_cost",
-        size="total_cost",
-        color="avg_risk",
-        hover_name=label,
-        color_continuous_scale=["#059669", "#D97706", "#DC2626"],
-        labels={
-            "shipments": "Shipment Volume",
-            "avg_cost":  "Avg Total Cost ($)",
-            "avg_risk":  "Avg Risk Score",
-            "total_cost":"Total Spend",
-        },
-        hover_data={"avg_cpm": ":.2f", "accessorial_rate": ":.1f"},
-    )
-    scatter_fig.update_layout(
-        margin=dict(l=0, r=0, t=8, b=0), height=320,
-        plot_bgcolor="white", paper_bgcolor="white",
-        xaxis=dict(gridcolor="#F3F4F6"),
-        yaxis=dict(gridcolor="#F3F4F6", tickprefix="$"),
-    )
-    st.plotly_chart(scatter_fig, use_container_width=True)
-=======
     hdr, btn = st.columns([9, 1])
     with hdr:
         st.markdown("#### Lane Volume vs Avg Cost")
@@ -375,7 +306,6 @@ with st.container(border=True):
             _popup_scatter()
     st.plotly_chart(_build_scatter_fig(lane_metrics, label),
                     use_container_width=True)
->>>>>>> Stashed changes
 
 st.markdown("<br>", unsafe_allow_html=True)
 

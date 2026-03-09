@@ -9,11 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from auth_utils import check_auth
 from utils.database import get_connection, get_shipments
 from utils.mock_data import generate_mock_shipments
-<<<<<<< Updated upstream
-from utils.styling import inject_css, top_nav, NAVY_900, NAVY_500
-=======
 from utils.styling import inject_css, top_nav, NAVY_900, NAVY_500, chart_theme, risk_badge_html
->>>>>>> Stashed changes
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -224,42 +220,7 @@ with col_left:
                 _popup_risk_dist()
 
         if total > 0:
-<<<<<<< Updated upstream
-            hist_df = df.copy()
-            hist_df["bucket"] = pd.cut(
-                hist_df["risk_score"],
-                bins=[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
-                labels=["0–10%","10–20%","20–30%","30–40%","40–50%",
-                        "50–60%","60–70%","70–80%","80–90%","90–100%"],
-                include_lowest=True,
-            )
-            bucket_counts = hist_df["bucket"].value_counts().sort_index().reset_index()
-            bucket_counts.columns = ["Bracket", "Count"]
-
-            def bucket_color(label):
-                pct = int(label.split("–")[0])
-                if pct >= 67: return NAVY_900
-                if pct >= 34: return "#D97706"
-                return "#059669"
-
-            bar_colors = [bucket_color(b) for b in bucket_counts["Bracket"].astype(str)]
-
-            fig = go.Figure(go.Bar(
-                x=bucket_counts["Bracket"].astype(str),
-                y=bucket_counts["Count"],
-                marker_color=bar_colors,
-                hovertemplate="<b>%{x}</b><br>%{y} shipments<extra></extra>",
-            ))
-            fig.update_layout(
-                margin=dict(l=0, r=0, t=8, b=0), height=260,
-                plot_bgcolor="white", paper_bgcolor="white",
-                xaxis=dict(tickfont=dict(size=11), gridcolor="#F3F4F6"),
-                yaxis=dict(tickfont=dict(size=11), gridcolor="#F3F4F6"),
-            )
-            st.plotly_chart(fig, use_container_width=True)
-=======
             st.plotly_chart(_build_risk_dist_fig(df), use_container_width=True)
->>>>>>> Stashed changes
         else:
             st.info("No data matches the current filters.")
 
@@ -274,35 +235,7 @@ with col_right:
                 _popup_carrier_risk()
 
         if total > 0:
-<<<<<<< Updated upstream
-            carrier_risk = (
-                df.groupby("carrier")["risk_score"]
-                .mean()
-                .reset_index()
-                .sort_values("risk_score", ascending=True)
-            )
-            carrier_risk["risk_pct"] = (carrier_risk["risk_score"] * 100).round(1)
-
-            fig2 = go.Figure(go.Bar(
-                x=carrier_risk["risk_pct"],
-                y=carrier_risk["carrier"],
-                orientation="h",
-                marker_color=NAVY_500,
-                text=carrier_risk["risk_pct"].apply(lambda v: f"{v:.1f}%"),
-                textposition="outside",
-                hovertemplate="<b>%{y}</b><br>Avg Risk: %{x:.1f}%<extra></extra>",
-            ))
-            fig2.update_layout(
-                margin=dict(l=0, r=40, t=8, b=0), height=260,
-                plot_bgcolor="white", paper_bgcolor="white",
-                xaxis=dict(title="Avg Risk Score (%)", range=[0, 100],
-                           tickfont=dict(size=11), gridcolor="#F3F4F6"),
-                yaxis=dict(tickfont=dict(size=11)),
-            )
-            st.plotly_chart(fig2, use_container_width=True)
-=======
             st.plotly_chart(_build_carrier_risk_fig(df), use_container_width=True)
->>>>>>> Stashed changes
         else:
             st.info("No data matches the current filters.")
 

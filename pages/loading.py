@@ -157,23 +157,22 @@ try:
            .reset_index().sort_values("cost_per_mile")
     )
 
-    time.sleep(0.3)
     progress_bar.progress(100)
     status_slot.markdown(
         "<p style='text-align:center;color:#34D399;font-size:14px;font-weight:600;"
         "margin:8px 0;'>✓ &nbsp;Everything ready</p>",
         unsafe_allow_html=True,
     )
-    time.sleep(0.7)
+    time.sleep(0.15)
 
 except Exception as e:
     progress_bar.progress(100)
     status_slot.markdown(
         f"<p style='text-align:center;color:#FCD34D;font-size:13px;margin:6px 0;'>"
-        f"⚠ Loaded with warnings</p>",
+        f"⚠ Loaded with warnings — {e}</p>",
         unsafe_allow_html=True,
     )
-    time.sleep(1.0)
+    time.sleep(0.3)
 
 st.session_state["_data_preloaded"] = True
 st.switch_page(dest)

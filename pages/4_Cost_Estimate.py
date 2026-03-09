@@ -11,6 +11,7 @@ from auth_utils import check_auth
 from utils.database import get_connection, get_shipments
 from utils.mock_data import generate_mock_shipments
 from utils.styling import inject_css, top_nav, NAVY_500, NAVY_100
+from utils.cost_model import get_cost_model
 
 st.set_page_config(
     page_title="PACE — Cost Estimate",
@@ -37,36 +38,8 @@ if _df_raw.empty:
 
 df = _df_raw.copy()
 
-<<<<<<< Updated upstream
-# ── Train model (cached so it only runs once) ─────────────────────────────────
-@st.cache_resource
-def train_model(_data_hash):
-    from sklearn.ensemble import RandomForestRegressor
-    from sklearn.compose import ColumnTransformer
-    from sklearn.preprocessing import OneHotEncoder
-    from sklearn.pipeline import Pipeline
-
-    cat_cols = ["carrier", "facility"]
-    num_cols = ["weight_lbs", "miles"]
-
-    preprocessor = ColumnTransformer([
-        ("cat", OneHotEncoder(handle_unknown="ignore"), cat_cols),
-        ("num", "passthrough", num_cols),
-    ])
-    model = Pipeline([
-        ("pre", preprocessor),
-        ("rf",  RandomForestRegressor(n_estimators=200, random_state=42)),
-    ])
-    X = df[cat_cols + num_cols]
-    y = df["total_cost_usd"]
-    model.fit(X, y)
-    return model
-
-model = train_model(len(df))
-=======
 with st.spinner("Preparing cost model…"):
     model = get_cost_model(len(df), df)
->>>>>>> Stashed changes
 
 # ── Header ────────────────────────────────────────────────────────────────────
 st.markdown("## Cost Estimator")
@@ -174,16 +147,10 @@ with result_col:
             ))
             comp_fig.update_layout(
                 margin=dict(l=0, r=0, t=8, b=0), height=220,
-<<<<<<< Updated upstream
-                plot_bgcolor="white", paper_bgcolor="white",
-                yaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-                xaxis=dict(gridcolor="#F3F4F6"),
-=======
                 plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
                 font=dict(color="#A78BFA"),
                 yaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
                 xaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
->>>>>>> Stashed changes
                 showlegend=False,
             )
             st.plotly_chart(comp_fig, use_container_width=True)
@@ -235,16 +202,10 @@ with st.container(border=True):
     ))
     fi_fig.update_layout(
         margin=dict(l=0, r=60, t=8, b=0), height=340,
-<<<<<<< Updated upstream
-        plot_bgcolor="white", paper_bgcolor="white",
-        xaxis=dict(tickformat=".0%", gridcolor="#F3F4F6"),
-        yaxis=dict(gridcolor="#F3F4F6"),
-=======
         plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
         font=dict(color="#A78BFA"),
         xaxis=dict(tickformat=".0%", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
         yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
->>>>>>> Stashed changes
     )
     st.plotly_chart(fi_fig, use_container_width=True)
 
@@ -271,16 +232,9 @@ with st.container(border=True):
 
     hist_fig.update_layout(
         margin=dict(l=0, r=0, t=8, b=0), height=220,
-<<<<<<< Updated upstream
-        plot_bgcolor="white", paper_bgcolor="white",
-        xaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-        yaxis=dict(gridcolor="#F3F4F6"),
-=======
         plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
         font=dict(color="#A78BFA"),
         xaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
         yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
->>>>>>> Stashed changes
-        showlegend=False,
     )
     st.plotly_chart(hist_fig, use_container_width=True)

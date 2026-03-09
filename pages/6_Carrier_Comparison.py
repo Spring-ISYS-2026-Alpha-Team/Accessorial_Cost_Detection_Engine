@@ -346,47 +346,6 @@ ch1, ch2 = st.columns(2, gap="medium")
 
 with ch1:
     with st.container(border=True):
-<<<<<<< Updated upstream
-        st.markdown("#### Avg Cost per Mile")
-        sorted_m = metrics.sort_values("avg_cpm")
-        fig = go.Figure(go.Bar(
-            x=sorted_m["carrier"],
-            y=sorted_m["avg_cpm"],
-            marker_color=[color_map[c] for c in sorted_m["carrier"]],
-            text=sorted_m["avg_cpm"].apply(lambda v: f"${v:.2f}"),
-            textposition="outside",
-        ))
-        fig.update_layout(
-            margin=dict(l=0, r=0, t=8, b=0), height=280,
-            plot_bgcolor="white", paper_bgcolor="white",
-            yaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-            xaxis=dict(gridcolor="#F3F4F6"),
-            showlegend=False,
-        )
-        st.plotly_chart(fig, use_container_width=True)
-
-with ch2:
-    with st.container(border=True):
-        st.markdown("#### High Risk Shipment Rate")
-        sorted_m2 = metrics.sort_values("high_risk_pct", ascending=False)
-        bar_colors = ["#DC2626" if p > 40 else "#D97706" if p > 25 else "#059669"
-                      for p in sorted_m2["high_risk_pct"]]
-        fig2 = go.Figure(go.Bar(
-            x=sorted_m2["carrier"],
-            y=sorted_m2["high_risk_pct"],
-            marker_color=bar_colors,
-            text=sorted_m2["high_risk_pct"].apply(lambda v: f"{v:.1f}%"),
-            textposition="outside",
-        ))
-        fig2.update_layout(
-            margin=dict(l=0, r=0, t=8, b=0), height=280,
-            plot_bgcolor="white", paper_bgcolor="white",
-            yaxis=dict(ticksuffix="%", gridcolor="#F3F4F6"),
-            xaxis=dict(gridcolor="#F3F4F6"),
-            showlegend=False,
-        )
-        st.plotly_chart(fig2, use_container_width=True)
-=======
         hdr, btn = st.columns([9, 1])
         with hdr:
             st.markdown("#### Avg Cost per Mile")
@@ -404,7 +363,6 @@ with ch2:
             if st.button("⤢", key="exp_high_risk", help="Expand chart"):
                 _popup_high_risk()
         st.plotly_chart(_build_high_risk_fig(metrics), use_container_width=True)
->>>>>>> Stashed changes
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -412,68 +370,6 @@ ch3, ch4 = st.columns(2, gap="medium")
 
 with ch3:
     with st.container(border=True):
-<<<<<<< Updated upstream
-        st.markdown("#### Accessorial Cost Rate")
-        st.caption("Accessorial charges as % of total spend")
-        sorted_m3 = metrics.sort_values("accessorial_rate", ascending=False)
-        fig3 = go.Figure(go.Bar(
-            x=sorted_m3["carrier"],
-            y=sorted_m3["accessorial_rate"],
-            marker_color=[color_map[c] for c in sorted_m3["carrier"]],
-            text=sorted_m3["accessorial_rate"].apply(lambda v: f"{v:.1f}%"),
-            textposition="outside",
-        ))
-        fig3.update_layout(
-            margin=dict(l=0, r=0, t=8, b=0), height=260,
-            plot_bgcolor="white", paper_bgcolor="white",
-            yaxis=dict(ticksuffix="%", gridcolor="#F3F4F6"),
-            xaxis=dict(gridcolor="#F3F4F6"),
-            showlegend=False,
-        )
-        st.plotly_chart(fig3, use_container_width=True)
-
-with ch4:
-    with st.container(border=True):
-        st.markdown("#### Carrier Performance Radar")
-        st.caption("Normalized across cost, risk, and accessorial rate (lower = better)")
-
-        def norm(series, invert=True):
-            mn, mx = series.min(), series.max()
-            if mx == mn:
-                return pd.Series([0.5] * len(series), index=series.index)
-            n = (series - mn) / (mx - mn)
-            return 1 - n if invert else n
-
-        radar_df = metrics.copy()
-        radar_df["cost_score"]      = norm(radar_df["avg_cpm"],          invert=True)
-        radar_df["risk_score_norm"] = norm(radar_df["avg_risk"],         invert=True)
-        radar_df["acc_score"]       = norm(radar_df["accessorial_rate"], invert=True)
-        radar_df["volume_score"]    = norm(radar_df["shipments"],        invert=False)
-
-        categories = ["Cost Efficiency", "Low Risk", "Low Accessorial", "Volume"]
-
-        radar_fig = go.Figure()
-        for _, row in radar_df.iterrows():
-            vals = [row["cost_score"], row["risk_score_norm"],
-                    row["acc_score"],  row["volume_score"]]
-            vals += [vals[0]]
-            radar_fig.add_trace(go.Scatterpolar(
-                r=vals,
-                theta=categories + [categories[0]],
-                fill="toself",
-                name=row["carrier"],
-                line_color=color_map[row["carrier"]],
-                opacity=0.6,
-            ))
-        radar_fig.update_layout(
-            polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
-            margin=dict(l=20, r=20, t=20, b=20),
-            height=260,
-            paper_bgcolor="white",
-            legend=dict(font=dict(size=10)),
-        )
-        st.plotly_chart(radar_fig, use_container_width=True)
-=======
         hdr, btn = st.columns([9, 1])
         with hdr:
             st.markdown("#### Accessorial Cost Rate")
@@ -493,4 +389,3 @@ with ch4:
             if st.button("⤢", key="exp_radar", help="Expand chart"):
                 _popup_radar()
         st.plotly_chart(_build_radar_fig(metrics), use_container_width=True)
->>>>>>> Stashed changes
