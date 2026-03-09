@@ -5,3 +5,5 @@ python-dotenv
 numpy
 plotly
 scikit-learn
+lightgbm
+joblib

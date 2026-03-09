@@ -61,12 +61,18 @@ avg_cpm           = df["cost_per_mile"].mean()
 accessorial_rate  = (len(df[df["accessorial_charge_usd"] > 0]) / total_shipments * 100) if total_shipments else 0
 
 k1, k2, k3, k4, k5, k6 = st.columns(6)
-with k1: st.metric("Total Shipments",   f"{total_shipments:,}")
-with k2: st.metric("Total Revenue",     f"${total_revenue:,.0f}")
-with k3: st.metric("Total Costs",       f"${total_costs:,.0f}")
-with k4: st.metric("Accessorial Costs", f"${total_accessorial:,.0f}")
-with k5: st.metric("Avg Cost / Mile",   f"${avg_cpm:.2f}")
-with k6: st.metric("Accessorial Rate",  f"{accessorial_rate:.1f}%")
+with k1: st.metric("Total Shipments",   f"{total_shipments:,}",
+                   help="Total number of shipment records in the selected dataset.")
+with k2: st.metric("Total Revenue",     f"${total_revenue:,.0f}",
+                   help="Sum of all revenue billed to customers across every shipment.")
+with k3: st.metric("Total Costs",       f"${total_costs:,.0f}",
+                   help="Combined linehaul and accessorial costs paid to carriers.")
+with k4: st.metric("Accessorial Costs", f"${total_accessorial:,.0f}",
+                   help="Extra charges beyond base freight — detention, liftgate, fuel surcharges, etc.")
+with k5: st.metric("Avg Cost / Mile",   f"${avg_cpm:.2f}",
+                   help="Average carrier cost per mile across all shipments. Lower is more efficient.")
+with k6: st.metric("Accessorial Rate",  f"{accessorial_rate:.1f}%",
+                   help="Percentage of shipments that incurred at least one accessorial charge.")
 
 st.markdown("<br>", unsafe_allow_html=True)
 

@@ -94,7 +94,7 @@ def get_table_data(_conn, table_name: str, row_limit: int = 500) -> pd.DataFrame
 
 
 @st.cache_data
-def get_shipments(_conn, row_limit: int = 1000) -> pd.DataFrame:
+def get_shipments(_conn, row_limit: int = 7500) -> pd.DataFrame:
     """Fetch shipment records joined with carrier name."""
     if _conn is None:
         return pd.DataFrame()
@@ -134,7 +134,7 @@ def get_shipments(_conn, row_limit: int = 1000) -> pd.DataFrame:
 
 
 @st.cache_data
-def get_accessorial_charges(_conn, row_limit: int = 2000) -> pd.DataFrame:
+def get_accessorial_charges(_conn, row_limit: int = 10000) -> pd.DataFrame:
     """Fetch accessorial charge records."""
     if _conn is None:
         return pd.DataFrame()
@@ -181,7 +181,7 @@ def get_facilities(_conn) -> pd.DataFrame:
 
 
 @st.cache_data
-def get_shipments_with_charges(_conn, row_limit: int = 2000) -> pd.DataFrame:
+def get_shipments_with_charges(_conn, row_limit: int = 10000) -> pd.DataFrame:
     """
     Accessorial Charges joined to Shipment + Carrier for the Accessorial Tracker page.
     Returns one row per charge with carrier/facility context.

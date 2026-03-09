@@ -86,13 +86,17 @@ est_cost_delta  = est_cost - df_all["accessorial_charge_usd"].sum()
 
 c1, c2, c3, c4 = st.columns(4)
 with c1:
-    st.metric("Total Shipments",     f"{total:,}",            delta=f"{total_delta:+,} vs all")
+    st.metric("Total Shipments",     f"{total:,}",            delta=f"{total_delta:+,} vs all",
+              help="Number of shipments matching the current filter. Delta compares to the unfiltered total.")
 with c2:
-    st.metric("Avg Risk Score",      f"{avg_risk:.1f}%",      delta=f"{avg_risk_delta:+.1f}%")
+    st.metric("Avg Risk Score",      f"{avg_risk:.1f}%",      delta=f"{avg_risk_delta:+.1f}%",
+              help="Average risk score across filtered shipments. Higher scores indicate greater likelihood of accessorial overruns.")
 with c3:
-    st.metric("High-Risk Shipments", f"{high_risk:,}",        delta=f"{high_risk_delta:+,} vs all")
+    st.metric("High-Risk Shipments", f"{high_risk:,}",        delta=f"{high_risk_delta:+,} vs all",
+              help="Shipments classified as High risk tier. These are most likely to generate unexpected charges.")
 with c4:
-    st.metric("Est. Accessorial Cost", f"${est_cost:,.0f}",  delta=f"${est_cost_delta:+,.0f}")
+    st.metric("Est. Accessorial Cost", f"${est_cost:,.0f}",  delta=f"${est_cost_delta:+,.0f}",
+              help="Total accessorial charges across filtered shipments. Delta shows difference vs. the unfiltered dataset.")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
