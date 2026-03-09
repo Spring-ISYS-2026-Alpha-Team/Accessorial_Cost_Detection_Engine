@@ -91,15 +91,20 @@ pct_of_total    = (total_acc / df["total_cost_usd"].sum() * 100) if df["total_co
 
 k1, k2, k3, k4, k5 = st.columns(5)
 with k1:
-    st.metric("Total Accessorial", f"${total_acc:,.0f}")
+    st.metric("Total Accessorial", f"${total_acc:,.0f}",
+              help="Sum of all accessorial charges — extra fees beyond the base linehaul cost.")
 with k2:
-    st.metric("Affected Shipments", f"{shipments_w_acc:,} of {total_shipments:,}")
+    st.metric("Affected Shipments", f"{shipments_w_acc:,} of {total_shipments:,}",
+              help="Number of shipments that incurred at least one accessorial charge out of the total.")
 with k3:
-    st.metric("Accessorial Rate", f"{acc_rate:.1f}%")
+    st.metric("Accessorial Rate", f"{acc_rate:.1f}%",
+              help="Percentage of shipments with accessorial charges. Industry average is typically 30–50%.")
 with k4:
-    st.metric("Avg per Affected Shipment", f"${avg_acc:,.2f}")
+    st.metric("Avg per Affected Shipment", f"${avg_acc:,.2f}",
+              help="Average accessorial dollar amount on shipments that had at least one charge.")
 with k5:
-    st.metric("% of Total Spend", f"{pct_of_total:.1f}%")
+    st.metric("% of Total Spend", f"{pct_of_total:.1f}%",
+              help="Accessorial costs as a share of total carrier spend (linehaul + accessorial combined).")
 
 st.markdown("<br>", unsafe_allow_html=True)
 

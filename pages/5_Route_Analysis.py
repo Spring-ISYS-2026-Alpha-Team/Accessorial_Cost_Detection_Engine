@@ -91,13 +91,17 @@ most_exp_lane = lane_metrics.loc[lane_metrics["avg_cpm"].idxmax(),  label] if to
 
 k1, k2, k3, k4 = st.columns(4)
 with k1:
-    st.metric("Active Lanes",    f"{total_lanes}")
+    st.metric("Active Lanes",    f"{total_lanes}",
+              help="Number of unique origin → destination pairs with at least one shipment.")
 with k2:
-    st.metric("Busiest Lane",    busiest_lane if len(busiest_lane) < 30 else busiest_lane[:27] + "…")
+    st.metric("Busiest Lane",    busiest_lane if len(busiest_lane) < 30 else busiest_lane[:27] + "…",
+              help="The origin → destination lane with the highest number of shipments.")
 with k3:
-    st.metric("Cheapest $/Mile", cheapest_lane if len(cheapest_lane) < 30 else cheapest_lane[:27] + "…")
+    st.metric("Cheapest $/Mile", cheapest_lane if len(cheapest_lane) < 30 else cheapest_lane[:27] + "…",
+              help="The lane with the lowest average carrier cost per mile — most cost-efficient route.")
 with k4:
-    st.metric("Most Expensive",  most_exp_lane if len(most_exp_lane) < 30 else most_exp_lane[:27] + "…")
+    st.metric("Most Expensive",  most_exp_lane if len(most_exp_lane) < 30 else most_exp_lane[:27] + "…",
+              help="The lane with the highest average carrier cost per mile — flags where pricing may need renegotiation.")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
