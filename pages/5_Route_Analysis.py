@@ -10,7 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from auth_utils import check_auth
 from utils.database import get_connection, get_shipments
 from utils.mock_data import generate_mock_shipments
-from utils.styling import inject_css, top_nav, NAVY_500, NAVY_900
+from utils.styling import inject_css, top_nav, NAVY_500, NAVY_900, chart_theme
 
 st.set_page_config(
     page_title="PACE — Route Analysis",
@@ -119,9 +119,10 @@ with chart_l:
         ))
         fig.update_layout(
             margin=dict(l=0, r=80, t=8, b=0), height=300,
-            plot_bgcolor="white", paper_bgcolor="white",
-            xaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-            yaxis=dict(gridcolor="#F3F4F6"),
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#94A3B8"),
+            xaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+            yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
         )
         st.plotly_chart(fig, use_container_width=True)
 
@@ -140,9 +141,10 @@ with chart_r:
         ))
         fig2.update_layout(
             margin=dict(l=0, r=80, t=8, b=0), height=300,
-            plot_bgcolor="white", paper_bgcolor="white",
-            xaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-            yaxis=dict(gridcolor="#F3F4F6"),
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#94A3B8"),
+            xaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+            yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
         )
         st.plotly_chart(fig2, use_container_width=True)
 
@@ -170,9 +172,10 @@ with st.container(border=True):
     )
     scatter_fig.update_layout(
         margin=dict(l=0, r=0, t=8, b=0), height=320,
-        plot_bgcolor="white", paper_bgcolor="white",
-        xaxis=dict(gridcolor="#F3F4F6"),
-        yaxis=dict(gridcolor="#F3F4F6", tickprefix="$"),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#94A3B8"),
+        xaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+        yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)", tickprefix="$"),
     )
     st.plotly_chart(scatter_fig, use_container_width=True)
 

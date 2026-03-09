@@ -13,6 +13,7 @@ from utils.styling import (
     inject_css, top_nav,
     NAVY_500, NAVY_900, NAVY_100,
     RISK_HIGH_FG, RISK_MED_FG, RISK_LOW_FG,
+    chart_theme,
 )
 
 st.set_page_config(
@@ -131,8 +132,9 @@ with col_l:
             )
             donut_fig.update_layout(
                 margin=dict(l=0, r=0, t=8, b=0), height=280,
-                paper_bgcolor="white", showlegend=True,
-                legend=dict(orientation="v", x=1.0, y=0.5),
+                paper_bgcolor="rgba(0,0,0,0)", showlegend=True,
+                font=dict(color="#94A3B8"),
+                legend=dict(orientation="v", x=1.0, y=0.5, bgcolor="rgba(0,0,0,0)", font=dict(color="#94A3B8")),
             )
             st.plotly_chart(donut_fig, use_container_width=True)
 
@@ -182,9 +184,10 @@ with col_r:
             ))
             fig_c.update_layout(
                 margin=dict(l=0, r=80, t=8, b=0), height=280,
-                plot_bgcolor="white", paper_bgcolor="white",
-                xaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-                yaxis=dict(gridcolor="#F3F4F6"),
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#94A3B8"),
+                xaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+                yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
             )
             st.plotly_chart(fig_c, use_container_width=True)
         else:
@@ -219,9 +222,10 @@ with col_a:
             ))
             fac_fig.update_layout(
                 margin=dict(l=0, r=80, t=8, b=0), height=260,
-                plot_bgcolor="white", paper_bgcolor="white",
-                xaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-                yaxis=dict(gridcolor="#F3F4F6"),
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#94A3B8"),
+                xaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+                yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
             )
             st.plotly_chart(fac_fig, use_container_width=True)
         else:
@@ -250,9 +254,10 @@ with col_b:
             ))
             trend_fig.update_layout(
                 margin=dict(l=0, r=0, t=8, b=0), height=260,
-                plot_bgcolor="white", paper_bgcolor="white",
-                xaxis=dict(gridcolor="#F3F4F6"),
-                yaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#94A3B8"),
+                xaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+                yaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
             )
             st.plotly_chart(trend_fig, use_container_width=True)
         else:

@@ -10,7 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from auth_utils import check_auth
 from utils.database import get_connection, get_shipments
 from utils.mock_data import generate_mock_shipments
-from utils.styling import inject_css, top_nav, NAVY_500, NAVY_100
+from utils.styling import inject_css, top_nav, NAVY_500, NAVY_100, chart_theme
 from utils.cost_model import get_cost_model
 
 st.set_page_config(
@@ -146,9 +146,10 @@ with result_col:
             ))
             comp_fig.update_layout(
                 margin=dict(l=0, r=0, t=8, b=0), height=220,
-                plot_bgcolor="white", paper_bgcolor="white",
-                yaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-                xaxis=dict(gridcolor="#F3F4F6"),
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#94A3B8"),
+                yaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+                xaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
                 showlegend=False,
             )
             st.plotly_chart(comp_fig, use_container_width=True)
@@ -200,9 +201,10 @@ with st.container(border=True):
     ))
     fi_fig.update_layout(
         margin=dict(l=0, r=60, t=8, b=0), height=340,
-        plot_bgcolor="white", paper_bgcolor="white",
-        xaxis=dict(tickformat=".0%", gridcolor="#F3F4F6"),
-        yaxis=dict(gridcolor="#F3F4F6"),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#94A3B8"),
+        xaxis=dict(tickformat=".0%", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+        yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
     )
     st.plotly_chart(fi_fig, use_container_width=True)
 
@@ -229,9 +231,10 @@ with st.container(border=True):
 
     hist_fig.update_layout(
         margin=dict(l=0, r=0, t=8, b=0), height=220,
-        plot_bgcolor="white", paper_bgcolor="white",
-        xaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-        yaxis=dict(gridcolor="#F3F4F6"),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#94A3B8"),
+        xaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+        yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
         showlegend=False,
     )
     st.plotly_chart(hist_fig, use_container_width=True)

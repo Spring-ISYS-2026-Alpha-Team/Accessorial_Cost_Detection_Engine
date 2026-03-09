@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from auth_utils import check_auth
 from utils.database import get_connection, get_shipments
 from utils.mock_data import generate_mock_shipments
-from utils.styling import inject_css, top_nav, NAVY_900, NAVY_500
+from utils.styling import inject_css, top_nav, NAVY_900, NAVY_500, chart_theme
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -132,9 +132,10 @@ with col_left:
             ))
             fig.update_layout(
                 margin=dict(l=0, r=0, t=8, b=0), height=260,
-                plot_bgcolor="white", paper_bgcolor="white",
-                xaxis=dict(tickfont=dict(size=11), gridcolor="#F3F4F6"),
-                yaxis=dict(tickfont=dict(size=11), gridcolor="#F3F4F6"),
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#94A3B8"),
+                xaxis=dict(tickfont=dict(size=11), gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+                yaxis=dict(tickfont=dict(size=11), gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
             )
             st.plotly_chart(fig, use_container_width=True)
         else:
@@ -165,10 +166,11 @@ with col_right:
             ))
             fig2.update_layout(
                 margin=dict(l=0, r=40, t=8, b=0), height=260,
-                plot_bgcolor="white", paper_bgcolor="white",
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#94A3B8"),
                 xaxis=dict(title="Avg Risk Score (%)", range=[0, 100],
-                           tickfont=dict(size=11), gridcolor="#F3F4F6"),
-                yaxis=dict(tickfont=dict(size=11)),
+                           tickfont=dict(size=11), gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+                yaxis=dict(tickfont=dict(size=11), color="#94A3B8"),
             )
             st.plotly_chart(fig2, use_container_width=True)
         else:
