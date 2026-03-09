@@ -30,6 +30,160 @@ if df_all.empty:
     st.info("Live database unavailable — showing demo data.", icon="ℹ️")
 df_all["ship_date_dt"] = pd.to_datetime(df_all["ship_date"])
 
+# ── Shared chart layout helper ─────────────────────────────────────────────────
+_DARK = dict(plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+             font=dict(color="#A78BFA"))
+_GRID = dict(gridcolor="rgba(150,50,200,0.18)", color="#A78BFA")
+_LEGEND = dict(orientation="h", y=1.05, font=dict(color="#FFFFFF"))
+
+
+def _filter_by_range(df: pd.DataFrame, sel: str) -> pd.DataFrame:
+    days_map = {"1M": 30, "3M": 90, "6M": 180, "1Y": 365}
+    if sel not in days_map:
+        return df
+    cutoff = df["ship_date_dt"].max() - pd.Timedelta(days=days_map[sel])
+    return df[df["ship_date_dt"] >= cutoff]
+
+
+def _range_buttons(chart_key: str):
+    """Render 1M/3M/6M/1Y/All toggle buttons; return selected label."""
+    opts = ["1M", "3M", "6M", "1Y", "All"]
+    skey = f"popup_range_{chart_key}"
+    if skey not in st.session_state:
+        st.session_state[skey] = "All"
+    cols = st.columns(len(opts))
+    for col, lbl in zip(cols, opts):
+        with col:
+            kind = "primary" if st.session_state[skey] == lbl else "secondary"
+            if st.button(lbl, key=f"rb_{chart_key}_{lbl}", type=kind,
+                         use_container_width=True):
+                st.session_state[skey] = lbl
+    return st.session_state[skey]
+
+
+def _sort_buttons(chart_key: str):
+    """Render sort-order toggle buttons for categorical charts; return selected label."""
+    opts = ["Value ↑", "Value ↓", "A-Z"]
+    skey = f"sort_{chart_key}"
+    if skey not in st.session_state:
+        st.session_state[skey] = "Value ↓"
+    cols = st.columns(len(opts))
+    for col, lbl in zip(cols, opts):
+        with col:
+            kind = "primary" if st.session_state[skey] == lbl else "secondary"
+            if st.button(lbl, key=f"sb_{chart_key}_{lbl}", type=kind,
+                         use_container_width=True):
+                st.session_state[skey] = lbl
+    return st.session_state[skey]
+
+
+def _build_volume_fig(df: pd.DataFrame, height=260) -> go.Figure:
+    df = df.copy()
+    df["week"] = df["ship_date_dt"].dt.to_period("W").dt.start_time
+    wk = df.groupby("week").agg(shipments=("shipment_id", "count")).reset_index()
+    fig = go.Figure(go.Scatter(
+        x=wk["week"], y=wk["shipments"],
+        mode="lines", fill="tozeroy",
+        line=dict(color="#9333EA", width=2),
+        fillcolor="rgba(147,51,234,0.25)",
+    ))
+    fig.update_layout(**_DARK, height=height, margin=dict(l=0, r=0, t=8, b=0),
+                      xaxis=dict(**_GRID), yaxis=dict(**_GRID))
+    return fig
+
+
+def _build_rev_cost_fig(df: pd.DataFrame, height=260) -> go.Figure:
+    df = df.copy()
+    df["week"] = df["ship_date_dt"].dt.to_period("W").dt.start_time
+    wk = df.groupby("week").agg(revenue=("base_freight_usd", "sum"),
+                                 total_cost=("total_cost_usd", "sum")).reset_index()
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=wk["week"], y=wk["revenue"], name="Revenue",
+                             mode="lines", line=dict(color=NAVY_500, width=2)))
+    fig.add_trace(go.Scatter(x=wk["week"], y=wk["total_cost"], name="Total Cost",
+                             mode="lines", line=dict(color="#DC2626", width=2, dash="dash")))
+    fig.update_layout(**_DARK, height=height, margin=dict(l=0, r=0, t=8, b=0),
+                      legend=_LEGEND, xaxis=dict(**_GRID),
+                      yaxis=dict(**_GRID, tickprefix="$"))
+    return fig
+
+
+def _build_cpm_fig(df: pd.DataFrame, height=280, sort_by="Value ↓") -> go.Figure:
+    cpm = df.groupby("carrier")["cost_per_mile"].mean().reset_index()
+    if sort_by == "Value ↑":
+        cpm = cpm.sort_values("cost_per_mile", ascending=False)   # ascending bars = lowest on top
+    elif sort_by == "Value ↓":
+        cpm = cpm.sort_values("cost_per_mile", ascending=True)    # highest on top
+    else:
+        cpm = cpm.sort_values("carrier", ascending=False)         # A-Z top-to-bottom
+    fig = go.Figure(go.Bar(
+        x=cpm["cost_per_mile"], y=cpm["carrier"], orientation="h",
+        marker_color=NAVY_500,
+        text=cpm["cost_per_mile"].apply(lambda v: f"${v:.2f}"),
+        textposition="outside",
+    ))
+    fig.update_layout(**_DARK, height=height,
+                      margin=dict(l=0, r=130, t=8, b=0),
+                      xaxis=dict(**_GRID, tickprefix="$"),
+                      yaxis=dict(**_GRID))
+    return fig
+
+
+def _build_breakdown_fig(df: pd.DataFrame, height=280, sort_by="Value ↓") -> go.Figure:
+    cb = (df.groupby("carrier")
+            .agg(base=("base_freight_usd", "sum"),
+                 acc=("accessorial_charge_usd", "sum"))
+            .reset_index())
+    cb["total"] = cb["base"] + cb["acc"]
+    if sort_by == "Value ↑":
+        cb = cb.sort_values("total", ascending=True)
+    elif sort_by == "Value ↓":
+        cb = cb.sort_values("total", ascending=False)
+    else:
+        cb = cb.sort_values("carrier")
+    fig = go.Figure()
+    fig.add_trace(go.Bar(name="Base Freight", x=cb["carrier"],
+                         y=cb["base"], marker_color=NAVY_500))
+    fig.add_trace(go.Bar(name="Accessorial", x=cb["carrier"],
+                         y=cb["acc"], marker_color="#DC2626"))
+    fig.update_layout(barmode="stack", **_DARK, height=height,
+                      margin=dict(l=0, r=0, t=8, b=0), legend=_LEGEND,
+                      xaxis=dict(**_GRID),
+                      yaxis=dict(**_GRID, tickprefix="$"))
+    return fig
+
+
+# ── Expand dialogs ─────────────────────────────────────────────────────────────
+@st.dialog("Shipments Over Time", width="large")
+def _popup_volume():
+    sel = _range_buttons("volume")
+    df_f = _filter_by_range(df_all, sel)
+    st.caption(f"{len(df_f):,} shipments · {sel} view")
+    st.plotly_chart(_build_volume_fig(df_f, height=480), use_container_width=True)
+
+
+@st.dialog("Revenue vs Total Cost", width="large")
+def _popup_rev_cost():
+    sel = _range_buttons("rev_cost")
+    df_f = _filter_by_range(df_all, sel)
+    st.caption(f"{len(df_f):,} shipments · {sel} view")
+    st.plotly_chart(_build_rev_cost_fig(df_f, height=480), use_container_width=True)
+
+
+@st.dialog("Avg Cost per Mile by Carrier", width="large")
+def _popup_cpm():
+    sort_by = _sort_buttons("cpm")
+    st.caption(f"{len(df_all):,} shipments · all carriers")
+    st.plotly_chart(_build_cpm_fig(df_all, height=460, sort_by=sort_by), use_container_width=True)
+
+
+@st.dialog("Cost Breakdown by Carrier", width="large")
+def _popup_breakdown():
+    sort_by = _sort_buttons("breakdown")
+    st.caption(f"{len(df_all):,} shipments · all carriers")
+    st.plotly_chart(_build_breakdown_fig(df_all, height=460, sort_by=sort_by), use_container_width=True)
+
+
 # ── Inline date filter ────────────────────────────────────────────────────────
 min_d = df_all["ship_date_dt"].min().date()
 max_d = df_all["ship_date_dt"].max().date()
@@ -77,50 +231,29 @@ with k6: st.metric("Accessorial Rate",  f"{accessorial_rate:.1f}%",
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ── Shipments over time + Revenue vs Cost ─────────────────────────────────────
-df["week"] = df["ship_date_dt"].dt.to_period("W").dt.start_time
-weekly = (
-    df.groupby("week")
-    .agg(shipments=("shipment_id", "count"),
-         revenue=("base_freight_usd", "sum"),
-         total_cost=("total_cost_usd", "sum"))
-    .reset_index()
-)
-
 col_l, col_r = st.columns(2, gap="medium")
 
 with col_l:
     with st.container(border=True):
-        st.markdown("#### Shipments Over Time")
-        st.caption("Weekly shipment volume")
-        fig = go.Figure(go.Scatter(
-            x=weekly["week"], y=weekly["shipments"],
-            mode="lines", fill="tozeroy",
-            line=dict(color=NAVY_900, width=2),
-            fillcolor=NAVY_100,
-        ))
-        fig.update_layout(margin=dict(l=0,r=0,t=8,b=0), height=260,
-                          plot_bgcolor="white", paper_bgcolor="white",
-                          xaxis=dict(gridcolor="#F3F4F6"),
-                          yaxis=dict(gridcolor="#F3F4F6"))
-        st.plotly_chart(fig, use_container_width=True)
+        hdr, btn = st.columns([9, 1])
+        with hdr:
+            st.markdown("#### Shipments Over Time")
+            st.caption("Weekly shipment volume")
+        with btn:
+            if st.button("⤢", key="exp_vol", help="Expand chart"):
+                _popup_volume()
+        st.plotly_chart(_build_volume_fig(df), use_container_width=True)
 
 with col_r:
     with st.container(border=True):
-        st.markdown("#### Revenue vs Total Cost")
-        st.caption("Weekly — base revenue vs cost including accessorials")
-        fig2 = go.Figure()
-        fig2.add_trace(go.Scatter(x=weekly["week"], y=weekly["revenue"],
-                                  name="Revenue", mode="lines",
-                                  line=dict(color=NAVY_500, width=2)))
-        fig2.add_trace(go.Scatter(x=weekly["week"], y=weekly["total_cost"],
-                                  name="Total Cost", mode="lines",
-                                  line=dict(color="#DC2626", width=2, dash="dash")))
-        fig2.update_layout(margin=dict(l=0,r=0,t=8,b=0), height=260,
-                           plot_bgcolor="white", paper_bgcolor="white",
-                           legend=dict(orientation="h", y=1.1),
-                           xaxis=dict(gridcolor="#F3F4F6"),
-                           yaxis=dict(gridcolor="#F3F4F6", tickprefix="$"))
-        st.plotly_chart(fig2, use_container_width=True)
+        hdr, btn = st.columns([9, 1])
+        with hdr:
+            st.markdown("#### Revenue vs Total Cost")
+            st.caption("Weekly — base revenue vs cost including accessorials")
+        with btn:
+            if st.button("⤢", key="exp_rev", help="Expand chart"):
+                _popup_rev_cost()
+        st.plotly_chart(_build_rev_cost_fig(df), use_container_width=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -129,38 +262,22 @@ col_a, col_b = st.columns(2, gap="medium")
 
 with col_a:
     with st.container(border=True):
-        st.markdown("#### Avg Cost per Mile by Carrier")
-        st.caption("Lower is more cost-efficient")
-        cpm = (df.groupby("carrier")["cost_per_mile"].mean()
-               .reset_index().sort_values("cost_per_mile"))
-        fig3 = go.Figure(go.Bar(
-            x=cpm["cost_per_mile"], y=cpm["carrier"], orientation="h",
-            marker_color=NAVY_500,
-            text=cpm["cost_per_mile"].apply(lambda v: f"${v:.2f}"),
-            textposition="outside",
-        ))
-        fig3.update_layout(margin=dict(l=0,r=60,t=8,b=0), height=280,
-                           plot_bgcolor="white", paper_bgcolor="white",
-                           xaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-                           yaxis=dict(gridcolor="#F3F4F6"))
-        st.plotly_chart(fig3, use_container_width=True)
+        hdr, btn = st.columns([9, 1])
+        with hdr:
+            st.markdown("#### Avg Cost per Mile by Carrier")
+            st.caption("Lower is more cost-efficient")
+        with btn:
+            if st.button("⤢", key="exp_cpm", help="Expand chart"):
+                _popup_cpm()
+        st.plotly_chart(_build_cpm_fig(df), use_container_width=True)
 
 with col_b:
     with st.container(border=True):
-        st.markdown("#### Cost Breakdown by Carrier")
-        st.caption("Base freight vs accessorial charges per carrier")
-        cb = (df.groupby("carrier")
-              .agg(base=("base_freight_usd", "sum"),
-                   acc=("accessorial_charge_usd", "sum"))
-              .reset_index().sort_values("base", ascending=False))
-        fig4 = go.Figure()
-        fig4.add_trace(go.Bar(name="Base Freight", x=cb["carrier"],
-                              y=cb["base"], marker_color=NAVY_500))
-        fig4.add_trace(go.Bar(name="Accessorial", x=cb["carrier"],
-                              y=cb["acc"], marker_color="#DC2626"))
-        fig4.update_layout(barmode="stack", margin=dict(l=0,r=0,t=8,b=0),
-                           height=280, plot_bgcolor="white", paper_bgcolor="white",
-                           legend=dict(orientation="h", y=1.1),
-                           xaxis=dict(gridcolor="#F3F4F6"),
-                           yaxis=dict(gridcolor="#F3F4F6", tickprefix="$"))
-        st.plotly_chart(fig4, use_container_width=True)
+        hdr, btn = st.columns([9, 1])
+        with hdr:
+            st.markdown("#### Cost Breakdown by Carrier")
+            st.caption("Base freight vs accessorial charges per carrier")
+        with btn:
+            if st.button("⤢", key="exp_bd", help="Expand chart"):
+                _popup_breakdown()
+        st.plotly_chart(_build_breakdown_fig(df), use_container_width=True)

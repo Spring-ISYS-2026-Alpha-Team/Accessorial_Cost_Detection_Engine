@@ -31,7 +31,7 @@ def get_cost_model(data_hash: int, _df: pd.DataFrame):
     ])
     model = Pipeline([
         ("pre", preprocessor),
-        ("rf",  RandomForestRegressor(n_estimators=200, random_state=42)),
+        ("rf",  RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)),
     ])
     model.fit(X, y)
     return model

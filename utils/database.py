@@ -15,10 +15,10 @@ except ImportError:
     pass
 
 try:
-    import pyodbc
-    PYODBC_AVAILABLE = True
+    import pymssql
+    PYMSSQL_AVAILABLE = True
 except ImportError:
-    PYODBC_AVAILABLE = False
+    PYMSSQL_AVAILABLE = False
 
 
 def _get_secret(key: str) -> str:
@@ -35,38 +35,32 @@ def get_connection():
     Return a cached pyodbc connection to Azure SQL.
     Returns None and shows an error if connection fails.
     """
-    if not PYODBC_AVAILABLE:
-        st.error("pyodbc is not installed. Run: pip install pyodbc")
+    if not PYMSSQL_AVAILABLE:
         return None
 
     server   = _get_secret("DB_SERVER")
     database = _get_secret("DB_DATABASE")
     username = _get_secret("DB_USERNAME")
     password = _get_secret("DB_PASSWORD")
-    driver   = _get_secret("DB_DRIVER") or "ODBC Driver 18 for SQL Server"
 
     if not all([server, database, username, password]):
         return None  # Credentials not configured — caller falls back to mock data
 
-    conn_str = (
-        f"DRIVER={{{driver}}};"
-        f"SERVER=tcp:{server},1433;"
-        f"DATABASE={database};"
-        f"UID={username};"
-        f"PWD={password};"
-        f"Encrypt=yes;"
-        f"TrustServerCertificate=no;"
-        f"Connection Timeout=30;"
-    )
-
     try:
-        return pyodbc.connect(conn_str)
-    except Exception as e:
-        st.error(f"Azure SQL connection failed: {e}")
+        return pymssql.connect(
+            server=server,
+            user=username,
+            password=password,
+            database=database,
+            port=1433,
+            login_timeout=10,
+            tds_version="7.4",
+        )
+    except Exception:
         return None
 
 
-@st.cache_data(ttl=300)
+@st.cache_data
 def get_tables(_conn) -> list[str]:
     """Return list of user table names from the database."""
     if _conn is None:
@@ -83,7 +77,7 @@ def get_tables(_conn) -> list[str]:
         return []
 
 
-@st.cache_data(ttl=300)
+@st.cache_data
 def get_table_data(_conn, table_name: str, row_limit: int = 500) -> pd.DataFrame:
     """Fetch up to row_limit rows from a table."""
     if _conn is None:
@@ -95,12 +89,12 @@ def get_table_data(_conn, table_name: str, row_limit: int = 500) -> pd.DataFrame
 
 
 @st.cache_data(ttl=300)
-def get_shipments(_conn, row_limit: int = 1000) -> pd.DataFrame:
-    """Fetch shipment records joined with carrier name."""
+def get_shipments(_conn) -> pd.DataFrame:
+    """Fetch all shipment records joined with carrier name."""
     if _conn is None:
         return pd.DataFrame()
-    query = f"""
-        SELECT TOP {row_limit}
+    query = """
+        SELECT
             s.ShipmentId       AS shipment_id,
             s.ShipDate         AS ship_date,
             c.carrier_name     AS carrier,
@@ -134,7 +128,7 @@ def get_shipments(_conn, row_limit: int = 1000) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-@st.cache_data(ttl=300)
+@st.cache_data
 def get_accessorial_charges(_conn, row_limit: int = 2000) -> pd.DataFrame:
     """Fetch accessorial charge records."""
     if _conn is None:
@@ -159,7 +153,7 @@ def get_accessorial_charges(_conn, row_limit: int = 2000) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-@st.cache_data(ttl=300)
+@st.cache_data
 def get_carriers(_conn) -> pd.DataFrame:
     """Fetch all carrier records."""
     if _conn is None:
@@ -170,7 +164,7 @@ def get_carriers(_conn) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-@st.cache_data(ttl=300)
+@st.cache_data
 def get_facilities(_conn) -> pd.DataFrame:
     """Fetch all facility records."""
     if _conn is None:
@@ -181,7 +175,75 @@ def get_facilities(_conn) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-@st.cache_data(ttl=300)
+def verify_pace_user(_conn, username: str, password: str):
+    """
+    Verify a username/password against the PaceUsers table.
+    Passwords are stored as SHA-256 hex digests.
+    Returns the user's role string on success, None on failure.
+    """
+    if _conn is None:
+        return None
+    pw_hash = hashlib.sha256(password.encode()).hexdigest()
+    try:
+        row = pd.read_sql(
+            "SELECT role FROM PaceUsers WHERE username = %s AND password_hash = %s",
+            _conn,
+            params=(username, pw_hash),
+        )
+        if not row.empty:
+            return str(row.iloc[0]["role"])
+    except Exception:
+        pass
+    return None
+
+
+def get_pace_users(_conn) -> pd.DataFrame:
+    """Return all PaceUsers rows (no password_hash)."""
+    if _conn is None:
+        return pd.DataFrame()
+    try:
+        return pd.read_sql(
+            "SELECT username, role, created_at FROM PaceUsers ORDER BY username",
+            _conn,
+        )
+    except Exception:
+        try:
+            return pd.read_sql("SELECT username, role FROM PaceUsers ORDER BY username", _conn)
+        except Exception:
+            return pd.DataFrame()
+
+
+def create_pace_user(_conn, username: str, password: str, role: str) -> tuple[bool, str]:
+    """Insert a new user into PaceUsers. Returns (success, message)."""
+    if _conn is None:
+        return False, "No database connection."
+    pw_hash = hashlib.sha256(password.encode()).hexdigest()
+    try:
+        cursor = _conn.cursor()
+        cursor.execute(
+            "INSERT INTO PaceUsers (username, password_hash, role) VALUES (%s, %s, %s)",
+            (username.strip(), pw_hash, role),
+        )
+        _conn.commit()
+        return True, f"User '{username}' created successfully."
+    except Exception as e:
+        return False, str(e)
+
+
+def delete_pace_user(_conn, username: str) -> tuple[bool, str]:
+    """Delete a user from PaceUsers by username."""
+    if _conn is None:
+        return False, "No database connection."
+    try:
+        cursor = _conn.cursor()
+        cursor.execute("DELETE FROM PaceUsers WHERE username = %s", (username,))
+        _conn.commit()
+        return True, f"User '{username}' deleted."
+    except Exception as e:
+        return False, str(e)
+
+
+@st.cache_data
 def get_shipments_with_charges(_conn, row_limit: int = 2000) -> pd.DataFrame:
     """
     Accessorial Charges joined to Shipment + Carrier for the Accessorial Tracker page.
@@ -214,104 +276,3 @@ def get_shipments_with_charges(_conn, row_limit: int = 2000) -> pd.DataFrame:
         return df
     except Exception:
         return pd.DataFrame()
-
-
-# ── User management (PaceUsers table) ─────────────────────────────────────────
-
-def _hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode()).hexdigest()
-
-
-def _ensure_users_table(conn) -> None:
-    """Create PaceUsers table if it doesn't exist, seed default accounts."""
-    cursor = conn.cursor()
-    cursor.execute("""
-        IF NOT EXISTS (
-            SELECT 1 FROM INFORMATION_SCHEMA.TABLES
-            WHERE TABLE_NAME = 'PaceUsers'
-        )
-        BEGIN
-            CREATE TABLE PaceUsers (
-                username     NVARCHAR(100) PRIMARY KEY,
-                password_hash NVARCHAR(64) NOT NULL,
-                role         NVARCHAR(20)  NOT NULL DEFAULT 'user',
-                created_at   DATETIME      NOT NULL DEFAULT GETDATE()
-            );
-            INSERT INTO PaceUsers (username, password_hash, role) VALUES
-                ('admin', ?, 'admin'),
-                ('user',  ?, 'user');
-        END
-    """, _hash_password("admin"), _hash_password("user"))
-    conn.commit()
-
-
-def get_pace_users(conn) -> pd.DataFrame:
-    """Return all PaceUsers rows (no password hashes)."""
-    if conn is None:
-        return pd.DataFrame()
-    try:
-        _ensure_users_table(conn)
-        return pd.read_sql(
-            "SELECT username AS Username, role AS Role, created_at AS [Created At] FROM PaceUsers ORDER BY created_at",
-            conn,
-        )
-    except Exception:
-        return pd.DataFrame()
-
-
-def create_pace_user(conn, username: str, password: str, role: str) -> str:
-    """
-    Insert a new user. Returns '' on success or an error message string.
-    """
-    if conn is None:
-        return "No database connection."
-    try:
-        _ensure_users_table(conn)
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT 1 FROM PaceUsers WHERE username = ?", username
-        )
-        if cursor.fetchone():
-            return f"Username '{username}' already exists."
-        cursor.execute(
-            "INSERT INTO PaceUsers (username, password_hash, role) VALUES (?, ?, ?)",
-            username, _hash_password(password), role,
-        )
-        conn.commit()
-        return ""
-    except Exception as e:
-        return str(e)
-
-
-def delete_pace_user(conn, username: str) -> str:
-    """Delete a user by username. Returns '' on success or error string."""
-    if conn is None:
-        return "No database connection."
-    try:
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM PaceUsers WHERE username = ?", username)
-        conn.commit()
-        return ""
-    except Exception as e:
-        return str(e)
-
-
-def verify_pace_user(conn, username: str, password: str):
-    """
-    Verify credentials against PaceUsers table.
-    Returns role string on success, None on failure.
-    Falls back gracefully if table/connection unavailable.
-    """
-    if conn is None:
-        return None
-    try:
-        _ensure_users_table(conn)
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT role FROM PaceUsers WHERE username = ? AND password_hash = ?",
-            username, _hash_password(password),
-        )
-        row = cursor.fetchone()
-        return row[0] if row else None
-    except Exception:
-        return None

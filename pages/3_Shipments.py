@@ -84,8 +84,8 @@ def render_detail(row: pd.Series):
         st.rerun()
 
     st.markdown(
-        f"<div style='font-size:12px; color:#9CA3AF; margin-bottom:12px;'>"
-        f"Shipments / <b style='color:#374151'>{row['shipment_id']}</b></div>",
+        f"<div style='font-size:12px; color:#64748B; margin-bottom:12px;'>"
+        f"Shipments / <b style='color:#A78BFA'>{row['shipment_id']}</b></div>",
         unsafe_allow_html=True,
     )
 
@@ -111,7 +111,7 @@ def render_detail(row: pd.Series):
             st.write(row["facility"])
         with m3:
             st.markdown("**Ship Date**")
-            st.write(row["ship_date"])
+            st.write(str(row["ship_date"])[:10])
         with m4:
             st.markdown("**Base Freight**")
             st.write(f"${row['base_freight_usd']:,.2f}")
@@ -141,7 +141,7 @@ def render_detail(row: pd.Series):
 
             est = row["accessorial_charge_usd"]
             st.markdown(
-                f"<div style='font-size:13px; color:#6B7280; margin-top:8px;'>"
+                f"<div style='font-size:13px; color:#94A3B8; margin-top:8px;'>"
                 f"Estimated accessorial exposure: "
                 f"<b style='color:{fg};'>${est:,.2f}</b></div>",
                 unsafe_allow_html=True,
@@ -170,14 +170,14 @@ def render_detail(row: pd.Series):
                 fc1, fc2, fc3 = st.columns([3, 5, 1])
                 with fc1:
                     st.markdown(
-                        f"<span style='font-size:13px; color:#374151;'>{factor}</span>",
+                        f"<span style='font-size:13px; color:#CBD5E1;'>{factor}</span>",
                         unsafe_allow_html=True,
                     )
                 with fc2:
                     st.progress(pct / 100)
                 with fc3:
                     st.markdown(
-                        f"<span style='font-size:13px; font-weight:600; color:#111827;'>"
+                        f"<span style='font-size:13px; font-weight:600; color:#E2E8F0;'>"
                         f"{pct:.0f}%</span>",
                         unsafe_allow_html=True,
                     )
@@ -219,7 +219,7 @@ def render_detail(row: pd.Series):
                 f"width:22px; height:22px; min-width:22px; display:flex; "
                 f"align-items:center; justify-content:center; font-size:12px; "
                 f"font-weight:700;'>{i}</span>"
-                f"<span style='font-size:14px; color:#1F2937;'>{action}</span>"
+                f"<span style='font-size:14px; color:#E2E8F0;'>{action}</span>"
                 f"</div>",
                 unsafe_allow_html=True,
             )
