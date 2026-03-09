@@ -163,7 +163,7 @@ section[data-testid="stSidebarNav"] {{
 [data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
 [data-testid="stPageLink"] a div {{
     color: #FFFFFF !important;
-    font-size: 12px !important;
+    font-size: 15px !important;
     font-weight: 700 !important;
     text-decoration: none !important;
     white-space: nowrap !important;
