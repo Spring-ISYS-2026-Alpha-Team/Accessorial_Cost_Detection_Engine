@@ -23,3 +23,12 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# ML Pipeline outputs
+outputs/*.png
+
+# Credentials
+*.env
+
+# Saved ML models (too large for Git)
+models/*.joblib

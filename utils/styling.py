@@ -27,6 +27,7 @@ _NAV_PAGES = [
     ("Routes",      "pages/5_Route_Analysis.py"),
     ("Carriers",    "pages/6_Carrier_Comparison.py"),
     ("Accessorial", "pages/7_Accessorial_Tracker.py"),
+    ("Admin",       "pages/8_Admin.py"),
 ]
 
 # ── Base page CSS (injected on every page) ────────────────────────────────────
@@ -209,9 +210,9 @@ def top_nav(username: str) -> None:
     stays within the existing WebSocket session (no page reload, no auth loss).
     Call this at the top of every authenticated page, after inject_css().
     """
-    # Logo | nav links × 8 | user label | sign-out button
+    # Logo | nav links × 9 | user label | sign-out button
     logo_col, *page_cols, user_col, out_col = st.columns(
-        [1.4] + [1.0] * 8 + [1.0, 0.7]
+        [1.4] + [1.0] * 9 + [1.0, 0.7]
     )
 
     with logo_col:

@@ -8,6 +8,7 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from auth_utils import check_auth
+from utils.database import get_connection, get_shipments
 from utils.mock_data import generate_mock_shipments
 from utils.styling import inject_css, top_nav, NAVY_500, NAVY_900
 
@@ -27,11 +28,11 @@ if not check_auth():
 username = st.session_state.get("username", "User")
 top_nav(username)
 
-@st.cache_data
-def load_data():
-    return generate_mock_shipments(300)
-
-df = load_data()
+conn = get_connection()
+df = get_shipments(conn) if conn is not None else pd.DataFrame()
+if df.empty:
+    df = generate_mock_shipments(300)
+    st.info("Live database unavailable — showing demo data.", icon="ℹ️")
 
 # ── Inline filters ────────────────────────────────────────────────────────────
 with st.expander("⚙️ Filters", expanded=False):

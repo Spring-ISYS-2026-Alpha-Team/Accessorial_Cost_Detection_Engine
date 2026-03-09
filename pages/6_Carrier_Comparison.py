@@ -7,7 +7,8 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from auth_utils import check_auth
-from utils.mock_data import generate_mock_shipments, CARRIERS
+from utils.database import get_connection, get_shipments
+from utils.mock_data import generate_mock_shipments
 from utils.styling import inject_css, top_nav, NAVY_500, NAVY_900
 
 st.set_page_config(
@@ -26,15 +27,17 @@ if not check_auth():
 username = st.session_state.get("username", "User")
 top_nav(username)
 
-@st.cache_data
-def load_data():
-    return generate_mock_shipments(300)
+conn = get_connection()
+df_all = get_shipments(conn) if conn is not None else pd.DataFrame()
+if df_all.empty:
+    df_all = generate_mock_shipments(300)
+    st.info("Live database unavailable — showing demo data.", icon="ℹ️")
 
-df_all = load_data()
+ALL_CARRIERS = sorted(df_all["carrier"].dropna().unique())
 
 # ── Persist active carriers in session state ──────────────────────────────────
 if "active_carriers" not in st.session_state:
-    st.session_state["active_carriers"] = sorted(CARRIERS)
+    st.session_state["active_carriers"] = ALL_CARRIERS
 
 # ── Inline carrier selector ───────────────────────────────────────────────────
 with st.expander("⚙️ Manage Carriers", expanded=False):
@@ -42,8 +45,8 @@ with st.expander("⚙️ Manage Carriers", expanded=False):
     with f1:
         selected = st.multiselect(
             "Active Carriers",
-            options=sorted(CARRIERS),
-            default=st.session_state["active_carriers"],
+            options=ALL_CARRIERS,
+            default=[c for c in st.session_state["active_carriers"] if c in ALL_CARRIERS],
         )
         st.session_state["active_carriers"] = selected
     with f2:
@@ -51,7 +54,7 @@ with st.expander("⚙️ Manage Carriers", expanded=False):
         col_a, col_b = st.columns(2)
         with col_a:
             if st.button("All", use_container_width=True):
-                st.session_state["active_carriers"] = sorted(CARRIERS)
+                st.session_state["active_carriers"] = ALL_CARRIERS
                 st.rerun()
         with col_b:
             if st.button("Clear", use_container_width=True):
@@ -78,7 +81,7 @@ CARRIER_COLORS = [
     "#DC2626", "#7C3AED", "#0891B2", "#BE185D",
 ]
 color_map = {c: CARRIER_COLORS[i % len(CARRIER_COLORS)]
-             for i, c in enumerate(sorted(CARRIERS))}
+             for i, c in enumerate(ALL_CARRIERS)}
 
 metrics = (
     df.groupby("carrier")

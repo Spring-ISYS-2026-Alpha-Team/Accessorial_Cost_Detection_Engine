@@ -7,6 +7,7 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from auth_utils import check_auth
+from utils.database import get_connection, get_shipments
 from utils.mock_data import generate_mock_shipments
 from utils.styling import inject_css, top_nav, NAVY_900, NAVY_500
 
@@ -28,12 +29,13 @@ if not check_auth():
 username = st.session_state.get("username", "User")
 top_nav(username)
 
-# ── Load data (cached) ────────────────────────────────────────────────────────
-@st.cache_data
-def load_data():
-    return generate_mock_shipments(300)
-
-df_all = load_data()
+# ── Load data (live DB with mock fallback) ────────────────────────────────────
+conn = get_connection()
+df_all = get_shipments(conn) if conn is not None else pd.DataFrame()
+using_live = not df_all.empty
+if not using_live:
+    df_all = generate_mock_shipments(300)
+    st.info("Live database unavailable — showing demo data.", icon="ℹ️")
 df_all["ship_date_dt"] = pd.to_datetime(df_all["ship_date"])
 
 # ── Inline filters ────────────────────────────────────────────────────────────
@@ -180,11 +182,11 @@ with st.container(border=True):
     with th_col:
         st.markdown("#### Recent Shipments")
     with search_col:
-        search = st.text_input("", placeholder="🔍 Search shipment ID…", label_visibility="collapsed")
+        search = st.text_input("Search", placeholder="🔍 Search shipment ID…", label_visibility="collapsed")
 
     table_df = df.copy()
     if search:
-        table_df = table_df[table_df["shipment_id"].str.contains(search.upper(), na=False)]
+        table_df = table_df[table_df["shipment_id"].astype(str).str.contains(search.upper(), na=False)]
 
     st.dataframe(
         table_df[[
