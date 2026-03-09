@@ -4,6 +4,7 @@ Azure SQL database connection for PACE.
 Reads credentials from .env (local) or st.secrets (Streamlit Cloud).
 """
 import os
+import hashlib
 import streamlit as st
 import pandas as pd
 
@@ -65,7 +66,7 @@ def get_connection():
         return None
 
 
-@st.cache_data
+@st.cache_data(ttl=300)
 def get_tables(_conn) -> list[str]:
     """Return list of user table names from the database."""
     if _conn is None:
@@ -82,7 +83,7 @@ def get_tables(_conn) -> list[str]:
         return []
 
 
-@st.cache_data
+@st.cache_data(ttl=300)
 def get_table_data(_conn, table_name: str, row_limit: int = 500) -> pd.DataFrame:
     """Fetch up to row_limit rows from a table."""
     if _conn is None:
@@ -93,7 +94,7 @@ def get_table_data(_conn, table_name: str, row_limit: int = 500) -> pd.DataFrame
         return pd.DataFrame()
 
 
-@st.cache_data
+@st.cache_data(ttl=300)
 def get_shipments(_conn, row_limit: int = 1000) -> pd.DataFrame:
     """Fetch shipment records joined with carrier name."""
     if _conn is None:
@@ -133,7 +134,7 @@ def get_shipments(_conn, row_limit: int = 1000) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-@st.cache_data
+@st.cache_data(ttl=300)
 def get_accessorial_charges(_conn, row_limit: int = 2000) -> pd.DataFrame:
     """Fetch accessorial charge records."""
     if _conn is None:
@@ -158,7 +159,7 @@ def get_accessorial_charges(_conn, row_limit: int = 2000) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-@st.cache_data
+@st.cache_data(ttl=300)
 def get_carriers(_conn) -> pd.DataFrame:
     """Fetch all carrier records."""
     if _conn is None:
@@ -169,7 +170,7 @@ def get_carriers(_conn) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-@st.cache_data
+@st.cache_data(ttl=300)
 def get_facilities(_conn) -> pd.DataFrame:
     """Fetch all facility records."""
     if _conn is None:
@@ -180,7 +181,7 @@ def get_facilities(_conn) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-@st.cache_data
+@st.cache_data(ttl=300)
 def get_shipments_with_charges(_conn, row_limit: int = 2000) -> pd.DataFrame:
     """
     Accessorial Charges joined to Shipment + Carrier for the Accessorial Tracker page.
@@ -213,3 +214,104 @@ def get_shipments_with_charges(_conn, row_limit: int = 2000) -> pd.DataFrame:
         return df
     except Exception:
         return pd.DataFrame()
+
+
+# ── User management (PaceUsers table) ─────────────────────────────────────────
+
+def _hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+def _ensure_users_table(conn) -> None:
+    """Create PaceUsers table if it doesn't exist, seed default accounts."""
+    cursor = conn.cursor()
+    cursor.execute("""
+        IF NOT EXISTS (
+            SELECT 1 FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_NAME = 'PaceUsers'
+        )
+        BEGIN
+            CREATE TABLE PaceUsers (
+                username     NVARCHAR(100) PRIMARY KEY,
+                password_hash NVARCHAR(64) NOT NULL,
+                role         NVARCHAR(20)  NOT NULL DEFAULT 'user',
+                created_at   DATETIME      NOT NULL DEFAULT GETDATE()
+            );
+            INSERT INTO PaceUsers (username, password_hash, role) VALUES
+                ('admin', ?, 'admin'),
+                ('user',  ?, 'user');
+        END
+    """, _hash_password("admin"), _hash_password("user"))
+    conn.commit()
+
+
+def get_pace_users(conn) -> pd.DataFrame:
+    """Return all PaceUsers rows (no password hashes)."""
+    if conn is None:
+        return pd.DataFrame()
+    try:
+        _ensure_users_table(conn)
+        return pd.read_sql(
+            "SELECT username AS Username, role AS Role, created_at AS [Created At] FROM PaceUsers ORDER BY created_at",
+            conn,
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+def create_pace_user(conn, username: str, password: str, role: str) -> str:
+    """
+    Insert a new user. Returns '' on success or an error message string.
+    """
+    if conn is None:
+        return "No database connection."
+    try:
+        _ensure_users_table(conn)
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT 1 FROM PaceUsers WHERE username = ?", username
+        )
+        if cursor.fetchone():
+            return f"Username '{username}' already exists."
+        cursor.execute(
+            "INSERT INTO PaceUsers (username, password_hash, role) VALUES (?, ?, ?)",
+            username, _hash_password(password), role,
+        )
+        conn.commit()
+        return ""
+    except Exception as e:
+        return str(e)
+
+
+def delete_pace_user(conn, username: str) -> str:
+    """Delete a user by username. Returns '' on success or error string."""
+    if conn is None:
+        return "No database connection."
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM PaceUsers WHERE username = ?", username)
+        conn.commit()
+        return ""
+    except Exception as e:
+        return str(e)
+
+
+def verify_pace_user(conn, username: str, password: str):
+    """
+    Verify credentials against PaceUsers table.
+    Returns role string on success, None on failure.
+    Falls back gracefully if table/connection unavailable.
+    """
+    if conn is None:
+        return None
+    try:
+        _ensure_users_table(conn)
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT role FROM PaceUsers WHERE username = ? AND password_hash = ?",
+            username, _hash_password(password),
+        )
+        row = cursor.fetchone()
+        return row[0] if row else None
+    except Exception:
+        return None

@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from auth_utils import check_auth
 from utils.database import get_connection, get_shipments
 from utils.mock_data import generate_mock_shipments
-from utils.styling import inject_css, top_nav, NAVY_900, NAVY_500
+from utils.styling import inject_css, top_nav, NAVY_900, NAVY_500, chart_theme
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -86,13 +86,17 @@ est_cost_delta  = est_cost - df_all["accessorial_charge_usd"].sum()
 
 c1, c2, c3, c4 = st.columns(4)
 with c1:
-    st.metric("Total Shipments",     f"{total:,}",            delta=f"{total_delta:+,} vs all")
+    st.metric("Total Shipments",     f"{total:,}",            delta=f"{total_delta:+,} vs all",
+              help="Number of shipments matching the current filter. Delta compares to the unfiltered total.")
 with c2:
-    st.metric("Avg Risk Score",      f"{avg_risk:.1f}%",      delta=f"{avg_risk_delta:+.1f}%")
+    st.metric("Avg Risk Score",      f"{avg_risk:.1f}%",      delta=f"{avg_risk_delta:+.1f}%",
+              help="Average risk score across filtered shipments. Higher scores indicate greater likelihood of accessorial overruns.")
 with c3:
-    st.metric("High-Risk Shipments", f"{high_risk:,}",        delta=f"{high_risk_delta:+,} vs all")
+    st.metric("High-Risk Shipments", f"{high_risk:,}",        delta=f"{high_risk_delta:+,} vs all",
+              help="Shipments classified as High risk tier. These are most likely to generate unexpected charges.")
 with c4:
-    st.metric("Est. Accessorial Cost", f"${est_cost:,.0f}",  delta=f"${est_cost_delta:+,.0f}")
+    st.metric("Est. Accessorial Cost", f"${est_cost:,.0f}",  delta=f"${est_cost_delta:+,.0f}",
+              help="Total accessorial charges across filtered shipments. Delta shows difference vs. the unfiltered dataset.")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -132,9 +136,10 @@ with col_left:
             ))
             fig.update_layout(
                 margin=dict(l=0, r=0, t=8, b=0), height=260,
-                plot_bgcolor="white", paper_bgcolor="white",
-                xaxis=dict(tickfont=dict(size=11), gridcolor="#F3F4F6"),
-                yaxis=dict(tickfont=dict(size=11), gridcolor="#F3F4F6"),
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#94A3B8"),
+                xaxis=dict(tickfont=dict(size=11), gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+                yaxis=dict(tickfont=dict(size=11), gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
             )
             st.plotly_chart(fig, use_container_width=True)
         else:
@@ -165,10 +170,11 @@ with col_right:
             ))
             fig2.update_layout(
                 margin=dict(l=0, r=40, t=8, b=0), height=260,
-                plot_bgcolor="white", paper_bgcolor="white",
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#94A3B8"),
                 xaxis=dict(title="Avg Risk Score (%)", range=[0, 100],
-                           tickfont=dict(size=11), gridcolor="#F3F4F6"),
-                yaxis=dict(tickfont=dict(size=11)),
+                           tickfont=dict(size=11), gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+                yaxis=dict(tickfont=dict(size=11), color="#94A3B8"),
             )
             st.plotly_chart(fig2, use_container_width=True)
         else:
@@ -182,7 +188,7 @@ with st.container(border=True):
     with th_col:
         st.markdown("#### Recent Shipments")
     with search_col:
-        search = st.text_input("", placeholder="🔍 Search shipment ID…", label_visibility="collapsed")
+        search = st.text_input("Search", placeholder="🔍 Search shipment ID…", label_visibility="collapsed")
 
     table_df = df.copy()
     if search:

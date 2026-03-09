@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from auth_utils import check_auth
 from utils.database import get_connection, get_shipments
 from utils.mock_data import generate_mock_shipments
-from utils.styling import inject_css, top_nav, NAVY_500, NAVY_900
+from utils.styling import inject_css, top_nav, NAVY_500, NAVY_900, chart_theme
 
 st.set_page_config(
     page_title="PACE — Carrier Comparison",
@@ -157,9 +157,10 @@ with ch1:
         ))
         fig.update_layout(
             margin=dict(l=0, r=0, t=8, b=0), height=280,
-            plot_bgcolor="white", paper_bgcolor="white",
-            yaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-            xaxis=dict(gridcolor="#F3F4F6"),
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#94A3B8"),
+            yaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+            xaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
             showlegend=False,
         )
         st.plotly_chart(fig, use_container_width=True)
@@ -179,9 +180,10 @@ with ch2:
         ))
         fig2.update_layout(
             margin=dict(l=0, r=0, t=8, b=0), height=280,
-            plot_bgcolor="white", paper_bgcolor="white",
-            yaxis=dict(ticksuffix="%", gridcolor="#F3F4F6"),
-            xaxis=dict(gridcolor="#F3F4F6"),
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#94A3B8"),
+            yaxis=dict(ticksuffix="%", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+            xaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
             showlegend=False,
         )
         st.plotly_chart(fig2, use_container_width=True)
@@ -204,9 +206,10 @@ with ch3:
         ))
         fig3.update_layout(
             margin=dict(l=0, r=0, t=8, b=0), height=260,
-            plot_bgcolor="white", paper_bgcolor="white",
-            yaxis=dict(ticksuffix="%", gridcolor="#F3F4F6"),
-            xaxis=dict(gridcolor="#F3F4F6"),
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#94A3B8"),
+            yaxis=dict(ticksuffix="%", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+            xaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
             showlegend=False,
         )
         st.plotly_chart(fig3, use_container_width=True)
@@ -248,7 +251,8 @@ with ch4:
             polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
             margin=dict(l=20, r=20, t=20, b=20),
             height=260,
-            paper_bgcolor="white",
-            legend=dict(font=dict(size=10)),
+            paper_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#94A3B8"),
+            legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(size=10, color="#94A3B8")),
         )
         st.plotly_chart(radar_fig, use_container_width=True)

@@ -10,7 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from auth_utils import check_auth
 from utils.database import get_connection, get_shipments
 from utils.mock_data import generate_mock_shipments
-from utils.styling import inject_css, top_nav, NAVY_500, NAVY_900
+from utils.styling import inject_css, top_nav, NAVY_500, NAVY_900, chart_theme
 
 st.set_page_config(
     page_title="PACE — Route Analysis",
@@ -91,13 +91,17 @@ most_exp_lane = lane_metrics.loc[lane_metrics["avg_cpm"].idxmax(),  label] if to
 
 k1, k2, k3, k4 = st.columns(4)
 with k1:
-    st.metric("Active Lanes",    f"{total_lanes}")
+    st.metric("Active Lanes",    f"{total_lanes}",
+              help="Number of unique origin → destination pairs with at least one shipment.")
 with k2:
-    st.metric("Busiest Lane",    busiest_lane if len(busiest_lane) < 30 else busiest_lane[:27] + "…")
+    st.metric("Busiest Lane",    busiest_lane if len(busiest_lane) < 30 else busiest_lane[:27] + "…",
+              help="The origin → destination lane with the highest number of shipments.")
 with k3:
-    st.metric("Cheapest $/Mile", cheapest_lane if len(cheapest_lane) < 30 else cheapest_lane[:27] + "…")
+    st.metric("Cheapest $/Mile", cheapest_lane if len(cheapest_lane) < 30 else cheapest_lane[:27] + "…",
+              help="The lane with the lowest average carrier cost per mile — most cost-efficient route.")
 with k4:
-    st.metric("Most Expensive",  most_exp_lane if len(most_exp_lane) < 30 else most_exp_lane[:27] + "…")
+    st.metric("Most Expensive",  most_exp_lane if len(most_exp_lane) < 30 else most_exp_lane[:27] + "…",
+              help="The lane with the highest average carrier cost per mile — flags where pricing may need renegotiation.")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -119,9 +123,10 @@ with chart_l:
         ))
         fig.update_layout(
             margin=dict(l=0, r=80, t=8, b=0), height=300,
-            plot_bgcolor="white", paper_bgcolor="white",
-            xaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-            yaxis=dict(gridcolor="#F3F4F6"),
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#94A3B8"),
+            xaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+            yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
         )
         st.plotly_chart(fig, use_container_width=True)
 
@@ -140,9 +145,10 @@ with chart_r:
         ))
         fig2.update_layout(
             margin=dict(l=0, r=80, t=8, b=0), height=300,
-            plot_bgcolor="white", paper_bgcolor="white",
-            xaxis=dict(tickprefix="$", gridcolor="#F3F4F6"),
-            yaxis=dict(gridcolor="#F3F4F6"),
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#94A3B8"),
+            xaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+            yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
         )
         st.plotly_chart(fig2, use_container_width=True)
 
@@ -170,9 +176,10 @@ with st.container(border=True):
     )
     scatter_fig.update_layout(
         margin=dict(l=0, r=0, t=8, b=0), height=320,
-        plot_bgcolor="white", paper_bgcolor="white",
-        xaxis=dict(gridcolor="#F3F4F6"),
-        yaxis=dict(gridcolor="#F3F4F6", tickprefix="$"),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#94A3B8"),
+        xaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+        yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)", tickprefix="$"),
     )
     st.plotly_chart(scatter_fig, use_container_width=True)
 
