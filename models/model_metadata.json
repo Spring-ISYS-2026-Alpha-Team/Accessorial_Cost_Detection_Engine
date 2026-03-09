@@ -1,11 +1,11 @@
 {
-  "model_name": "RandomForest_v3",
+  "model_name": "RandomForest_v4_explainable",
   "n_estimators": 300,
   "max_depth": 15,
   "class_weight": "balanced",
-  "accuracy": 0.7107,
-  "auc_roc": 0.6642,
-  "n_features": 24,
-  "trained_at": "2026-03-07 14:09:19",
-  "trained_on_rows": 24
+  "accuracy": 0.7129,
+  "auc_roc": 0.6636,
+  "n_features": 28,
+  "trained_at": "2026-03-09 01:04:33",
+  "trained_on_rows": 5600
 }
