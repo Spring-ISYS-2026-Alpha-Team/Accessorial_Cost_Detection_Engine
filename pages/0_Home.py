@@ -7,6 +7,7 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from auth_utils import check_auth
+from utils.database import get_connection, get_shipments
 from utils.mock_data import generate_mock_shipments
 from utils.styling import inject_css, top_nav, NAVY_500, NAVY_900, NAVY_100
 
@@ -22,11 +23,11 @@ if not check_auth():
 username = st.session_state.get("username", "User")
 top_nav(username)
 
-@st.cache_data
-def load_data():
-    return generate_mock_shipments(300)
-
-df_all = load_data()
+conn = get_connection()
+df_all = get_shipments(conn) if conn is not None else pd.DataFrame()
+if df_all.empty:
+    df_all = generate_mock_shipments(300)
+    st.info("Live database unavailable — showing demo data.", icon="ℹ️")
 df_all["ship_date_dt"] = pd.to_datetime(df_all["ship_date"])
 
 # ── Inline date filter ────────────────────────────────────────────────────────

@@ -6,7 +6,8 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from auth_utils import check_auth
-from utils.mock_data import generate_mock_shipments, CARRIERS, FACILITIES
+from utils.database import get_connection, get_shipments
+from utils.mock_data import generate_mock_shipments
 from utils.styling import (
     inject_css, top_nav,
     NAVY_500, NAVY_100,
@@ -33,24 +34,22 @@ if not check_auth():
 username = st.session_state.get("username", "User")
 top_nav(username)
 
-# ── Load data ─────────────────────────────────────────────────────────────────
-@st.cache_data
-def load_data():
-    return generate_mock_shipments(300)
-
-df_all = load_data()
+# ── Load data (live DB with mock fallback) ────────────────────────────────────
+conn = get_connection()
+df_all = get_shipments(conn) if conn is not None else pd.DataFrame()
+if df_all.empty:
+    df_all = generate_mock_shipments(300)
+    st.info("Live database unavailable — showing demo data.", icon="ℹ️")
 
 # ── Inline filters ────────────────────────────────────────────────────────────
 with st.expander("⚙️ Filters", expanded=False):
     f1, f2, f3 = st.columns(3)
     with f1:
-        sel_carriers = st.multiselect(
-            "Carrier", sorted(CARRIERS), default=sorted(CARRIERS), key="ship_carriers"
-        )
+        carriers = sorted(df_all["carrier"].dropna().unique())
+        sel_carriers = st.multiselect("Carrier", carriers, default=carriers, key="ship_carriers")
     with f2:
-        sel_facilities = st.multiselect(
-            "Facility", sorted(FACILITIES), default=sorted(FACILITIES), key="ship_facilities"
-        )
+        facilities = sorted(df_all["facility"].dropna().unique())
+        sel_facilities = st.multiselect("Facility", facilities, default=facilities, key="ship_facilities")
     with f3:
         sel_tiers = st.multiselect(
             "Risk Tier", ["Low", "Medium", "High"],
@@ -236,14 +235,13 @@ def render_detail(row: pd.Series):
             df_all[df_all["carrier"] == row["carrier"]]
             .head(10)
             [["shipment_id", "ship_date", "facility", "risk_score",
-              "risk_tier", "accessorial_type", "accessorial_charge_usd"]]
+              "risk_tier", "accessorial_charge_usd"]]
             .rename(columns={
                 "shipment_id":            "Shipment ID",
                 "ship_date":              "Ship Date",
                 "facility":               "Facility",
                 "risk_score":             "Risk Score",
                 "risk_tier":              "Risk Tier",
-                "accessorial_type":       "Accessorial Type",
                 "accessorial_charge_usd": "Actual Charge ($)",
             })
         )
@@ -280,14 +278,14 @@ else:
         "", placeholder="🔍 Search by shipment ID…", label_visibility="collapsed"
     )
     if search:
-        df = df[df["shipment_id"].str.contains(search.upper(), na=False)]
+        df = df[df["shipment_id"].astype(str).str.contains(search.upper(), na=False)]
 
     with st.container(border=True):
         event = st.dataframe(
             df[[
                 "shipment_id", "ship_date", "carrier", "facility",
                 "weight_lbs", "miles", "risk_score", "risk_tier",
-                "accessorial_type", "base_freight_usd", "accessorial_charge_usd",
+                "base_freight_usd", "accessorial_charge_usd",
             ]].rename(columns={
                 "shipment_id":            "Shipment ID",
                 "ship_date":              "Ship Date",
@@ -297,7 +295,6 @@ else:
                 "miles":                  "Miles",
                 "risk_score":             "Risk Score",
                 "risk_tier":              "Risk Tier",
-                "accessorial_type":       "Accessorial Type",
                 "base_freight_usd":       "Base Freight ($)",
                 "accessorial_charge_usd": "Est. Accessorial ($)",
             }),

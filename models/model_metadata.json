@@ -6,6 +6,6 @@
   "accuracy": 0.7107,
   "auc_roc": 0.6642,
   "n_features": 24,
-  "trained_at": "2026-03-07 14:09:19",
+  "trained_at": "2026-03-09 02:53:02",
   "trained_on_rows": 24
 }

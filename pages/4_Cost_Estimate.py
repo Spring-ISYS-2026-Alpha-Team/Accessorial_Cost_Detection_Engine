@@ -8,8 +8,10 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from auth_utils import check_auth
-from utils.mock_data import generate_mock_shipments, CARRIERS, FACILITIES
+from utils.database import get_connection, get_shipments
+from utils.mock_data import generate_mock_shipments
 from utils.styling import inject_css, top_nav, NAVY_500, NAVY_100
+from utils.cost_model import get_cost_model
 
 st.set_page_config(
     page_title="PACE — Cost Estimate",
@@ -27,39 +29,16 @@ if not check_auth():
 username = st.session_state.get("username", "User")
 top_nav(username)
 
-# ── Train model (cached so it only runs once) ─────────────────────────────────
-@st.cache_resource
-def train_model():
-    from sklearn.ensemble import RandomForestRegressor
-    from sklearn.compose import ColumnTransformer
-    from sklearn.preprocessing import OneHotEncoder
-    from sklearn.pipeline import Pipeline
+# ── Load data (live DB with mock fallback) ────────────────────────────────────
+_conn = get_connection()
+_df_raw = get_shipments(_conn) if _conn is not None else pd.DataFrame()
+if _df_raw.empty:
+    _df_raw = generate_mock_shipments(1000)
+    st.info("Live database unavailable — showing demo data.", icon="ℹ️")
 
-    df = generate_mock_shipments(300)
-    df["total_cost_usd"] = df["base_freight_usd"] + df["accessorial_charge_usd"]
+df = _df_raw.copy()
 
-    cat_cols = ["carrier", "facility"]
-    num_cols = ["weight_lbs", "miles"]
-
-    preprocessor = ColumnTransformer([
-        ("cat", OneHotEncoder(handle_unknown="ignore"), cat_cols),
-        ("num", "passthrough", num_cols),
-    ])
-    model = Pipeline([
-        ("pre", preprocessor),
-        ("rf",  RandomForestRegressor(n_estimators=200, random_state=42)),
-    ])
-    X = df[cat_cols + num_cols]
-    y = df["total_cost_usd"]
-    model.fit(X, y)
-    return model, df
-
-@st.cache_data
-def load_data():
-    return generate_mock_shipments(300)
-
-model, df_train = train_model()
-df = load_data()
+model = get_cost_model(len(df), df)
 
 # ── Header ────────────────────────────────────────────────────────────────────
 st.markdown("## Cost Estimator")
@@ -72,8 +51,10 @@ form_col, result_col = st.columns([2, 3], gap="large")
 with form_col:
     with st.container(border=True):
         st.markdown("#### Shipment Details")
-        carrier  = st.selectbox("Carrier",  sorted(CARRIERS))
-        facility = st.selectbox("Facility", sorted(FACILITIES))
+        carriers_list  = sorted(df["carrier"].dropna().unique())
+        facilities_list = sorted(df["facility"].dropna().unique())
+        carrier  = st.selectbox("Carrier",  carriers_list)
+        facility = st.selectbox("Facility", facilities_list)
         weight   = st.number_input("Weight (lbs)", min_value=100, max_value=44_000,
                                    value=10_000, step=500)
         miles    = st.number_input("Miles", min_value=50, max_value=2_400,
@@ -84,7 +65,7 @@ with form_col:
     with st.expander("ℹ️ Model Info", expanded=False):
         st.markdown("""
 **Algorithm:** Random Forest Regressor
-**Training samples:** 300
+**Training samples:** {len(df):,}
 **Features:** Carrier, Facility, Weight, Miles
 **Target:** Total Shipment Cost
         """)

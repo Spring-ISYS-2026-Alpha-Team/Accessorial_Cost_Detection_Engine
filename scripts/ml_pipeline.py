@@ -290,7 +290,7 @@ def evaluate_model(model, X_test, y_test, feature_columns):
 
     print(f"\n  Top 10 Feature Importances:")
     for _, row in importance_df.head(10).iterrows():
-        bar = "█" * int(row["importance"] * 80)
+        bar = "#" * int(row["importance"] * 80)
         print(f"    {row['feature']:<25} {row['importance']:.4f}  {bar}")
 
     return importance_df, acc, auc
@@ -538,24 +538,228 @@ def save_visualizations(importance_df, predictions):
 
 
 # ============================================================================
+# EXPLANATION GENERATION
+# ============================================================================
+
+def generate_explanations(df, predictions, feature_columns):
+    """
+    INFERENCE PIPELINE — Generate human-readable risk explanations
+    and recommended operational actions for each shipment.
+
+    Uses rule-based logic driven by the actual feature values that the
+    Random Forest found most predictive. No LLM needed — the patterns
+    are deterministic and traceable back to real freight operations.
+
+    Returns predictions DataFrame with two new columns:
+      risk_reason         — plain-English explanation of top risk factors
+      recommended_action  — suggested action for operations team
+    """
+    print("[7b/8] Generating risk explanations and recommendations...")
+
+    reasons = []
+    actions = []
+
+    for idx, pred_row in predictions.iterrows():
+        shipment_id = pred_row["ShipmentId"]
+        tier        = str(pred_row["ml_risk_tier"])
+        score       = float(pred_row["ml_risk_score"])
+
+        # Look up the original shipment features
+        match = df[df["ShipmentId"] == shipment_id]
+        if match.empty:
+            reasons.append("Insufficient data for explanation.")
+            actions.append("Standard review recommended.")
+            continue
+
+        row = match.iloc[0]
+
+        # ── Identify the top risk contributors ──────────────────────────────
+        factors = []
+
+        # Appointment type
+        appt = str(row.get("AppointmentType", "")).strip()
+        if appt == "Live":
+            factors.append(("Live unload appointment — driver must wait at dock", 0.30))
+
+        # Facility dwell time
+        dwell = float(row.get("avg_dwell_time_hrs", 0) or 0)
+        if dwell >= 5.0:
+            factors.append((f"Facility avg dwell time is {dwell:.1f} hrs (very high)", 0.28))
+        elif dwell >= 3.5:
+            factors.append((f"Facility avg dwell time is {dwell:.1f} hrs (elevated)", 0.18))
+
+        # Carrier safety
+        safety = str(row.get("safety_rating", "") or row.get("safety_encoded", ""))
+        if "Unsatisfactory" in safety or safety == "3":
+            factors.append(("Carrier has Unsatisfactory safety rating", 0.25))
+        elif "Conditional" in safety or safety == "1":
+            factors.append(("Carrier has Conditional safety rating (at-risk)", 0.15))
+
+        # Distance
+        dist = float(row.get("DistanceMiles", 0) or 0)
+        if dist > 1200:
+            factors.append((f"Long-haul lane ({dist:.0f} mi) — layover risk elevated", 0.20))
+        elif dist > 700:
+            factors.append((f"Medium-long lane ({dist:.0f} mi) — potential overnight", 0.10))
+
+        # Weight
+        weight = float(row.get("weight_lbs", 0) or 0)
+        if weight > 35000:
+            factors.append((f"Heavy load ({weight:,.0f} lbs) — liftgate/lumper likely", 0.18))
+        elif weight > 25000:
+            factors.append((f"Above-average weight ({weight:,.0f} lbs)", 0.10))
+
+        # Time of day
+        hour = int(row.get("hour_of_day", 10) or 10)
+        if hour >= 16:
+            factors.append((f"Late dispatch ({hour}:00) — high overnight/weekend risk", 0.15))
+        elif hour >= 14:
+            factors.append((f"Afternoon dispatch ({hour}:00) — potential delay into evening", 0.08))
+
+        # Fleet size (small carrier = less scheduling flexibility)
+        fleet = float(row.get("fleet_size", 9999) or 9999)
+        if fleet < 1000:
+            factors.append((f"Small carrier fleet ({fleet:.0f} trucks) — limited scheduling buffer", 0.12))
+
+        # Day of week
+        dow = int(row.get("day_of_week", 3) or 3)
+        if dow == 6:  # Saturday (1=Sun in SQL DATEPART, 6=Fri, 7=Sat)
+            factors.append(("Weekend delivery — higher detention and delay risk", 0.15))
+        elif dow == 5:  # Friday
+            factors.append(("Friday dispatch — risk of weekend detention if delayed", 0.10))
+
+        # Sort by weight and pick top 3
+        factors.sort(key=lambda x: -x[1])
+        top_factors = factors[:3] if factors else [("Standard shipment with no dominant risk flags", 0)]
+
+        # ── Build reason string ──────────────────────────────────────────────
+        if tier == "High":
+            prefix = f"High risk score ({score:.2f}): "
+        elif tier == "Medium":
+            prefix = f"Moderate risk score ({score:.2f}): "
+        else:
+            prefix = f"Low risk score ({score:.2f}): "
+
+        reason_parts = [f[0] for f in top_factors]
+        reason = prefix + "; ".join(reason_parts) + "."
+        reasons.append(reason[:500])  # cap at 500 chars for DB
+
+        # ── Build recommended action ─────────────────────────────────────────
+        if tier == "High":
+            if appt == "Live" and dwell >= 4.0:
+                action = (
+                    "Request earliest available morning appointment window (before 10 AM). "
+                    "Pre-confirm dock availability. Add detention buffer of $150-300 to freight budget."
+                )
+            elif dist > 1000 and appt == "Live":
+                action = (
+                    "Coordinate drop-and-hook if facility allows. If live required, "
+                    "ensure driver departs by noon to avoid overnight layover ($250-450 charge)."
+                )
+            elif weight > 35000:
+                action = (
+                    "Confirm liftgate availability or lumper service at destination. "
+                    "Pre-authorize driver assist. Budget $120-265 for unloading charges."
+                )
+            else:
+                action = (
+                    "Flag for proactive monitoring. Contact carrier day before for ETA confirmation. "
+                    "Reserve $150-350 accessorial contingency in shipment budget."
+                )
+        elif tier == "Medium":
+            if appt == "Live" and dwell >= 3.5:
+                action = (
+                    "Confirm appointment 24 hrs in advance. "
+                    "Request dock availability update morning of delivery. "
+                    "Reserve $75-150 contingency for potential detention."
+                )
+            else:
+                action = (
+                    "Standard monitoring. Verify carrier check-in protocol. "
+                    "No immediate action required but watch for delays on day of delivery."
+                )
+        else:
+            action = (
+                "Low risk — standard operating procedure. "
+                "No additional accessorial buffer required."
+            )
+
+        actions.append(action[:500])  # cap at 500 chars
+
+    predictions = predictions.copy()
+    predictions["risk_reason"]         = reasons
+    predictions["recommended_action"]  = actions
+
+    high_n   = (predictions["ml_risk_tier"].astype(str) == "High").sum()
+    medium_n = (predictions["ml_risk_tier"].astype(str) == "Medium").sum()
+    print(f"      Explanations generated: {len(predictions):,} total "
+          f"({high_n} High, {medium_n} Medium, {len(predictions)-high_n-medium_n} Low)")
+    return predictions
+
+
+# ============================================================================
 # WRITE-BACK
 # ============================================================================
 
+def _ensure_explanation_columns(conn):
+    """
+    Add risk_reason and recommended_action columns to the Shipments table
+    if they don't already exist. Safe to run multiple times (no-op if present).
+    """
+    cursor = conn.cursor()
+    for col, dtype in [("risk_reason", "NVARCHAR(500)"),
+                       ("recommended_action", "NVARCHAR(500)")]:
+        try:
+            cursor.execute(f"""
+                IF NOT EXISTS (
+                    SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_NAME = 'Shipments' AND COLUMN_NAME = '{col}'
+                )
+                ALTER TABLE Shipments ADD {col} {dtype} NULL
+            """)
+            conn.commit()
+        except Exception as e:
+            print(f"      Warning: could not add column '{col}': {e}")
+    cursor.close()
+    print("      Schema check: risk_reason + recommended_action columns ready.")
+
+
 def write_predictions_to_sql(conn, predictions):
-    """UPDATE risk_score and risk_tier on Shipments in batches of 500."""
+    """
+    UPDATE risk_score, risk_tier, risk_reason, and recommended_action
+    on Shipments table in batches of 500.
+    Falls back to updating only risk_score + risk_tier if the explanation
+    columns don't exist in the schema yet.
+    """
     print("[8/8] Writing predictions back to SQL...")
 
-    update_sql = """
-        UPDATE Shipments
-        SET risk_score = ?, risk_tier = ?
-        WHERE ShipmentId = ?
-    """
+    has_explanation_cols = "risk_reason" in predictions.columns
 
-    records = list(zip(
-        predictions["ml_risk_score"].round(4),
-        predictions["ml_risk_tier"].astype(str),
-        predictions["ShipmentId"],
-    ))
+    if has_explanation_cols:
+        update_sql = """
+            UPDATE Shipments
+            SET risk_score = ?, risk_tier = ?,
+                risk_reason = ?, recommended_action = ?
+            WHERE ShipmentId = ?
+        """
+        records = list(zip(
+            predictions["ml_risk_score"].round(4),
+            predictions["ml_risk_tier"].astype(str),
+            predictions["risk_reason"],
+            predictions["recommended_action"],
+            predictions["ShipmentId"],
+        ))
+    else:
+        update_sql = """
+            UPDATE Shipments
+            SET risk_score = ?, risk_tier = ?
+            WHERE ShipmentId = ?
+        """
+        records = list(zip(
+            predictions["ml_risk_score"].round(4),
+            predictions["ml_risk_tier"].astype(str),
+            predictions["ShipmentId"],
+        ))
 
     batch_size = 500
     cursor = conn.cursor()
@@ -600,7 +804,9 @@ def main():
         )
         save_model(model, feature_columns, accuracy, auc)
         predictions = generate_predictions(model, df, feature_columns)
+        predictions = generate_explanations(df, predictions, feature_columns)
         save_visualizations(importance_df, predictions)
+        _ensure_explanation_columns(conn)
         write_predictions_to_sql(conn, predictions)
 
         print("\n" + "=" * 60)

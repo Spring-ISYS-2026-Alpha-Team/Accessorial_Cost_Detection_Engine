@@ -9,7 +9,8 @@ def logout():
     for key in list(st.session_state.keys()):
         del st.session_state[key]
     st.cache_data.clear()
-    st.cache_resource.clear()
+    # Intentionally NOT clearing cache_resource so the ML model
+    # stays loaded in memory between sessions for faster reloads.
     st.switch_page("app.py")
 
 def check_auth():
