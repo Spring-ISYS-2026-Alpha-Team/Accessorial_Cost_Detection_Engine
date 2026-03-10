@@ -56,7 +56,7 @@ st.markdown("""
     inset: -20px;
     z-index: -1;
     """ + _bg_props + """
-    filter: blur(3px);
+    filter: blur(1.5px);
 }
 
 /* ── Dot grid overlay ── */

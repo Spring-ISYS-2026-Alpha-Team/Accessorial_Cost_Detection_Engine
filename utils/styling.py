@@ -126,7 +126,7 @@ _BASE_CSS = f"""
     inset: -20px;
     z-index: -1;
     {_bg_css()}
-    filter: blur(3px);
+    filter: blur(1.5px);
 }}
 
 /* ── Hide Streamlit chrome and sidebar ── */
@@ -274,7 +274,7 @@ h2 {{ color: #F1F5F9 !important; font-weight: 600 !important; }}
 h3 {{ color: #E2E8F0 !important; font-weight: 600 !important; }}
 h4, h5, h6 {{ color: #CBD5E1 !important; font-weight: 600 !important; }}
 p, .stMarkdown p {{ color: {TEXT_SECONDARY} !important; }}
-.stCaption, [data-testid="stCaptionContainer"] p {{ color: #A78BFA !important; font-size: 13px !important; }}
+.stCaption, [data-testid="stCaptionContainer"] p {{ color: #CBD5E1 !important; font-size: 13px !important; }}
 .stDivider hr {{ border-color: rgba(180,80,220,0.25) !important; }}
 
 /* ── Plotly chart containers ── */

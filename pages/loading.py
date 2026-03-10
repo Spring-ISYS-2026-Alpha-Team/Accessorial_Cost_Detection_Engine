@@ -67,7 +67,7 @@ st.markdown(f"""
     inset: -20px;
     z-index: -1;
     {_bg_props}
-    filter: blur(3px);
+    filter: blur(1.5px);
 }}
 
 /* Dot grid overlay */
@@ -121,7 +121,7 @@ else:
     """, unsafe_allow_html=True)
 
 st.markdown(
-    "<p style='text-align:center;color:#64748B;font-size:12px;margin:-12px 0 28px;'>"
+    "<p style='text-align:center;color:#CBD5E1;font-size:12px;margin:-12px 0 28px;'>"
     "Preparing your workspace…</p>",
     unsafe_allow_html=True,
 )
@@ -134,7 +134,7 @@ status_slot  = st.empty()
 def _step(msg: str, pct: int):
     progress_bar.progress(pct)
     status_slot.markdown(
-        f"<p style='text-align:center;color:#A78BFA;font-size:13px;margin:6px 0;'>{msg}…</p>",
+        f"<p style='text-align:center;color:#E2E8F0;font-size:13px;margin:6px 0;'>{msg}…</p>",
         unsafe_allow_html=True,
     )
 
