@@ -9,7 +9,7 @@ import streamlit as st
 
 
 def _bg_css() -> str:
-    """Load background image as base64 CSS, fall back to gradient if missing."""
+    """Return background CSS props for the ::before blur layer."""
     _root = os.path.dirname(os.path.dirname(__file__))
     img_path = os.path.join(_root, "assets", "background.png")
     if os.path.exists(img_path):
@@ -19,14 +19,12 @@ def _bg_css() -> str:
             f"background-image: url('data:image/png;base64,{b64}');"
             "background-size: cover;"
             "background-position: center center;"
-            "background-attachment: fixed;"
         )
     return (
         "background: "
         "radial-gradient(ellipse 65% 55% at 8% 62%, rgba(120,20,180,0.45) 0%, transparent 58%),"
         "radial-gradient(ellipse 55% 45% at 92% 18%, rgba(200,20,100,0.38) 0%, transparent 52%),"
         "linear-gradient(155deg, #060012 0%, #09021a 40%, #06010f 100%);"
-        "background-attachment: fixed;"
     )
 
 
@@ -108,11 +106,27 @@ _BASE_CSS = f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-/* ── Global background ── */
+@keyframes pace-in {{
+    from {{ opacity: 0; transform: translateY(8px); }}
+    to   {{ opacity: 1; transform: translateY(0); }}
+}}
+
+/* ── App shell — no direct background ── */
 .stApp {{
-    {_bg_css()}
+    background: none;
     font-family: 'Inter', 'Segoe UI', sans-serif;
     color: {TEXT_PRIMARY};
+    animation: pace-in 0.4s ease-out;
+}}
+
+/* ── Blurred background layer ── */
+.stApp::before {{
+    content: '';
+    position: fixed;
+    inset: -20px;
+    z-index: -1;
+    {_bg_css()}
+    filter: blur(3px);
 }}
 
 /* ── Hide Streamlit chrome and sidebar ── */

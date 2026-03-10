@@ -3,17 +3,22 @@ import os
 import base64
 import streamlit as st
 from auth_utils import check_auth
-from utils.database import get_connection, verify_pace_user
+
 
 def _bg_css() -> str:
+    """Return background CSS props for the ::before blur layer."""
     img_path = os.path.join(os.path.dirname(__file__), "assets", "background.png")
     if os.path.exists(img_path):
         with open(img_path, "rb") as f:
             b64 = base64.b64encode(f.read()).decode()
-        return f"background-image:url('data:image/png;base64,{b64}');background-size:cover;background-position:center;background-attachment:fixed;"
-    return "background:linear-gradient(155deg,#060012 0%,#09021a 40%,#06010f 100%);background-attachment:fixed;"
+        return (
+            f"background-image:url('data:image/png;base64,{b64}');"
+            "background-size:cover;background-position:center;"
+        )
+    return "background:linear-gradient(155deg,#060012 0%,#09021a 40%,#06010f 100%);"
 
-_bg_style = _bg_css()
+
+_bg_props = _bg_css()
 
 # ── Fallback users if DB unavailable ──────────────────────────────────────────
 _FALLBACK = {
@@ -32,11 +37,30 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-.stApp {
-    """ + _bg_style + """
-    font-family: 'Inter', 'Segoe UI', sans-serif;
+@keyframes pace-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ── App shell — no direct background, handled by ::before ── */
+.stApp {
+    background: none;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    animation: pace-in 0.4s ease-out;
+}
+
+/* ── Blurred background layer ── */
 .stApp::before {
+    content: '';
+    position: fixed;
+    inset: -20px;
+    z-index: -1;
+    """ + _bg_props + """
+    filter: blur(3px);
+}
+
+/* ── Dot grid overlay ── */
+.stApp::after {
     content: '';
     position: fixed;
     inset: 0;
@@ -45,6 +69,7 @@ st.markdown("""
     pointer-events: none;
     z-index: 0;
 }
+
 #MainMenu, header, footer { visibility: hidden; }
 [data-testid="stSidebar"], [data-testid="collapsedControl"] { display: none !important; }
 
@@ -175,32 +200,39 @@ with st.container(border=True):
     </div>
     """, unsafe_allow_html=True)
 
+    # Show error passed back from loading screen (bad DB credentials)
+    _err = st.session_state.pop("_login_error", None)
+    if _err:
+        st.error(_err)
+
     with st.form("login_form", clear_on_submit=False):
         username = st.text_input("Username", placeholder="Enter your username")
         password = st.text_input(
             "Password", type="password", placeholder="Enter your password"
         )
         submitted = st.form_submit_button(
-            "Sign In", use_container_width=True, type="primary"
+            "Sign In", width="stretch", type="primary"
         )
         if submitted:
             if username and password:
                 u, p = username.strip(), password
-                conn = get_connection()
-                role = verify_pace_user(conn, u, p)
-                if role is None and u in _FALLBACK and p == _FALLBACK[u]["password"]:
+
+                # Check fallback dict first — instant, no DB call
+                if u in _FALLBACK and p == _FALLBACK[u]["password"]:
                     role = _FALLBACK[u]["role"]
-                if role:
-                    st.session_state["authenticated"] = True
-                    st.session_state["username"] = u
-                    st.session_state["role"] = role
-                    st.session_state["_data_preloaded"] = False
-                    st.session_state["post_load_dest"] = (
-                        "pages/8_Admin.py" if role == "admin" else "pages/0_Home.py"
-                    )
-                    st.switch_page("pages/loading.py")
                 else:
-                    st.error("Invalid username or password.")
+                    # Non-fallback user: defer DB verification to loading screen
+                    role = "pending"
+                    st.session_state["_pending_password"] = p
+
+                st.session_state["authenticated"] = True
+                st.session_state["username"] = u
+                st.session_state["role"] = role
+                st.session_state["_data_preloaded"] = False
+                st.session_state["post_load_dest"] = (
+                    "pages/8_Admin.py" if role == "admin" else "pages/0_Home.py"
+                )
+                st.switch_page("pages/loading.py")
             else:
                 st.error("Please enter both username and password.")
 

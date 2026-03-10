@@ -40,24 +40,51 @@ def _bg_css() -> str:
         with open(img, "rb") as f:
             b64 = base64.b64encode(f.read()).decode()
         return (f"background-image:url('data:image/png;base64,{b64}');"
-                "background-size:cover;background-position:center;background-attachment:fixed;")
+                "background-size:cover;background-position:center;")
     return "background:linear-gradient(155deg,#060012 0%,#09021a 40%,#06010f 100%);"
+
+_bg_props = _bg_css()
 
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+@keyframes pace-in {{
+    from {{ opacity: 0; transform: translateY(8px); }}
+    to   {{ opacity: 1; transform: translateY(0); }}
+}}
+
 .stApp {{
-    {_bg_css()}
+    background: none;
     font-family: 'Inter', sans-serif;
+    animation: pace-in 0.4s ease-out;
 }}
+
+/* Blurred background layer */
 .stApp::before {{
-    content:''; position:fixed; inset:0;
-    background-image:radial-gradient(rgba(180,80,220,0.06) 1px, transparent 1px);
-    background-size:28px 28px; pointer-events:none; z-index:0;
+    content: '';
+    position: fixed;
+    inset: -20px;
+    z-index: -1;
+    {_bg_props}
+    filter: blur(3px);
 }}
+
+/* Dot grid overlay */
+.stApp::after {{
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(rgba(180,80,220,0.06) 1px, transparent 1px);
+    background-size: 28px 28px;
+    pointer-events: none;
+    z-index: 0;
+}}
+
 #MainMenu, header, footer {{ visibility:hidden; }}
 [data-testid="stSidebar"], [data-testid="collapsedControl"] {{ display:none !important; }}
 .block-container {{ position:relative; z-index:1; padding-top:0 !important; }}
+
 [data-testid="stProgressBar"] > div > div {{
     background: linear-gradient(90deg, #9333EA, #E040FB) !important;
     border-radius: 4px !important;
@@ -115,7 +142,8 @@ def _step(msg: str, pct: int):
 # ── Pre-warm all caches ────────────────────────────────────────────────────────
 try:
     from utils.database import (
-        get_connection, get_shipments, get_accessorial_charges,
+        get_connection, verify_pace_user,
+        get_shipments, get_accessorial_charges,
         get_carriers, get_facilities, get_shipments_with_charges,
     )
     from utils.mock_data import generate_mock_shipments
@@ -123,6 +151,22 @@ try:
 
     _step("Connecting to database", 5)
     conn = get_connection()
+
+    # ── Verify non-fallback users against the DB ───────────────────────────────
+    if st.session_state.get("role") == "pending":
+        _u = st.session_state.get("username", "")
+        _p = st.session_state.pop("_pending_password", "")
+        verified_role = verify_pace_user(conn, _u, _p) if conn is not None else None
+        if verified_role is None:
+            _err = "Invalid credentials or database unavailable."
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.session_state["_login_error"] = _err
+            st.switch_page("app.py")
+            st.stop()
+        st.session_state["role"] = verified_role
+        dest = "pages/8_Admin.py" if verified_role == "admin" else "pages/0_Home.py"
+        st.session_state["post_load_dest"] = dest
 
     _step("Loading shipment records", 20)
     df = get_shipments(conn) if conn is not None else pd.DataFrame()
