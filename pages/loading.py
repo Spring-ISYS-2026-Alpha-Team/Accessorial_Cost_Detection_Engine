@@ -148,6 +148,7 @@ try:
     )
     from utils.mock_data import generate_mock_shipments
     from utils.cost_model import get_cost_model
+    from utils.risk_model import get_risk_model
 
     _step("Connecting to database", 5)
     conn = get_connection()
@@ -181,8 +182,11 @@ try:
     get_carriers(conn)
     get_facilities(conn)
 
-    _step("Training ML cost model", 72)
+    _step("Training ML cost model", 68)
     get_cost_model(len(df), df)
+
+    _step("Training risk model", 82)
+    get_risk_model(len(df), df)
 
     _step("Preparing dashboards", 90)
     _df = df.copy()
