@@ -56,7 +56,7 @@ def _sort_buttons(chart_key: str):
         with col:
             kind = "primary" if st.session_state[skey] == lbl else "secondary"
             if st.button(lbl, key=f"sb_{chart_key}_{lbl}", type=kind,
-                         use_container_width=True):
+                         width="stretch"):
                 st.session_state[skey] = lbl
     return st.session_state[skey]
 
@@ -225,7 +225,7 @@ def _popup_cpm():
     if m.empty:
         st.info("No data available.")
     else:
-        st.plotly_chart(_build_cpm_fig(m, height=460, sort_by=sort_by), use_container_width=True)
+        st.plotly_chart(_build_cpm_fig(m, height=460, sort_by=sort_by), width="stretch")
 
 
 @st.dialog("High Risk Shipment Rate", width="large")
@@ -236,7 +236,7 @@ def _popup_high_risk():
     if m.empty:
         st.info("No data available.")
     else:
-        st.plotly_chart(_build_high_risk_fig(m, height=460, sort_by=sort_by), use_container_width=True)
+        st.plotly_chart(_build_high_risk_fig(m, height=460, sort_by=sort_by), width="stretch")
 
 
 @st.dialog("Accessorial Cost Rate", width="large")
@@ -247,7 +247,7 @@ def _popup_acc_rate():
     if m.empty:
         st.info("No data available.")
     else:
-        st.plotly_chart(_build_acc_rate_fig(m, height=460, sort_by=sort_by), use_container_width=True)
+        st.plotly_chart(_build_acc_rate_fig(m, height=460, sort_by=sort_by), width="stretch")
 
 
 @st.dialog("Carrier Performance Radar", width="large")
@@ -257,7 +257,7 @@ def _popup_radar():
     if m.empty:
         st.info("No data available.")
     else:
-        st.plotly_chart(_build_radar_fig(m, height=500), use_container_width=True)
+        st.plotly_chart(_build_radar_fig(m, height=500), width="stretch")
 
 
 # ── Persist active carriers in session state ──────────────────────────────────
@@ -278,11 +278,11 @@ with st.expander("⚙️ Manage Carriers", expanded=False):
         st.markdown("<br>", unsafe_allow_html=True)
         col_a, col_b = st.columns(2)
         with col_a:
-            if st.button("All", use_container_width=True):
+            if st.button("All", width="stretch"):
                 st.session_state["active_carriers"] = ALL_CARRIERS
                 st.rerun()
         with col_b:
-            if st.button("Clear", use_container_width=True):
+            if st.button("Clear", width="stretch"):
                 st.session_state["active_carriers"] = []
                 st.rerun()
 
@@ -327,7 +327,7 @@ with st.container(border=True):
             "accessorial_rate":"Accessorial %",
             "total_spend":     "Total Spend",
         }).sort_values("Avg $/Mile"),
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         column_config={
             "Avg Risk":       st.column_config.ProgressColumn(
@@ -352,7 +352,7 @@ with ch1:
         with btn:
             if st.button("⤢", key="exp_cpm", help="Expand chart"):
                 _popup_cpm()
-        st.plotly_chart(_build_cpm_fig(metrics), use_container_width=True)
+        st.plotly_chart(_build_cpm_fig(metrics), width="stretch")
 
 with ch2:
     with st.container(border=True):
@@ -362,7 +362,7 @@ with ch2:
         with btn:
             if st.button("⤢", key="exp_high_risk", help="Expand chart"):
                 _popup_high_risk()
-        st.plotly_chart(_build_high_risk_fig(metrics), use_container_width=True)
+        st.plotly_chart(_build_high_risk_fig(metrics), width="stretch")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -377,7 +377,7 @@ with ch3:
         with btn:
             if st.button("⤢", key="exp_acc_rate", help="Expand chart"):
                 _popup_acc_rate()
-        st.plotly_chart(_build_acc_rate_fig(metrics), use_container_width=True)
+        st.plotly_chart(_build_acc_rate_fig(metrics), width="stretch")
 
 with ch4:
     with st.container(border=True):
@@ -388,4 +388,4 @@ with ch4:
         with btn:
             if st.button("⤢", key="exp_radar", help="Expand chart"):
                 _popup_radar()
-        st.plotly_chart(_build_radar_fig(metrics), use_container_width=True)
+        st.plotly_chart(_build_radar_fig(metrics), width="stretch")

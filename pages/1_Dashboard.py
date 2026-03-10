@@ -57,7 +57,7 @@ def _sort_buttons(chart_key: str):
         with col:
             kind = "primary" if st.session_state[skey] == lbl else "secondary"
             if st.button(lbl, key=f"sb_{chart_key}_{lbl}", type=kind,
-                         use_container_width=True):
+                         width="stretch"):
                 st.session_state[skey] = lbl
     return st.session_state[skey]
 
@@ -134,7 +134,7 @@ def _build_carrier_risk_fig(df: pd.DataFrame, height=260, sort_by="Value ↓") -
 def _popup_risk_dist():
     st.caption(f"{len(df_all):,} shipments · all time")
     st.plotly_chart(_build_risk_dist_fig(df_all, height=480),
-                    use_container_width=True)
+                    width="stretch")
 
 
 @st.dialog("Avg Risk Score by Carrier", width="large")
@@ -145,7 +145,7 @@ def _popup_carrier_risk():
         st.info("No data available.")
     else:
         st.plotly_chart(_build_carrier_risk_fig(df_all, height=480, sort_by=sort_by),
-                        use_container_width=True)
+                        width="stretch")
 
 
 # ── Inline filters ────────────────────────────────────────────────────────────
@@ -220,7 +220,7 @@ with col_left:
                 _popup_risk_dist()
 
         if total > 0:
-            st.plotly_chart(_build_risk_dist_fig(df), use_container_width=True)
+            st.plotly_chart(_build_risk_dist_fig(df), width="stretch")
         else:
             st.info("No data matches the current filters.")
 
@@ -235,7 +235,7 @@ with col_right:
                 _popup_carrier_risk()
 
         if total > 0:
-            st.plotly_chart(_build_carrier_risk_fig(df), use_container_width=True)
+            st.plotly_chart(_build_carrier_risk_fig(df), width="stretch")
         else:
             st.info("No data matches the current filters.")
 
@@ -273,7 +273,7 @@ with st.container(border=True):
     with th_col:
         st.markdown("#### Recent Shipments")
     with search_col:
-        search = st.text_input("", placeholder="🔍 Search shipment ID…", label_visibility="collapsed")
+        search = st.text_input("Search", placeholder="🔍 Search shipment ID…", label_visibility="collapsed")
 
     table_df = df.copy()
     if search:
@@ -293,7 +293,7 @@ with st.container(border=True):
             "base_freight_usd":       "Base Freight ($)",
             "accessorial_charge_usd": "Est. Accessorial ($)",
         }),
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         column_config={
             "Risk Score": st.column_config.ProgressColumn(

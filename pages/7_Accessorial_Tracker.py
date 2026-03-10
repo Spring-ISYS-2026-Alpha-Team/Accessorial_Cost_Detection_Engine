@@ -62,7 +62,7 @@ def _range_buttons(chart_key: str):
         with col:
             kind = "primary" if st.session_state[skey] == lbl else "secondary"
             if st.button(lbl, key=f"rb_{chart_key}_{lbl}", type=kind,
-                         use_container_width=True):
+                         width="stretch"):
                 st.session_state[skey] = lbl
     return st.session_state[skey]
 
@@ -77,7 +77,7 @@ def _sort_buttons(chart_key: str):
         with col:
             kind = "primary" if st.session_state[skey] == lbl else "secondary"
             if st.button(lbl, key=f"sb_{chart_key}_{lbl}", type=kind,
-                         use_container_width=True):
+                         width="stretch"):
                 st.session_state[skey] = lbl
     return st.session_state[skey]
 
@@ -227,7 +227,7 @@ def _popup_donut():
         st.info("No accessorial charges available.")
     else:
         st.plotly_chart(_build_donut_fig(df_acc, total, height=480),
-                        use_container_width=True)
+                        width="stretch")
 
 
 @st.dialog("Accessorial Costs by Carrier", width="large")
@@ -239,7 +239,7 @@ def _popup_carrier_acc():
         st.info("No data available.")
     else:
         st.plotly_chart(_build_carrier_acc_fig(df_acc, height=480, sort_by=sort_by),
-                        use_container_width=True)
+                        width="stretch")
 
 
 @st.dialog("Accessorial Costs by Facility", width="large")
@@ -251,7 +251,7 @@ def _popup_facility():
         st.info("No data available.")
     else:
         st.plotly_chart(_build_facility_fig(df_acc, height=480, sort_by=sort_by),
-                        use_container_width=True)
+                        width="stretch")
 
 
 @st.dialog("Accessorial Cost Trend", width="large")
@@ -264,7 +264,7 @@ def _popup_trend():
         st.info("No trend data for the selected range.")
     else:
         st.plotly_chart(_build_trend_fig(df_f_acc, height=480),
-                        use_container_width=True)
+                        width="stretch")
 
 
 # ── Inline filters ────────────────────────────────────────────────────────────
@@ -348,14 +348,14 @@ with col_l:
         )
         if not type_data.empty:
             st.plotly_chart(_build_donut_fig(df_with_acc, total_acc),
-                            use_container_width=True)
+                            width="stretch")
             st.dataframe(
                 type_data.rename(columns={
                     "accessorial_type": "Type",
                     "total":            "Total Cost ($)",
                     "count":            "Occurrences",
                 }),
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
                 column_config={
                     "Total Cost ($)": st.column_config.NumberColumn(format="$%.2f")
@@ -376,7 +376,7 @@ with col_r:
 
         if not df_with_acc.empty:
             st.plotly_chart(_build_carrier_acc_fig(df_with_acc),
-                            use_container_width=True)
+                            width="stretch")
         else:
             st.info("No data for the current filter selection.")
 
@@ -397,7 +397,7 @@ with col_a:
 
         if not df_with_acc.empty:
             st.plotly_chart(_build_facility_fig(df_with_acc),
-                            use_container_width=True)
+                            width="stretch")
         else:
             st.info("No data for the current filter selection.")
 
@@ -413,7 +413,7 @@ with col_b:
 
         if not df_with_acc.empty:
             st.plotly_chart(_build_trend_fig(df_with_acc),
-                            use_container_width=True)
+                            width="stretch")
         else:
             st.info("No trend data available for this filter.")
 
@@ -494,7 +494,7 @@ with st.container(border=True):
     )
     st.dataframe(
         top15,
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         column_config={
             "Accessorial ($)":  st.column_config.NumberColumn(format="$%.2f"),
@@ -653,7 +653,7 @@ else:
 
         event = st.dataframe(
             display_df,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             on_select="rerun",
             selection_mode="single-row",

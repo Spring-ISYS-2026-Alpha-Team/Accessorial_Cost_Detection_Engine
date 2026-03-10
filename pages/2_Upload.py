@@ -342,7 +342,7 @@ if st.session_state.get("upload_df") is not None:
                 "Generate Risk Scores →",
                 type="primary",
                 disabled=bool(errs) or (pass_count == 0),
-                use_container_width=True,
+                width="stretch",
             )
 
         if errs:
@@ -356,7 +356,7 @@ if st.session_state.get("upload_df") is not None:
 
         st.dataframe(
             preview,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             column_config={
                 "risk_score": st.column_config.ProgressColumn(

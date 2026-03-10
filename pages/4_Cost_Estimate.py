@@ -61,7 +61,7 @@ with form_col:
         miles    = st.number_input("Miles", min_value=50, max_value=2_400,
                                    value=500, step=50)
         estimate_clicked = st.button("Estimate Cost →", type="primary",
-                                     use_container_width=True)
+                                     width="stretch")
 
     with st.expander("ℹ️ Model Info", expanded=False):
         st.markdown("""
@@ -153,7 +153,7 @@ with result_col:
                 xaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
                 showlegend=False,
             )
-            st.plotly_chart(comp_fig, use_container_width=True)
+            st.plotly_chart(comp_fig, width="stretch")
 
     else:
         with st.container(border=True):
@@ -207,7 +207,7 @@ with st.container(border=True):
         xaxis=dict(tickformat=".0%", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
         yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
     )
-    st.plotly_chart(fi_fig, use_container_width=True)
+    st.plotly_chart(fi_fig, width="stretch")
 
 # ── Historical distribution ───────────────────────────────────────────────────
 with st.container(border=True):
@@ -237,4 +237,4 @@ with st.container(border=True):
         xaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
         yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
     )
-    st.plotly_chart(hist_fig, use_container_width=True)
+    st.plotly_chart(hist_fig, width="stretch")

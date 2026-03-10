@@ -56,7 +56,7 @@ def _range_buttons(chart_key: str):
         with col:
             kind = "primary" if st.session_state[skey] == lbl else "secondary"
             if st.button(lbl, key=f"rb_{chart_key}_{lbl}", type=kind,
-                         use_container_width=True):
+                         width="stretch"):
                 st.session_state[skey] = lbl
     return st.session_state[skey]
 
@@ -72,7 +72,7 @@ def _sort_buttons(chart_key: str):
         with col:
             kind = "primary" if st.session_state[skey] == lbl else "secondary"
             if st.button(lbl, key=f"sb_{chart_key}_{lbl}", type=kind,
-                         use_container_width=True):
+                         width="stretch"):
                 st.session_state[skey] = lbl
     return st.session_state[skey]
 
@@ -159,7 +159,7 @@ def _popup_volume():
     sel = _range_buttons("volume")
     df_f = _filter_by_range(df_all, sel)
     st.caption(f"{len(df_f):,} shipments · {sel} view")
-    st.plotly_chart(_build_volume_fig(df_f, height=480), use_container_width=True)
+    st.plotly_chart(_build_volume_fig(df_f, height=480), width="stretch")
 
 
 @st.dialog("Revenue vs Total Cost", width="large")
@@ -167,21 +167,21 @@ def _popup_rev_cost():
     sel = _range_buttons("rev_cost")
     df_f = _filter_by_range(df_all, sel)
     st.caption(f"{len(df_f):,} shipments · {sel} view")
-    st.plotly_chart(_build_rev_cost_fig(df_f, height=480), use_container_width=True)
+    st.plotly_chart(_build_rev_cost_fig(df_f, height=480), width="stretch")
 
 
 @st.dialog("Avg Cost per Mile by Carrier", width="large")
 def _popup_cpm():
     sort_by = _sort_buttons("cpm")
     st.caption(f"{len(df_all):,} shipments · all carriers")
-    st.plotly_chart(_build_cpm_fig(df_all, height=460, sort_by=sort_by), use_container_width=True)
+    st.plotly_chart(_build_cpm_fig(df_all, height=460, sort_by=sort_by), width="stretch")
 
 
 @st.dialog("Cost Breakdown by Carrier", width="large")
 def _popup_breakdown():
     sort_by = _sort_buttons("breakdown")
     st.caption(f"{len(df_all):,} shipments · all carriers")
-    st.plotly_chart(_build_breakdown_fig(df_all, height=460, sort_by=sort_by), use_container_width=True)
+    st.plotly_chart(_build_breakdown_fig(df_all, height=460, sort_by=sort_by), width="stretch")
 
 
 # ── Inline date filter ────────────────────────────────────────────────────────
@@ -242,7 +242,7 @@ with col_l:
         with btn:
             if st.button("⤢", key="exp_vol", help="Expand chart"):
                 _popup_volume()
-        st.plotly_chart(_build_volume_fig(df), use_container_width=True)
+        st.plotly_chart(_build_volume_fig(df), width="stretch")
 
 with col_r:
     with st.container(border=True):
@@ -253,7 +253,7 @@ with col_r:
         with btn:
             if st.button("⤢", key="exp_rev", help="Expand chart"):
                 _popup_rev_cost()
-        st.plotly_chart(_build_rev_cost_fig(df), use_container_width=True)
+        st.plotly_chart(_build_rev_cost_fig(df), width="stretch")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -269,7 +269,7 @@ with col_a:
         with btn:
             if st.button("⤢", key="exp_cpm", help="Expand chart"):
                 _popup_cpm()
-        st.plotly_chart(_build_cpm_fig(df), use_container_width=True)
+        st.plotly_chart(_build_cpm_fig(df), width="stretch")
 
 with col_b:
     with st.container(border=True):
@@ -280,4 +280,4 @@ with col_b:
         with btn:
             if st.button("⤢", key="exp_bd", help="Expand chart"):
                 _popup_breakdown()
-        st.plotly_chart(_build_breakdown_fig(df), use_container_width=True)
+        st.plotly_chart(_build_breakdown_fig(df), width="stretch")

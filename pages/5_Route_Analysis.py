@@ -56,7 +56,7 @@ def _range_buttons(chart_key: str):
         with col:
             kind = "primary" if st.session_state[skey] == lbl else "secondary"
             if st.button(lbl, key=f"rb_{chart_key}_{lbl}", type=kind,
-                         use_container_width=True):
+                         width="stretch"):
                 st.session_state[skey] = lbl
     return st.session_state[skey]
 
@@ -190,7 +190,7 @@ def _popup_expensive():
         st.info("No data for the selected range.")
     else:
         st.plotly_chart(_build_expensive_fig(lm, label, height=480),
-                        use_container_width=True)
+                        width="stretch")
 
 
 @st.dialog("Most Efficient Lanes", width="large")
@@ -204,7 +204,7 @@ def _popup_efficient():
         st.info("No data for the selected range.")
     else:
         st.plotly_chart(_build_efficient_fig(lm, label, height=480),
-                        use_container_width=True)
+                        width="stretch")
 
 
 @st.dialog("Lane Volume vs Avg Cost", width="large")
@@ -218,7 +218,7 @@ def _popup_scatter():
         st.info("No data for the selected range.")
     else:
         st.plotly_chart(_build_scatter_fig(lm, label, height=500),
-                        use_container_width=True)
+                        width="stretch")
 
 
 # ── Inline filters ────────────────────────────────────────────────────────────
@@ -279,7 +279,7 @@ with chart_l:
             if st.button("⤢", key="exp_expensive", help="Expand chart"):
                 _popup_expensive()
         st.plotly_chart(_build_expensive_fig(lane_metrics, label),
-                        use_container_width=True)
+                        width="stretch")
 
 with chart_r:
     with st.container(border=True):
@@ -291,7 +291,7 @@ with chart_r:
             if st.button("⤢", key="exp_efficient", help="Expand chart"):
                 _popup_efficient()
         st.plotly_chart(_build_efficient_fig(lane_metrics, label),
-                        use_container_width=True)
+                        width="stretch")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -305,7 +305,7 @@ with st.container(border=True):
         if st.button("⤢", key="exp_scatter", help="Expand chart"):
             _popup_scatter()
     st.plotly_chart(_build_scatter_fig(lane_metrics, label),
-                    use_container_width=True)
+                    width="stretch")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -332,7 +332,7 @@ with st.container(border=True):
             "total_cost":      "Total Spend ($)",
         })
         .sort_values("Avg $/Mile", ascending=False),
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         column_config={
             "Avg Risk": st.column_config.ProgressColumn(

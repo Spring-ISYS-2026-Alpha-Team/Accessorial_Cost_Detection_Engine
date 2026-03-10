@@ -47,7 +47,7 @@ with col_form:
             new_username = st.text_input("Username")
             new_password = st.text_input("Password", type="password")
             new_role = st.selectbox("Role", ["user", "admin"])
-            submitted = st.form_submit_button("Create User", use_container_width=True, type="primary")
+            submitted = st.form_submit_button("Create User", width="stretch", type="primary")
             if submitted:
                 if not new_username or not new_password:
                     st.error("Username and password are required.")
@@ -67,14 +67,14 @@ with col_users:
             st.warning("No database connection — showing fallback accounts only.")
             st.dataframe(
                 [{"username": "admin", "role": "admin"}, {"username": "user", "role": "user"}],
-                use_container_width=True, hide_index=True,
+                width="stretch", hide_index=True,
             )
         else:
             users_df = get_pace_users(conn)
             if users_df.empty:
                 st.info("No users found in PaceUsers table.")
             else:
-                st.dataframe(users_df, use_container_width=True, hide_index=True)
+                st.dataframe(users_df, width="stretch", hide_index=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 

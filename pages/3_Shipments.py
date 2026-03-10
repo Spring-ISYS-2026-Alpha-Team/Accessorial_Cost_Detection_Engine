@@ -247,7 +247,7 @@ def render_detail(row: pd.Series):
         )
         st.dataframe(
             similar,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             column_config={
                 "Risk Score": st.column_config.ProgressColumn(
@@ -275,7 +275,7 @@ else:
     st.divider()
 
     search = st.text_input(
-        "", placeholder="🔍 Search by shipment ID…", label_visibility="collapsed"
+        "Search", placeholder="🔍 Search by shipment ID…", label_visibility="collapsed"
     )
     if search:
         df = df[df["shipment_id"].astype(str).str.contains(search.upper(), na=False)]
@@ -298,7 +298,7 @@ else:
                 "base_freight_usd":       "Base Freight ($)",
                 "accessorial_charge_usd": "Est. Accessorial ($)",
             }),
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             on_select="rerun",
             selection_mode="single-row",
