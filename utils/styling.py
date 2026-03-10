@@ -126,7 +126,7 @@ _BASE_CSS = f"""
     inset: -20px;
     z-index: -1;
     {_bg_css()}
-    filter: blur(1.5px);
+    filter: blur(2px);
 }}
 
 /* ── Hide Streamlit chrome and sidebar ── */

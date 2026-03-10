@@ -67,7 +67,7 @@ st.markdown(f"""
     inset: -20px;
     z-index: -1;
     {_bg_props}
-    filter: blur(1.5px);
+    filter: blur(2px);
 }}
 
 /* Dot grid overlay */
