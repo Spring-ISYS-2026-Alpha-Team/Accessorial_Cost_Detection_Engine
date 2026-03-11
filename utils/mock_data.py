@@ -395,6 +395,13 @@ def generate_mock_shipments(n: int = 1000, seed: int = 42) -> pd.DataFrame:
     # ── Facility name for display ──────────────────────────────────────────────
     facility_types = np.array([FACILITY_PROFILES[f]["type"] for f in facility_list])
 
+    # ── Extract state codes from "City, ST" strings ────────────────────────────
+    origin_states = np.array([c.split(", ")[-1] if ", " in c else "" for c in origins])
+    dest_states   = np.array([c.split(", ")[-1] if ", " in c else "" for c in destinations])
+
+    # ── Binary target variable for ML classification ───────────────────────────
+    had_accessorial = (accessorial_charges > 0).astype(int)
+
     df = pd.DataFrame({
         "shipment_id":            [f"SHP-{str(i).zfill(5)}" for i in range(1, n + 1)],
         "ship_date":              ship_dates,
@@ -403,12 +410,17 @@ def generate_mock_shipments(n: int = 1000, seed: int = 42) -> pd.DataFrame:
         "facility_type":          facility_types,
         "origin_city":            origins,
         "destination_city":       destinations,
+        "origin_state":           origin_states,
+        "dest_state":             dest_states,
         "lane":                   [f"{o} → {d}" for o, d in zip(origins, destinations)],
         "appointment_type":       appt_types,
         "weight_lbs":             weight_lbs,
         "miles":                  miles,
+        "day_of_week":            day_of_week,
+        "month":                  month,
         "base_freight_usd":       base_freight,
         "accessorial_charge_usd": accessorial_charges,
+        "had_accessorial":        had_accessorial,
         "total_cost_usd":         total_costs,
         "cost_per_mile":          cost_per_mile,
         "risk_score":             risk_scores,

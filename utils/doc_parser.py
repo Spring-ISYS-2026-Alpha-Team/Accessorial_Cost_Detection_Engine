@@ -1,0 +1,250 @@
+"""
+utils/doc_parser.py
+Parses shipping documents (PDF, Excel, image) into a PACE-compatible DataFrame.
+Uses Ollama (local LLM) for unstructured text extraction.
+Excel files with recognizable columns are mapped directly without AI.
+"""
+import io
+import json
+import re
+
+import pandas as pd
+import requests
+
+OLLAMA_BASE   = "http://localhost:11434"
+OLLAMA_MODEL  = "llama3.2"
+OLLAMA_TIMEOUT = 120  # seconds
+
+# Fields Ollama must extract
+PACE_FIELDS = {
+    "shipment_id":            "unique shipment identifier (BOL number, PRO number, or any reference ID)",
+    "ship_date":              "date of shipment — normalize to YYYY-MM-DD",
+    "carrier":                "carrier or trucking company name",
+    "facility":               "destination facility, warehouse, or DC name",
+    "weight_lbs":             "shipment weight in pounds — numeric only, no units",
+    "miles":                  "distance in miles — numeric only",
+    "base_freight_usd":       "base freight or linehaul cost in USD — numeric only, no $ sign",
+    "accessorial_charge_usd": "accessorial charges in USD — numeric only, 0 if not present",
+}
+
+# Excel column synonyms → PACE column names
+_EXCEL_ALIASES = {
+    "shipment_id":            ["shipment_id", "shipment id", "bol", "bol number", "pro", "pro number",
+                               "reference", "ref #", "shipment #", "order id", "order number"],
+    "ship_date":              ["ship_date", "ship date", "shipdate", "date", "pickup date",
+                               "dispatch date", "shipped date"],
+    "carrier":                ["carrier", "carrier name", "trucking company", "scac", "vendor"],
+    "facility":               ["facility", "destination", "dest", "consignee", "delivery location",
+                               "ship to", "warehouse"],
+    "weight_lbs":             ["weight_lbs", "weight", "weight (lbs)", "lbs", "gross weight",
+                               "total weight"],
+    "miles":                  ["miles", "distance", "distance (mi)", "mileage", "transit miles"],
+    "base_freight_usd":       ["base_freight_usd", "base freight", "linehaul", "linehaul cost",
+                               "freight charge", "freight cost", "base cost", "rate"],
+    "accessorial_charge_usd": ["accessorial_charge_usd", "accessorial", "accessorials",
+                               "accessorial charges", "additional charges", "surcharge", "extras"],
+}
+
+
+# ── Ollama health check ────────────────────────────────────────────────────────
+def check_ollama() -> tuple[bool, str]:
+    """Returns (is_running, status_message)."""
+    try:
+        r = requests.get(f"{OLLAMA_BASE}/api/tags", timeout=3)
+        if r.status_code == 200:
+            models = [m["name"] for m in r.json().get("models", [])]
+            has_model = any(OLLAMA_MODEL in m for m in models)
+            if not has_model:
+                return False, (
+                    f"Ollama is running but model '{OLLAMA_MODEL}' is not pulled. "
+                    f"Run: `ollama pull {OLLAMA_MODEL}`"
+                )
+            return True, f"Ollama ready ({OLLAMA_MODEL})"
+        return False, "Ollama returned an unexpected response."
+    except requests.exceptions.ConnectionError:
+        return False, (
+            "Ollama is not running. Start it with: `ollama serve`  "
+            "then pull a model: `ollama pull llama3.2`"
+        )
+    except Exception as e:
+        return False, f"Could not reach Ollama: {e}"
+
+
+# ── Text extraction ────────────────────────────────────────────────────────────
+def _extract_pdf_text(file_bytes: bytes) -> str:
+    try:
+        import pdfplumber
+    except ImportError:
+        raise ImportError("pdfplumber is required for PDF parsing. Run: pip install pdfplumber")
+
+    with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+        pages = [page.extract_text() or "" for page in pdf.pages]
+    text = "\n".join(pages).strip()
+    if not text:
+        raise ValueError("No text could be extracted from the PDF. It may be a scanned image — try uploading as an image file instead.")
+    return text
+
+
+def _extract_image_text(file_bytes: bytes) -> str:
+    try:
+        from PIL import Image
+        import pytesseract
+    except ImportError:
+        raise ImportError(
+            "Pillow and pytesseract are required for image parsing. "
+            "Run: pip install Pillow pytesseract  "
+            "and install Tesseract: https://github.com/UB-Mannheim/tesseract/wiki"
+        )
+
+    img = Image.open(io.BytesIO(file_bytes))
+    text = pytesseract.image_to_string(img).strip()
+    if not text:
+        raise ValueError("No text could be extracted from the image.")
+    return text
+
+
+# ── Excel direct mapping ───────────────────────────────────────────────────────
+def _map_excel_columns(df: pd.DataFrame) -> pd.DataFrame | None:
+    """
+    Try to map Excel columns to PACE schema using known aliases.
+    Returns a remapped DataFrame if enough columns matched, else None.
+    """
+    col_lower = {c.lower().strip(): c for c in df.columns}
+    mapping = {}
+
+    for pace_col, aliases in _EXCEL_ALIASES.items():
+        for alias in aliases:
+            if alias.lower() in col_lower:
+                mapping[col_lower[alias.lower()]] = pace_col
+                break
+
+    # Require at least shipment_id + 3 others to consider it a match
+    mapped_pace_cols = set(mapping.values())
+    must_have = {"shipment_id", "carrier", "ship_date"}
+    if not must_have.issubset(mapped_pace_cols):
+        return None
+
+    remapped = df.rename(columns=mapping)
+    # Keep only PACE columns that were found; fill missing ones with None
+    for col in PACE_FIELDS:
+        if col not in remapped.columns:
+            remapped[col] = None
+    return remapped[list(PACE_FIELDS.keys())]
+
+
+# ── Ollama extraction ─────────────────────────────────────────────────────────
+def _call_ollama(text: str) -> list[dict]:
+    fields_desc = "\n".join(f'  "{k}": {v}' for k, v in PACE_FIELDS.items())
+    prompt = (
+        "You are a logistics data extraction assistant. "
+        "Extract all shipment records from the document text below and return them as a JSON array.\n\n"
+        "Each object in the array must have exactly these fields:\n"
+        f"{fields_desc}\n\n"
+        "Rules:\n"
+        "- Return ONLY a valid JSON array, no explanation, no markdown fences\n"
+        "- If a field cannot be found, use null\n"
+        "- Extract ALL shipments found — there may be more than one\n"
+        "- Normalize all dates to YYYY-MM-DD\n"
+        "- Strip currency symbols from numeric fields\n"
+        "- accessorial_charge_usd should be 0 if no accessorial charges are mentioned\n\n"
+        f"Document:\n{text[:6000]}\n\n"
+        "JSON array:"
+    )
+
+    payload = {"model": OLLAMA_MODEL, "prompt": prompt, "stream": False}
+    try:
+        r = requests.post(f"{OLLAMA_BASE}/api/generate", json=payload, timeout=OLLAMA_TIMEOUT)
+        r.raise_for_status()
+    except requests.exceptions.Timeout:
+        raise RuntimeError("Ollama timed out. The model may still be loading — try again in a moment.")
+    except requests.exceptions.ConnectionError:
+        raise RuntimeError("Lost connection to Ollama during parsing.")
+
+    raw = r.json().get("response", "").strip()
+
+    # Strip markdown fences if model included them anyway
+    raw = re.sub(r"^```(?:json)?", "", raw, flags=re.MULTILINE).strip()
+    raw = re.sub(r"```$", "", raw, flags=re.MULTILINE).strip()
+
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        # Try to extract the first [...] block
+        match = re.search(r"\[.*\]", raw, re.DOTALL)
+        if match:
+            data = json.loads(match.group())
+        else:
+            raise RuntimeError(
+                "Ollama returned a response that could not be parsed as JSON. "
+                "Try again — the model may need a moment to warm up."
+            )
+
+    if isinstance(data, dict):
+        # Unwrap if model returned {"shipments": [...]}
+        for v in data.values():
+            if isinstance(v, list):
+                return v
+        return [data]
+
+    if isinstance(data, list):
+        return data
+
+    raise RuntimeError("Unexpected response structure from Ollama.")
+
+
+# ── Main entry point ──────────────────────────────────────────────────────────
+def parse_document(file_bytes: bytes, filename: str) -> pd.DataFrame:
+    """
+    Parse a shipping document into a PACE-compatible DataFrame.
+
+    - Excel files: direct column mapping (no AI needed if columns are recognizable)
+    - PDF / image files: text extraction → Ollama → structured JSON → DataFrame
+
+    Raises ValueError / RuntimeError with user-friendly messages on failure.
+    """
+    ext = filename.lower().rsplit(".", 1)[-1]
+
+    # ── Excel ──────────────────────────────────────────────────────────────────
+    if ext in ("xlsx", "xls"):
+        try:
+            raw = pd.read_excel(io.BytesIO(file_bytes))
+        except Exception as e:
+            raise ValueError(f"Could not read Excel file: {e}")
+
+        mapped = _map_excel_columns(raw)
+        if mapped is not None:
+            return mapped
+
+        # Columns didn't match — convert to CSV text and send to Ollama
+        text = raw.to_csv(index=False)
+        records = _call_ollama(text)
+        return _records_to_df(records)
+
+    # ── PDF ────────────────────────────────────────────────────────────────────
+    if ext == "pdf":
+        text = _extract_pdf_text(file_bytes)
+        records = _call_ollama(text)
+        return _records_to_df(records)
+
+    # ── Image ──────────────────────────────────────────────────────────────────
+    if ext in ("png", "jpg", "jpeg"):
+        text = _extract_image_text(file_bytes)
+        records = _call_ollama(text)
+        return _records_to_df(records)
+
+    raise ValueError(f"Unsupported file type: .{ext}")
+
+
+def _records_to_df(records: list[dict]) -> pd.DataFrame:
+    """Convert Ollama's list of dicts into a clean DataFrame with PACE columns."""
+    if not records:
+        raise ValueError("No shipment records were found in the document.")
+
+    df = pd.DataFrame(records)
+
+    # Ensure all PACE columns exist
+    for col in PACE_FIELDS:
+        if col not in df.columns:
+            df[col] = None
+
+    return df[list(PACE_FIELDS.keys())]

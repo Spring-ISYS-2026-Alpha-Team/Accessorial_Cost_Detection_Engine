@@ -7,3 +7,13 @@ plotly
 scikit-learn
 lightgbm
 joblib
+
+# Document parsing (Phase 1 — AI document import)
+pdfplumber
+openpyxl
+Pillow
+pytesseract
+
+# Geospatial routing (Phase 3 — real driving miles)
+geopy
+openrouteservice
