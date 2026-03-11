@@ -273,8 +273,9 @@ h1 {{ color: #FFFFFF !important; font-weight: 700 !important; text-shadow: 0 0 3
 h2 {{ color: #F1F5F9 !important; font-weight: 600 !important; }}
 h3 {{ color: #E2E8F0 !important; font-weight: 600 !important; }}
 h4, h5, h6 {{ color: #CBD5E1 !important; font-weight: 600 !important; }}
-p, .stMarkdown p {{ color: {TEXT_SECONDARY} !important; }}
-.stCaption, [data-testid="stCaptionContainer"] p {{ color: #CBD5E1 !important; font-size: 13px !important; }}
+p, .stMarkdown p {{ color: #CBD5E1 !important; }}
+strong, b {{ color: #F1F5F9 !important; }}
+.stCaption, [data-testid="stCaptionContainer"] p {{ color: #94A3B8 !important; font-size: 13px !important; }}
 .stDivider hr {{ border-color: rgba(180,80,220,0.25) !important; }}
 
 /* ── Plotly chart containers ── */

@@ -84,8 +84,8 @@ def render_detail(row: pd.Series):
         st.rerun()
 
     st.markdown(
-        f"<div style='font-size:12px; color:#64748B; margin-bottom:12px;'>"
-        f"Shipments / <b style='color:#A78BFA'>{row['shipment_id']}</b></div>",
+        f"<div style='font-size:12px; color:#94A3B8; margin-bottom:12px;'>"
+        f"Shipments / <b style='color:#E2E8F0'>{row['shipment_id']}</b></div>",
         unsafe_allow_html=True,
     )
 

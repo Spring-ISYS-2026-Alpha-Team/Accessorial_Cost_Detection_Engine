@@ -445,26 +445,41 @@ with st.container(border=True):
     tier_analysis = tier_analysis.sort_values("sort").drop(columns="sort")
 
     t1, t2, t3 = st.columns(3)
-    for col_widget, (_, row) in zip([t1, t2, t3], tier_analysis.iterrows()):
-        tier  = row["risk_tier"]
-        color = {"High": RISK_HIGH_FG, "Medium": RISK_MED_FG, "Low": RISK_LOW_FG}[tier]
+    tier_map = {r["risk_tier"]: r for _, r in tier_analysis.iterrows()}
+    for col_widget, tier, color in [
+        (t1, "Low",    RISK_LOW_FG),
+        (t2, "Medium", RISK_MED_FG),
+        (t3, "High",   RISK_HIGH_FG),
+    ]:
         with col_widget:
-            st.markdown(
-                f"<div style='border-left:4px solid {color}; padding:12px 16px; "
-                f"background:#FAFAFA; border-radius:0 8px 8px 0; margin-bottom:8px;'>"
-                f"<div style='font-size:13px; font-weight:700; color:{color}; "
-                f"text-transform:uppercase; letter-spacing:0.5px;'>{tier} Risk</div>"
-                f"<div style='font-size:22px; font-weight:700; color:#111827; margin:6px 0;'>"
-                f"${row['avg_acc']:,.2f}</div>"
-                f"<div style='font-size:12px; color:#6B7280;'>avg accessorial charge</div>"
-                f"<hr style='border:none; border-top:1px solid #E5E7EB; margin:10px 0;'>"
-                f"<div style='font-size:12px; color:#374151;'>"
-                f"<b>{row['pct_with_acc']:.0f}%</b> of shipments charged<br>"
-                f"<b>{row['count']:.0f}</b> total shipments<br>"
-                f"Avg total cost: <b>${row['avg_total']:,.2f}</b>"
-                f"</div></div>",
-                unsafe_allow_html=True,
-            )
+            if tier not in tier_map:
+                st.markdown(
+                    f"<div style='border-left:4px solid {color}; padding:12px 16px; "
+                    f"background:#FAFAFA; border-radius:0 8px 8px 0; margin-bottom:8px;'>"
+                    f"<div style='font-size:13px; font-weight:700; color:{color}; "
+                    f"text-transform:uppercase; letter-spacing:0.5px;'>{tier} Risk</div>"
+                    f"<div style='font-size:14px; color:#6B7280; margin-top:8px;'>No shipments</div>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                row = tier_map[tier]
+                st.markdown(
+                    f"<div style='border-left:4px solid {color}; padding:12px 16px; "
+                    f"background:#FAFAFA; border-radius:0 8px 8px 0; margin-bottom:8px;'>"
+                    f"<div style='font-size:13px; font-weight:700; color:{color}; "
+                    f"text-transform:uppercase; letter-spacing:0.5px;'>{tier} Risk</div>"
+                    f"<div style='font-size:22px; font-weight:700; color:#111827; margin:6px 0;'>"
+                    f"${row['avg_acc']:,.2f}</div>"
+                    f"<div style='font-size:12px; color:#6B7280;'>avg accessorial charge</div>"
+                    f"<hr style='border:none; border-top:1px solid #E5E7EB; margin:10px 0;'>"
+                    f"<div style='font-size:12px; color:#374151;'>"
+                    f"<b>{row['pct_with_acc']:.0f}%</b> of shipments charged<br>"
+                    f"<b>{row['count']:.0f}</b> total shipments<br>"
+                    f"Avg total cost: <b>${row['avg_total']:,.2f}</b>"
+                    f"</div></div>",
+                    unsafe_allow_html=True,
+                )
 
 st.markdown("<br>", unsafe_allow_html=True)
 
