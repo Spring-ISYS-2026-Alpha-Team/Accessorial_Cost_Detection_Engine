@@ -132,6 +132,72 @@ def _map_excel_columns(df: pd.DataFrame) -> pd.DataFrame | None:
     return remapped[list(PACE_FIELDS.keys())]
 
 
+# ── Ollama column mapping (for structured CSVs / Excel with unknown layout) ───
+def _ollama_map_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Send column headers + 3 sample rows to Ollama and ask it to map them to
+    PACE field names.  Returns a remapped DataFrame with all PACE columns present.
+    Falls back to ensure_expected_columns() if Ollama is unavailable or fails.
+    """
+    fields_desc = "\n".join(f'  "{k}": {v}' for k, v in PACE_FIELDS.items())
+
+    # Build a compact sample: column names + up to 3 non-null rows
+    sample_rows = df.dropna(how="all").head(3).to_dict(orient="records")
+    sample_text = "\n".join(
+        "  " + ", ".join(f'{k}: "{v}"' for k, v in row.items())
+        for row in sample_rows
+    )
+
+    prompt = (
+        "You are a data mapping assistant for a freight logistics system.\n"
+        "Map the columns from this CSV to the PACE schema fields listed below.\n\n"
+        "PACE fields and what they represent:\n"
+        f"{fields_desc}\n\n"
+        "CSV columns with sample values:\n"
+        f"{sample_text}\n\n"
+        "Rules:\n"
+        "- Return ONLY a valid JSON object, no explanation, no markdown fences\n"
+        "- Keys are the ORIGINAL CSV column names exactly as shown\n"
+        "- Values are the matching PACE field name, or null if no match\n"
+        "- Every PACE field should be mapped at most once\n"
+        "- Use context clues: 'Freight Charge ($)' → base_freight_usd, "
+        "'BOL #' → shipment_id, 'Detention Fee' → accessorial_charge_usd, etc.\n\n"
+        "JSON mapping:"
+    )
+
+    payload = {"model": OLLAMA_MODEL, "prompt": prompt, "stream": False}
+    try:
+        r = requests.post(f"{OLLAMA_BASE}/api/generate", json=payload, timeout=OLLAMA_TIMEOUT)
+        r.raise_for_status()
+        raw = r.json().get("response", "").strip()
+        raw = re.sub(r"^```(?:json)?", "", raw, flags=re.MULTILINE).strip()
+        raw = re.sub(r"```$", "", raw, flags=re.MULTILINE).strip()
+        mapping = json.loads(raw)
+    except Exception:
+        return ensure_expected_columns(df)
+
+    if not isinstance(mapping, dict):
+        return ensure_expected_columns(df)
+
+    # Apply mapping: only rename where value is a known PACE field
+    rename = {orig: pace for orig, pace in mapping.items()
+              if pace in PACE_FIELDS and orig in df.columns}
+
+    # Avoid clobbering a column that already has the correct PACE name
+    rename = {orig: pace for orig, pace in rename.items() if orig != pace}
+
+    remapped = df.rename(columns=rename)
+
+    # Fill any still-missing PACE columns with None
+    for col in PACE_FIELDS:
+        if col not in remapped.columns:
+            remapped[col] = None
+
+    remapped.attrs["column_mapping"] = rename
+    return remapped[[c for c in PACE_FIELDS if c in remapped.columns] +
+                    [c for c in remapped.columns if c not in PACE_FIELDS]]
+
+
 # ── Ollama extraction ─────────────────────────────────────────────────────────
 def _call_ollama(text: str) -> list[dict]:
     fields_desc = "\n".join(f'  "{k}": {v}' for k, v in PACE_FIELDS.items())
@@ -208,9 +274,12 @@ def parse_document(file_bytes: bytes, filename: str) -> pd.DataFrame:
     if ext == "csv":
         try:
             df = pd.read_csv(io.BytesIO(file_bytes))
-            return ensure_expected_columns(df)
         except Exception as e:
             raise ValueError(f"Could not read CSV file: {e}")
+        ollama_ok, _ = check_ollama()
+        if ollama_ok:
+            return _ollama_map_columns(df)
+        return ensure_expected_columns(df)
 
     # ── Excel ──────────────────────────────────────────────────────────────────
     if ext in ("xlsx", "xls"):
@@ -223,10 +292,11 @@ def parse_document(file_bytes: bytes, filename: str) -> pd.DataFrame:
         if mapped is not None:
             return mapped
 
-        # Columns didn't match — convert to CSV text and send to Ollama
-        text = raw.to_csv(index=False)
-        records = _call_ollama(text)
-        return _records_to_df(records)
+        # Columns didn't match — use Ollama column mapping if available
+        ollama_ok, _ = check_ollama()
+        if ollama_ok:
+            return _ollama_map_columns(raw)
+        return ensure_expected_columns(raw)
 
     # ── PDF ────────────────────────────────────────────────────────────────────
     if ext == "pdf":

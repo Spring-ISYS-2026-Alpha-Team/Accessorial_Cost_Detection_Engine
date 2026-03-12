@@ -76,11 +76,15 @@ def validate_dataframe(df: pd.DataFrame):
     ship_dt = pd.to_datetime(out["ship_date"], errors="coerce")
     bad_date = ship_dt.isna()
 
+    def _clean_num(s):
+        """Strip currency symbols, commas, spaces so $1,234.56 → 1234.56."""
+        return s.astype(str).str.replace(r"[$,\s]", "", regex=True)
+
     # numerics
-    weight = pd.to_numeric(out["weight_lbs"], errors="coerce")
-    miles = pd.to_numeric(out["miles"], errors="coerce")
-    base = pd.to_numeric(out["base_freight_usd"], errors="coerce")
-    acc = pd.to_numeric(out["accessorial_charge_usd"], errors="coerce")
+    weight = pd.to_numeric(_clean_num(out["weight_lbs"]), errors="coerce")
+    miles = pd.to_numeric(_clean_num(out["miles"]), errors="coerce")
+    base = pd.to_numeric(_clean_num(out["base_freight_usd"]), errors="coerce")
+    acc = pd.to_numeric(_clean_num(out["accessorial_charge_usd"]), errors="coerce")
 
     bad_weight_type = weight.isna()
     bad_miles_type = miles.isna()
