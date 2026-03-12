@@ -99,6 +99,7 @@ _NAV_PAGES = [
     ("Routes",      "pages/5_Route_Analysis.py"),
     ("Carriers",    "pages/6_Carrier_Comparison.py"),
     ("Accessorial", "pages/7_Accessorial_Tracker.py"),
+    ("Admin",       "pages/8_Admin.py"),
 ]
 
 # ── Base page CSS (injected on every page) ────────────────────────────────────
@@ -133,8 +134,16 @@ _BASE_CSS = f"""
 #MainMenu, header, footer {{ visibility: hidden; }}
 [data-testid="stSidebar"],
 [data-testid="collapsedControl"],
-section[data-testid="stSidebarNav"] {{
+[data-testid="stSidebarNav"],
+section[data-testid="stSidebarNav"],
+button[kind="header"],
+[data-testid="stSidebarNavItems"],
+[data-testid="stSidebarNavSeparator"] {{
     display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
 }}
 
 /* ── Page content padding ── */
@@ -385,7 +394,7 @@ def top_nav(username: str) -> None:
     Call this at the top of every authenticated page, after inject_css().
     """
     logo_col, *page_cols, user_col, out_col = st.columns(
-        [1.4] + [1.0] * 8 + [1.0, 0.7]
+        [1.4] + [1.0] * 9 + [1.0, 0.7]
     )
 
     with logo_col:
