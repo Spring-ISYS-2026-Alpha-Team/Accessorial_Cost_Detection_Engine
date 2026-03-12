@@ -1,5 +1,3 @@
-# File: pages/2_Upload.py
-
 import os
 import sys
 
@@ -10,8 +8,8 @@ import streamlit as st
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from auth_utils import check_auth
+from utils.doc_parser import parse_uploaded_document
 from utils.styling import NAVY_900, inject_css, top_nav  # noqa: F401
-
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -20,6 +18,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed",
 )
+
 inject_css()
 
 # ── Auth guard ────────────────────────────────────────────────────────────────
@@ -66,6 +65,7 @@ def validate_dataframe(df: pd.DataFrame):
     # shipment_id / carrier / facility required and non-empty
     for col in ["shipment_id", "carrier", "facility"]:
         out[col] = out[col].astype(str)
+
     empty_text = (
         (out["shipment_id"].str.strip() == "")
         | (out["carrier"].str.strip() == "")
@@ -106,69 +106,85 @@ def validate_dataframe(df: pd.DataFrame):
         | bad_acc_neg
     )
 
-    # 3) Build human-readable messages (limit for speed/readability)
-    # We keep detailed row messages but cap them so UI stays fast.
+    # 3) Build human-readable messages
     MAX_MSG = 200
 
     def add_row_msgs(mask: pd.Series, msg_fn):
         nonlocal errors
         idxs = mask[mask].index.tolist()
-        for i, idx in enumerate(idxs[:MAX_MSG]):
-            # +2 to account for header row in CSV
+        for idx in idxs[:MAX_MSG]:
             errors.append(msg_fn(idx + 2, df.loc[idx]))
         if len(idxs) > MAX_MSG:
             errors.append(f"… and {len(idxs) - MAX_MSG} more similar errors.")
 
-    # Missing/empty text columns
     if empty_text.any():
         add_row_msgs(
             empty_text,
             lambda row_num, r: f"Row {row_num}: 'shipment_id', 'carrier', or 'facility' is empty/missing.",
         )
 
-    # Bad date
     if bad_date.any():
         add_row_msgs(
             bad_date,
             lambda row_num, r: f"Row {row_num}: 'ship_date' value '{r['ship_date']}' is not a valid date.",
         )
 
-    # Numeric type errors
     if bad_weight_type.any():
-        add_row_msgs(bad_weight_type, lambda row_num, r: f"Row {row_num}: 'weight_lbs' is not a number.")
-    if bad_miles_type.any():
-        add_row_msgs(bad_miles_type, lambda row_num, r: f"Row {row_num}: 'miles' is not a number.")
-    if bad_base_type.any():
-        add_row_msgs(bad_base_type, lambda row_num, r: f"Row {row_num}: 'base_freight_usd' is not a number.")
-    if bad_acc_type.any():
         add_row_msgs(
-            bad_acc_type, lambda row_num, r: f"Row {row_num}: 'accessorial_charge_usd' is not a number."
+            bad_weight_type,
+            lambda row_num, r: f"Row {row_num}: 'weight_lbs' is not a number.",
         )
 
-    # Range errors
+    if bad_miles_type.any():
+        add_row_msgs(
+            bad_miles_type,
+            lambda row_num, r: f"Row {row_num}: 'miles' is not a number.",
+        )
+
+    if bad_base_type.any():
+        add_row_msgs(
+            bad_base_type,
+            lambda row_num, r: f"Row {row_num}: 'base_freight_usd' is not a number.",
+        )
+
+    if bad_acc_type.any():
+        add_row_msgs(
+            bad_acc_type,
+            lambda row_num, r: f"Row {row_num}: 'accessorial_charge_usd' is not a number.",
+        )
+
     if (bad_weight_range & ~bad_weight_type).any():
         add_row_msgs(
             bad_weight_range & ~bad_weight_type,
             lambda row_num, r: f"Row {row_num}: 'weight_lbs' is out of range (0–200,000).",
         )
+
     if (bad_miles_range & ~bad_miles_type).any():
         add_row_msgs(
             bad_miles_range & ~bad_miles_type,
             lambda row_num, r: f"Row {row_num}: 'miles' is out of range (0–5,000).",
         )
+
     if (bad_base_neg & ~bad_base_type).any():
-        add_row_msgs(bad_base_neg & ~bad_base_type, lambda row_num, r: f"Row {row_num}: 'base_freight_usd' cannot be negative.")
+        add_row_msgs(
+            bad_base_neg & ~bad_base_type,
+            lambda row_num, r: f"Row {row_num}: 'base_freight_usd' cannot be negative.",
+        )
+
     if (bad_acc_neg & ~bad_acc_type).any():
         add_row_msgs(
             bad_acc_neg & ~bad_acc_type,
             lambda row_num, r: f"Row {row_num}: 'accessorial_charge_usd' cannot be negative.",
         )
 
-    # Warnings: blank accessorial_charge_usd → defaulted to 0 (only warn if truly blank/NaN)
-    blank_acc = df["accessorial_charge_usd"].isna() | (df["accessorial_charge_usd"].astype(str).str.strip() == "")
+    blank_acc = df["accessorial_charge_usd"].isna() | (
+        df["accessorial_charge_usd"].astype(str).str.strip() == ""
+    )
     warn_idxs = blank_acc[blank_acc].index.tolist()
     for idx in warn_idxs[:MAX_MSG]:
-        warnings.append(f"Row {idx + 2}: 'accessorial_charge_usd' is blank — defaulted to 0.")
+        warnings.append(
+            f"Row {idx + 2}: 'accessorial_charge_usd' is blank — defaulted to 0."
+        )
     if len(warn_idxs) > MAX_MSG:
         warnings.append(f"… and {len(warn_idxs) - MAX_MSG} more similar warnings.")
 
@@ -181,7 +197,9 @@ def mock_score(df: pd.DataFrame) -> pd.DataFrame:
 
     scored["weight_lbs"] = pd.to_numeric(scored["weight_lbs"], errors="coerce").fillna(0)
     scored["miles"] = pd.to_numeric(scored["miles"], errors="coerce").fillna(0)
-    scored["base_freight_usd"] = pd.to_numeric(scored["base_freight_usd"], errors="coerce").fillna(0)
+    scored["base_freight_usd"] = pd.to_numeric(
+        scored["base_freight_usd"], errors="coerce"
+    ).fillna(0)
 
     w_norm = scored["weight_lbs"] / 44_000
     m_norm = scored["miles"] / 5_000
@@ -191,14 +209,15 @@ def mock_score(df: pd.DataFrame) -> pd.DataFrame:
     scored["risk_tier"] = scored["risk_score"].apply(
         lambda x: "High" if x >= 0.67 else "Medium" if x >= 0.34 else "Low"
     )
+
     return scored
 
 
 # ── Page header ───────────────────────────────────────────────────────────────
 st.markdown("## Upload Shipment Data")
-st.caption("Upload a CSV file to validate your data and generate risk predictions.")
+st.caption("Upload a shipment file to validate your data and generate risk predictions.")
 
-with st.expander("📋 CSV Requirements", expanded=False):
+with st.expander("📋 File Requirements", expanded=False):
     st.markdown(
         """
 **Required columns:**
@@ -211,7 +230,8 @@ with st.expander("📋 CSV Requirements", expanded=False):
 - `base_freight_usd` *(≥ 0)*
 - `accessorial_charge_usd` *(≥ 0)*
 
-**File:** `.csv` · Max 10 MB
+**Accepted files:** `.csv`, `.xlsx`, `.xls`, `.pdf`, `.png`, `.jpg`, `.jpeg`  
+**Max size:** 10 MB
         """
     )
 
@@ -219,9 +239,9 @@ st.divider()
 
 # ── Upload zone ───────────────────────────────────────────────────────────────
 uploaded_file = st.file_uploader(
-    "Drag & drop your CSV here, or click to browse",
-    type=["csv"],
-    help="Accepted format: .csv · Max size: 10 MB",
+    "Drag & drop your file here, or click to browse",
+    type=["csv", "xlsx", "xls", "pdf", "png", "jpg", "jpeg"],
+    help="Accepted formats: CSV, Excel, PDF, Image · Max size: 10 MB",
 )
 
 st.markdown(
@@ -237,7 +257,8 @@ if use_sample:
 
     sample = generate_mock_shipments(50)
     st.session_state["upload_df"] = sample.drop(
-        columns=["risk_score", "risk_tier", "accessorial_type"], errors="ignore"
+        columns=["risk_score", "risk_tier", "accessorial_type"],
+        errors="ignore",
     )
     st.session_state["upload_scored"] = None
     st.session_state["upload_errors"] = []
@@ -248,15 +269,17 @@ if use_sample:
 # ── Parse uploaded file ───────────────────────────────────────────────────────
 if uploaded_file is not None:
     try:
-        raw_df = pd.read_csv(uploaded_file)
+        raw_df = parse_uploaded_document(uploaded_file, uploaded_file.name)
+
         if raw_df.empty:
-            st.error("Uploaded CSV is empty.")
+            st.error("Uploaded file contains no usable data.")
         else:
             st.session_state["upload_df"] = raw_df
             st.session_state["upload_scored"] = None
             st.session_state["upload_errors"] = []
             st.session_state["upload_warnings"] = []
             st.session_state["upload_row_fail_mask"] = None
+
     except Exception as e:
         st.error(f"Could not parse file: {e}")
 
@@ -264,8 +287,10 @@ if uploaded_file is not None:
 if st.session_state.get("upload_df") is not None:
     raw_df = st.session_state["upload_df"]
 
-    # Only compute validation once per loaded df
-    if st.session_state.get("upload_row_fail_mask") is None and not st.session_state.get("upload_errors"):
+    if (
+        st.session_state.get("upload_row_fail_mask") is None
+        and not st.session_state.get("upload_errors")
+    ):
         errs, warns, row_fail_mask = validate_dataframe(raw_df)
         st.session_state["upload_errors"] = errs
         st.session_state["upload_warnings"] = warns
@@ -286,8 +311,8 @@ if st.session_state.get("upload_df") is not None:
 
     with st.container(border=True):
         st.markdown("#### Validation Results")
-        s1, s2, s3 = st.columns(3)
 
+        s1, s2, s3 = st.columns(3)
         with s1:
             st.markdown(
                 f"<div style='font-size:15px; font-weight:600; color:#059669;'>✅ {pass_count:,} rows passed</div>",
@@ -360,7 +385,10 @@ if st.session_state.get("upload_df") is not None:
             hide_index=True,
             column_config={
                 "risk_score": st.column_config.ProgressColumn(
-                    "Risk Score", format="%.0f%%", min_value=0, max_value=1
+                    "Risk Score",
+                    format="%.0f%%",
+                    min_value=0,
+                    max_value=1,
                 )
             }
             if scored_cols
