@@ -240,8 +240,60 @@ with col_controls:
     st.markdown("<br>", unsafe_allow_html=True)
 
     with st.container(border=True):
-        st.markdown("#### Manual Training")
-        st.caption("Trigger a training run manually. Full retrain rebuilds from scratch; incremental update continues from the current model.")
+        st.markdown("#### Train from CSV")
+        st.caption(
+            "Upload any shipment CSV to train the model on real data. "
+            "Column names are auto-normalized — `detention_fee`, `demurrage`, `surcharge`, etc. "
+            "are all recognized as accessorial charges."
+        )
+
+        train_file = st.file_uploader(
+            "Drop training CSV here",
+            type=["csv", "xlsx", "xls"],
+            key="admin_train_upload",
+        )
+
+        if train_file is not None:
+            try:
+                if train_file.name.endswith((".xlsx", ".xls")):
+                    import pandas as pd
+                    train_df = pd.read_excel(train_file)
+                else:
+                    import pandas as pd
+                    train_df = pd.read_csv(train_file)
+
+                from utils.doc_parser import ensure_expected_columns
+                train_df = ensure_expected_columns(train_df)
+
+                st.info(f"{len(train_df):,} rows loaded · columns: {', '.join(train_df.columns.tolist())}")
+
+                t0, t1_btn = st.columns(2)
+                with t0:
+                    if st.button("Incremental Update from File", type="primary", use_container_width=True):
+                        with st.spinner("Updating model..."):
+                            try:
+                                metrics = incremental_update(train_df)
+                                st.success(f"Updated! AUC: {metrics['auc']} · F1: {metrics['f1']}")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Update failed: {e}")
+                with t1_btn:
+                    if st.button("Full Retrain from File", use_container_width=True):
+                        with st.spinner("Retraining from scratch..."):
+                            try:
+                                metrics = retrain(train_df)
+                                st.success(f"Retrained! AUC: {metrics['auc']} · F1: {metrics['f1']}")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Retrain failed: {e}")
+            except Exception as e:
+                st.error(f"Could not read file: {e}")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    with st.container(border=True):
+        st.markdown("#### Manual Training (Mock Data)")
+        st.caption("Train on generated mock data — useful for testing the pipeline without a real dataset.")
 
         t1, t2 = st.columns(2)
         with t1:
