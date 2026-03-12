@@ -347,7 +347,7 @@ def incremental_update(df_new: pd.DataFrame) -> dict:
 
 def data_hash(df: pd.DataFrame) -> int:
     """Stable hash of a DataFrame for use as Streamlit cache key."""
-    h = hashlib.md5(pd.util.hash_pandas_object(df, index=False).values).hexdigest()
+    h = hashlib.md5(pd.util.hash_pandas_object(df, index=False).values, usedforsecurity=False).hexdigest()
     return int(h, 16) % (2 ** 31)
 
 
