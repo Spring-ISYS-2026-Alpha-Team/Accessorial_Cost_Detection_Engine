@@ -204,6 +204,14 @@ def parse_document(file_bytes: bytes, filename: str) -> pd.DataFrame:
     """
     ext = filename.lower().rsplit(".", 1)[-1]
 
+    # ── CSV ────────────────────────────────────────────────────────────────────
+    if ext == "csv":
+        try:
+            df = pd.read_csv(io.BytesIO(file_bytes))
+            return ensure_expected_columns(df)
+        except Exception as e:
+            raise ValueError(f"Could not read CSV file: {e}")
+
     # ── Excel ──────────────────────────────────────────────────────────────────
     if ext in ("xlsx", "xls"):
         try:
