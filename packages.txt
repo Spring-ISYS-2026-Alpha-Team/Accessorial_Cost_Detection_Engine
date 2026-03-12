@@ -1,6 +1,3 @@
-# APT packages for Streamlit Cloud (Ubuntu)
-# Required by pymssql (Azure SQL driver)
 freetds-dev
 freetds-bin
-# Required by pytesseract (image OCR)
 tesseract-ocr
