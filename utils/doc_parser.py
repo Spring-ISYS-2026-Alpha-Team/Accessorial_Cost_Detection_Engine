@@ -272,10 +272,17 @@ _RENAME_MAP = {
     # freight
     "freight_cost": "base_freight_usd", "base_rate": "base_freight_usd",
     "freight": "base_freight_usd", "base_cost": "base_freight_usd",
-    # accessorial
+    # accessorial / detention / surcharge (all map to the same target)
     "extra_charges": "accessorial_charge_usd", "accessorial_cost": "accessorial_charge_usd",
     "extra_cost": "accessorial_charge_usd", "accessorials": "accessorial_charge_usd",
     "extra_fees": "accessorial_charge_usd",
+    "detention_fee": "accessorial_charge_usd", "detention": "accessorial_charge_usd",
+    "surcharge": "accessorial_charge_usd", "surcharges": "accessorial_charge_usd",
+    "penalty_fee": "accessorial_charge_usd", "penalty": "accessorial_charge_usd",
+    "late_delivery_penalty": "accessorial_charge_usd", "late_fee": "accessorial_charge_usd",
+    "demurrage_fee": "accessorial_charge_usd", "demurrage": "accessorial_charge_usd",
+    "additional_cost": "accessorial_charge_usd", "additional_charges": "accessorial_charge_usd",
+    "service_failure_cost": "accessorial_charge_usd", "overage_fee": "accessorial_charge_usd",
 }
 
 EXPECTED_COLUMNS = list(PACE_FIELDS.keys())

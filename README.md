@@ -276,7 +276,7 @@ Column names are **automatically normalized** — you don't need to match the ex
 | `weight_lbs` | `weight`, `lbs`, `shipment_weight` |
 | `miles` | `distance`, `distance_miles`, `route_miles` |
 | `base_freight_usd` | `freight_cost`, `base_rate`, `freight`, `base_cost` |
-| `accessorial_charge_usd` | `accessorial_cost`, `extra_charges`, `accessorials` |
+| `accessorial_charge_usd` | `accessorial_cost`, `extra_charges`, `accessorials`, `detention_fee`, `detention`, `surcharge`, `penalty_fee`, `late_delivery_penalty`, `demurrage_fee`, `demurrage`, `additional_cost`, `additional_charges` |
 
 **Required columns** (must be present, non-empty): `shipment_id`, `carrier`, `facility`
 
