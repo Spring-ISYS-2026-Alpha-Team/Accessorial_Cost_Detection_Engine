@@ -47,11 +47,14 @@ The goal of PACE is not to eliminate accessorial charges entirely — some are u
 - Risk tier breakdown with per-tier accessorial exposure totals
 - Searchable shipment table
 
-### CSV Upload & Validation
-- Drag-and-drop CSV ingestion with a built-in sample dataset option
+### Multi-Format Upload & Validation
+- Accepts `.csv`, `.xlsx`, `.xls`, `.pdf`, `.png`, `.jpg`, `.jpeg` — max 10 MB
+- Flexible column normalization: 20+ common column name aliases auto-mapped to PACE schema
+- AI-assisted extraction for PDFs and images via Ollama (local LLM, no cloud required)
 - Row-level validation: required fields, date formats, numeric ranges, non-negative constraints
 - Detailed error and warning reports before committing data
 - One-click risk scoring on clean uploads
+- Built-in sample dataset for demo/testing
 
 ### Shipments Explorer
 - Paginated, filterable list of all shipments (carrier, facility, risk tier)
@@ -83,9 +86,12 @@ The goal of PACE is not to eliminate accessorial charges entirely — some are u
 
 ### Admin Panel
 - Role-gated (admin only)
-- View all users from Azure SQL `PaceUsers` table
-- Create new users (password stored as SHA-256 hash)
-- Delete users (cannot self-delete)
+- **User management:** view, create (SHA-256 hashed passwords), and delete users from Azure SQL
+- **Model management:** live AUC/F1/Accuracy cards, mode toggle (demo vs. production)
+- **Risk tier thresholds:** adjustable sliders with data-suggested recommendations (Youden's J)
+- **Manual training:** incremental update (continues from current model) or full retrain from scratch
+- **Version history:** last 3 model versions with metrics, one-click rollback
+- **Auto-update:** configurable threshold — model updates automatically as new shipment records accumulate
 
 ### Authentication
 - Session-based login with auth guard on every page
@@ -103,7 +109,8 @@ The goal of PACE is not to eliminate accessorial charges entirely — some are u
 | UI | [Streamlit](https://streamlit.io) 1.5+ |
 | Data Processing | pandas, NumPy |
 | Visualization | Plotly |
-| ML | scikit-learn (Random Forest) |
+| ML | LightGBM (risk classifier), scikit-learn (cost estimator) |
+| Document Parsing | pdfplumber, pytesseract, Pillow, Ollama (optional AI enrichment) |
 | Database | Azure SQL (via pyodbc) |
 | Auth | SHA-256 hashing, Streamlit session state |
 | Config | python-dotenv / Streamlit secrets |
@@ -124,7 +131,7 @@ Accessorial_Cost_Detection_Engine/
 │   ├── loading.py              # Post-login cache pre-warm screen
 │   ├── 0_Home.py               # Home KPIs + 4 charts
 │   ├── 1_Dashboard.py          # Risk dashboard
-│   ├── 2_Upload.py             # CSV upload & scoring
+│   ├── 2_Upload.py             # Multi-format upload & scoring
 │   ├── 3_Shipments.py          # Shipment list + detail view
 │   ├── 4_Cost_Estimate.py      # ML cost predictor
 │   ├── 5_Route_Analysis.py     # Lane/route metrics
@@ -135,6 +142,10 @@ Accessorial_Cost_Detection_Engine/
     ├── database.py             # Azure SQL connection + all query functions
     ├── mock_data.py            # Synthetic data generator (fallback)
     ├── cost_model.py           # Random Forest cost estimator
+    ├── risk_model.py           # LightGBM risk classifier + versioning
+    ├── model_config.py         # Model metadata, thresholds, auto-update settings
+    ├── doc_parser.py           # Multi-format document parser (CSV/Excel/PDF/image)
+    ├── geo.py                  # Geospatial routing (driving distance)
     └── styling.py              # Dark glass theme CSS, color tokens, nav
 ```
 
@@ -142,26 +153,41 @@ Accessorial_Cost_Detection_Engine/
 
 ## Setup
 
-### Prerequisites
-- Python 3.10+
-- An Azure SQL (or compatible SQL Server) database
-- ODBC Driver 17+ for SQL Server
+### 1. Prerequisites
 
-### Install dependencies
+- **Python 3.10+**
+- **Git**
+- An **Azure SQL** (or compatible SQL Server) database with ODBC Driver 17+
+  - *The app runs in demo mode with mock data if no DB is configured — no Azure account required to explore the app*
+
+### 2. Clone the repo
+
+```bash
+git clone https://github.com/Spring-ISYS-2026-Alpha-Team/Accessorial_Cost_Detection_Engine.git
+cd Accessorial_Cost_Detection_Engine
+```
+
+### 3. Create a virtual environment
+
+```bash
+python -m venv venv
+
+# Windows
+venv\Scripts\activate
+
+# macOS / Linux
+source venv/bin/activate
+```
+
+### 4. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-If `streamlit` is not on your PATH (common on Windows), run:
+### 5. Configure environment
 
-```bash
-python -m streamlit run app.py
-```
-
-### Configure environment
-
-Create a `.env` file in the project root:
+Create a `.env` file in the project root (copy the example below):
 
 ```env
 DB_SERVER=your-server.database.windows.net
@@ -170,32 +196,95 @@ DB_USER=your-username
 DB_PASSWORD=your-password
 ```
 
-### Run the app
+> **No database?** Leave the `.env` file empty or skip this step entirely. PACE will run in demo mode using generated mock data — all pages are fully functional.
+
+### 6. Run the app
 
 ```bash
 streamlit run app.py
 ```
 
-The app will be available at `http://localhost:8501`.
+If `streamlit` is not on your PATH (common on Windows), use:
+
+```bash
+python -m streamlit run app.py
+```
+
+The app opens at **http://localhost:8501**.
+
+**Default login credentials:**
+| Username | Password | Role |
+|---|---|---|
+| `admin` | `admin` | Admin |
+| `user` | `user` | User |
 
 ---
 
-## CSV Format
+## Optional: PDF & Image Upload Support
 
-Upload historical shipment data using the following schema:
+PDF and image uploads require two additional installs:
 
-| Column | Type | Constraints |
-|---|---|---|
-| `shipment_id` | string | Required, unique |
-| `ship_date` | date | Required, `YYYY-MM-DD` |
-| `carrier` | string | Required |
-| `facility` | string | Required |
-| `weight_lbs` | float | Required, 0 – 200,000 |
-| `miles` | float | Required, 0 – 5,000 |
-| `base_freight_usd` | float | Required, ≥ 0 |
-| `accessorial_charge_usd` | float | Required, ≥ 0 |
+### pdfplumber (PDF text extraction)
 
-Maximum file size: **10 MB**. Only `.csv` format is accepted.
+```bash
+pip install pdfplumber
+```
+
+### Tesseract OCR (image text extraction)
+
+1. Download and install Tesseract:
+   - **Windows:** [UB-Mannheim installer](https://github.com/UB-Mannheim/tesseract/wiki) — install to `C:\Program Files\Tesseract-OCR`
+   - **macOS:** `brew install tesseract`
+   - **Linux:** `sudo apt install tesseract-ocr`
+
+2. Add Tesseract to your PATH (Windows only):
+   ```
+   setx PATH "%PATH%;C:\Program Files\Tesseract-OCR"
+   ```
+   Then restart your terminal.
+
+### Ollama (AI field extraction for unstructured PDFs/images)
+
+Ollama enables PACE to extract shipment fields from freeform documents using a local LLM — no cloud API key required.
+
+1. Download and install Ollama: https://ollama.com/download
+2. Start the Ollama server:
+   ```bash
+   ollama serve
+   ```
+3. Pull the model (one-time, ~2 GB):
+   ```bash
+   ollama pull llama3.2
+   ```
+
+> **Without Ollama:** CSV and standard Excel uploads work fully. PDFs and images with non-standard layouts will show a clear error message explaining what's needed.
+
+---
+
+## Upload Format
+
+PACE accepts **`.csv`, `.xlsx`, `.xls`, `.pdf`, `.png`, `.jpg`, `.jpeg`** — max **10 MB**.
+
+Column names are **automatically normalized** — you don't need to match the exact schema. Common variations are recognized:
+
+| PACE Column | Also recognized as |
+|---|---|
+| `shipment_id` | `load_id`, `order_id`, `shipment_number`, `id` |
+| `ship_date` | `date`, `pickup_date`, `shipment_date` |
+| `carrier` | `carrier_name`, `trucking_company`, `provider` |
+| `facility` | `warehouse`, `location`, `dc`, `distribution_center` |
+| `weight_lbs` | `weight`, `lbs`, `shipment_weight` |
+| `miles` | `distance`, `distance_miles`, `route_miles` |
+| `base_freight_usd` | `freight_cost`, `base_rate`, `freight`, `base_cost` |
+| `accessorial_charge_usd` | `accessorial_cost`, `extra_charges`, `accessorials` |
+
+**Required columns** (must be present, non-empty): `shipment_id`, `carrier`, `facility`
+
+**Constraints:**
+- `weight_lbs`: 0 – 200,000
+- `miles`: 0 – 5,000
+- `base_freight_usd`, `accessorial_charge_usd`: ≥ 0
+- `ship_date`: any recognizable date format (normalized to `YYYY-MM-DD`)
 
 ---
 

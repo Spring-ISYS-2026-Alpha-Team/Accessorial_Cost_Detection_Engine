@@ -248,3 +248,69 @@ def _records_to_df(records: list[dict]) -> pd.DataFrame:
             df[col] = None
 
     return df[list(PACE_FIELDS.keys())]
+
+
+# ── Column normalization utilities (compatible with Bui's flexible mapping) ────
+_RENAME_MAP = {
+    # shipment id
+    "load_id": "shipment_id", "order_id": "shipment_id",
+    "id": "shipment_id", "shipment_number": "shipment_id",
+    # date
+    "date": "ship_date", "pickup_date": "ship_date",
+    "shipment_date": "ship_date", "ship_dt": "ship_date",
+    # carrier
+    "carrier_name": "carrier", "trucking_company": "carrier", "provider": "carrier",
+    # facility
+    "warehouse": "facility", "location": "facility",
+    "dc": "facility", "distribution_center": "facility",
+    # weight
+    "weight": "weight_lbs", "lbs": "weight_lbs",
+    "weight_lb": "weight_lbs", "shipment_weight": "weight_lbs",
+    # miles
+    "distance": "miles", "distance_miles": "miles",
+    "route_miles": "miles", "trip_miles": "miles",
+    # freight
+    "freight_cost": "base_freight_usd", "base_rate": "base_freight_usd",
+    "freight": "base_freight_usd", "base_cost": "base_freight_usd",
+    # accessorial
+    "extra_charges": "accessorial_charge_usd", "accessorial_cost": "accessorial_charge_usd",
+    "extra_cost": "accessorial_charge_usd", "accessorials": "accessorial_charge_usd",
+    "extra_fees": "accessorial_charge_usd",
+}
+
+EXPECTED_COLUMNS = list(PACE_FIELDS.keys())
+
+
+def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Lowercase and underscore-normalize all column names."""
+    df = df.copy()
+    df.columns = [
+        str(col).strip().lower().replace(" ", "_").replace("-", "_")
+        for col in df.columns
+    ]
+    return df
+
+
+def ensure_expected_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize column names and remap known aliases to PACE schema."""
+    df = normalize_columns(df)
+    mapped = {old: new for old, new in _RENAME_MAP.items()
+              if old in df.columns and new not in df.columns}
+    df = df.rename(columns=_RENAME_MAP)
+    for col in EXPECTED_COLUMNS:
+        if col not in df.columns:
+            df[col] = None
+    df.attrs["column_mapping"] = mapped
+    return df[[c for c in EXPECTED_COLUMNS if c in df.columns] +
+               [c for c in df.columns if c not in EXPECTED_COLUMNS]]
+
+
+# ── Streamlit-compatible entry point (accepts file-like objects) ───────────────
+def parse_uploaded_document(file_obj, filename: str) -> pd.DataFrame:
+    """
+    Accepts a Streamlit UploadedFile (or any file-like object) and filename.
+    Delegates to parse_document() after reading the bytes.
+    This is the function imported by pages/2_Upload.py.
+    """
+    file_bytes = file_obj.read()
+    return parse_document(file_bytes, filename)
