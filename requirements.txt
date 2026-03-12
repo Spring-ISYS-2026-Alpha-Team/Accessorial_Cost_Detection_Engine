@@ -1,19 +1,22 @@
 streamlit>=1.31.0
 pandas
-pymssql
-python-dotenv
 numpy
 plotly
 scikit-learn
 lightgbm
 joblib
-
-# Document parsing (Phase 1 — AI document import)
-pdfplumber
+requests
+python-dotenv
 openpyxl
+
+# Azure SQL (requires freetds — see packages.txt for system deps)
+pymssql
+
+# Document parsing
+pdfplumber
 Pillow
 pytesseract
 
-# Geospatial routing (Phase 3 — real driving miles)
+# Geospatial routing
 geopy
 openrouteservice
