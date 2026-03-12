@@ -132,63 +132,80 @@ def _map_excel_columns(df: pd.DataFrame) -> pd.DataFrame | None:
     return remapped[list(PACE_FIELDS.keys())]
 
 
-# ── Ollama column mapping (for structured CSVs / Excel with unknown layout) ───
-def _ollama_map_columns(df: pd.DataFrame) -> pd.DataFrame:
+# ── Semantic column mapping via sentence-transformers ─────────────────────────
+# Rich keyword descriptions per PACE field — more synonyms = better matching
+_PACE_MATCH_DESCRIPTIONS = {
+    "shipment_id":            "shipment id BOL PRO order number reference load id tracking number bill of lading",
+    "ship_date":              "ship date pickup date dispatch date shipment date order date",
+    "carrier":                "carrier trucking company provider scac vendor transport name",
+    "facility":               "facility destination warehouse distribution center DC consignee ship to",
+    "weight_lbs":             "weight pounds lbs gross weight shipment weight total weight",
+    "miles":                  "miles distance mileage route distance transit miles",
+    "base_freight_usd":       "base freight linehaul cost rate charge dollar amount freight cost base rate",
+    "accessorial_charge_usd": "accessorial detention surcharge penalty demurrage extra charges fees additional cost layover",
+}
+
+# Module-level cache so PACE embeddings are only computed once per process
+_pace_embeddings_cache: dict = {}
+
+
+def _st_map_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Send column headers + 3 sample rows to Ollama and ask it to map them to
-    PACE field names.  Returns a remapped DataFrame with all PACE columns present.
-    Falls back to ensure_expected_columns() if Ollama is unavailable or fails.
+    Use sentence-transformers cosine similarity to map CSV/Excel column names
+    to PACE field names.  Works offline, no API key, runs on Streamlit Cloud.
+    Falls back to ensure_expected_columns() if sentence-transformers is not installed.
     """
-    fields_desc = "\n".join(f'  "{k}": {v}' for k, v in PACE_FIELDS.items())
-
-    # Build a compact sample: column names + up to 3 non-null rows
-    sample_rows = df.dropna(how="all").head(3).to_dict(orient="records")
-    sample_text = "\n".join(
-        "  " + ", ".join(f'{k}: "{v}"' for k, v in row.items())
-        for row in sample_rows
-    )
-
-    prompt = (
-        "You are a data mapping assistant for a freight logistics system.\n"
-        "Map the columns from this CSV to the PACE schema fields listed below.\n\n"
-        "PACE fields and what they represent:\n"
-        f"{fields_desc}\n\n"
-        "CSV columns with sample values:\n"
-        f"{sample_text}\n\n"
-        "Rules:\n"
-        "- Return ONLY a valid JSON object, no explanation, no markdown fences\n"
-        "- Keys are the ORIGINAL CSV column names exactly as shown\n"
-        "- Values are the matching PACE field name, or null if no match\n"
-        "- Every PACE field should be mapped at most once\n"
-        "- Use context clues: 'Freight Charge ($)' → base_freight_usd, "
-        "'BOL #' → shipment_id, 'Detention Fee' → accessorial_charge_usd, etc.\n\n"
-        "JSON mapping:"
-    )
-
-    payload = {"model": OLLAMA_MODEL, "prompt": prompt, "stream": False}
     try:
-        r = requests.post(f"{OLLAMA_BASE}/api/generate", json=payload, timeout=OLLAMA_TIMEOUT)
-        r.raise_for_status()
-        raw = r.json().get("response", "").strip()
-        raw = re.sub(r"^```(?:json)?", "", raw, flags=re.MULTILINE).strip()
-        raw = re.sub(r"```$", "", raw, flags=re.MULTILINE).strip()
-        mapping = json.loads(raw)
-    except Exception:
+        from sentence_transformers import SentenceTransformer, util
+    except ImportError:
         return ensure_expected_columns(df)
 
-    if not isinstance(mapping, dict):
-        return ensure_expected_columns(df)
+    global _pace_embeddings_cache
 
-    # Apply mapping: only rename where value is a known PACE field
-    rename = {orig: pace for orig, pace in mapping.items()
-              if pace in PACE_FIELDS and orig in df.columns}
+    model_name = "all-MiniLM-L6-v2"
+    if model_name not in _pace_embeddings_cache:
+        _model = SentenceTransformer(model_name)
+        pace_keys  = list(_PACE_MATCH_DESCRIPTIONS.keys())
+        pace_texts = list(_PACE_MATCH_DESCRIPTIONS.values())
+        _pace_embeddings_cache[model_name] = {
+            "model":       _model,
+            "keys":        pace_keys,
+            "embeddings":  _model.encode(pace_texts, convert_to_tensor=True),
+        }
 
-    # Avoid clobbering a column that already has the correct PACE name
-    rename = {orig: pace for orig, pace in rename.items() if orig != pace}
+    cached      = _pace_embeddings_cache[model_name]
+    st_model    = cached["model"]
+    pace_keys   = cached["keys"]
+    pace_emb    = cached["embeddings"]
+
+    # Normalize uploaded column names: lowercase + strip punctuation for matching
+    col_names   = df.columns.tolist()
+    col_texts   = [c.lower().replace("_", " ").replace("-", " ") for c in col_names]
+    col_emb     = st_model.encode(col_texts, convert_to_tensor=True)
+
+    similarity  = util.cos_sim(col_emb, pace_emb)   # shape: (n_cols, n_pace_fields)
+
+    # Greedy assignment: take highest-confidence pairs first, each field mapped once
+    THRESHOLD = 0.35
+    used_pace  = set()
+    candidates = []
+    for i, col in enumerate(col_names):
+        for j, pace in enumerate(pace_keys):
+            score = float(similarity[i][j])
+            if score >= THRESHOLD:
+                candidates.append((score, i, j))
+
+    candidates.sort(reverse=True)
+    rename = {}
+    for score, i, j in candidates:
+        pace = pace_keys[j]
+        col  = col_names[i]
+        if pace not in used_pace and col not in rename:
+            if col != pace:           # skip if already the right name
+                rename[col] = pace
+            used_pace.add(pace)
 
     remapped = df.rename(columns=rename)
-
-    # Fill any still-missing PACE columns with None
     for col in PACE_FIELDS:
         if col not in remapped.columns:
             remapped[col] = None
@@ -276,10 +293,7 @@ def parse_document(file_bytes: bytes, filename: str) -> pd.DataFrame:
             df = pd.read_csv(io.BytesIO(file_bytes))
         except Exception as e:
             raise ValueError(f"Could not read CSV file: {e}")
-        ollama_ok, _ = check_ollama()
-        if ollama_ok:
-            return _ollama_map_columns(df)
-        return ensure_expected_columns(df)
+        return _st_map_columns(df)
 
     # ── Excel ──────────────────────────────────────────────────────────────────
     if ext in ("xlsx", "xls"):
@@ -292,11 +306,8 @@ def parse_document(file_bytes: bytes, filename: str) -> pd.DataFrame:
         if mapped is not None:
             return mapped
 
-        # Columns didn't match — use Ollama column mapping if available
-        ollama_ok, _ = check_ollama()
-        if ollama_ok:
-            return _ollama_map_columns(raw)
-        return ensure_expected_columns(raw)
+        # Columns didn't match — use semantic column mapping
+        return _st_map_columns(raw)
 
     # ── PDF ────────────────────────────────────────────────────────────────────
     if ext == "pdf":
