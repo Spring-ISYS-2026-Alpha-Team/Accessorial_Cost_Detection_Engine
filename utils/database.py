@@ -56,7 +56,8 @@ def get_connection():
             login_timeout=10,
             tds_version="7.4",
         )
-    except Exception:
+    except Exception as e:
+        st.warning(f"Database connection failed: {e}", icon="⚠️")
         return None
 
 
