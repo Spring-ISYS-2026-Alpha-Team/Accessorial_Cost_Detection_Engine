@@ -10,7 +10,7 @@ from utils.database import get_connection, get_shipments
 from utils.mock_data import generate_mock_shipments
 from utils.styling import (
     inject_css, top_nav,
-    NAVY_500, NAVY_100,
+    NAVY_500,
     RISK_LOW_BG, RISK_LOW_FG,
     RISK_MED_BG, RISK_MED_FG,
     RISK_HIGH_BG, RISK_HIGH_FG,
@@ -18,8 +18,8 @@ from utils.styling import (
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="PACE — Shipments",
-    page_icon="🚚",
+    page_title="PACE | Shipments",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -28,7 +28,7 @@ inject_css()
 # ── Auth guard ────────────────────────────────────────────────────────────────
 if not check_auth():
     st.warning("Please sign in to access this page.")
-    st.page_link("app.py", label="Go to Sign In", icon="🔑")
+    st.page_link("app.py", label="Go to Sign In")
     st.stop()
 
 username = st.session_state.get("username", "User")
@@ -39,11 +39,11 @@ conn = get_connection()
 df_all = get_shipments(conn) if conn is not None else pd.DataFrame()
 if df_all.empty:
     df_all = generate_mock_shipments(300)
-    st.info("Live database unavailable — showing demo data.", icon="ℹ️")
+    st.info("Live database unavailable — showing demo data.")
 
 # ── Inline filters ────────────────────────────────────────────────────────────
 with st.expander("⚙️ Filters", expanded=False):
-    f1, f2, f3 = st.columns(3)
+    f1, f2, f3, f4 = st.columns(4)
     with f1:
         carriers = sorted(df_all["carrier"].dropna().unique())
         sel_carriers = st.multiselect("Carrier", carriers, default=carriers, key="ship_carriers")
@@ -55,6 +55,8 @@ with st.expander("⚙️ Filters", expanded=False):
             "Risk Tier", ["Low", "Medium", "High"],
             default=["Low", "Medium", "High"], key="ship_tiers"
         )
+    with f4:
+        min_risk = st.slider("Min risk", 0.0, 1.0, 0.0, 0.01, help="Only show shipments with risk score ≥ threshold")
 
 # ── Apply filters ─────────────────────────────────────────────────────────────
 df = df_all.copy()
@@ -64,6 +66,8 @@ if sel_facilities:
     df = df[df["facility"].isin(sel_facilities)]
 if sel_tiers:
     df = df[df["risk_tier"].isin(sel_tiers)]
+if min_risk > 0:
+    df = df[df["risk_score"] >= min_risk]
 
 # ── Session state for detail toggle ──────────────────────────────────────────
 if "selected_shipment" not in st.session_state:
@@ -281,6 +285,7 @@ else:
         df = df[df["shipment_id"].astype(str).str.contains(search.upper(), na=False)]
 
     with st.container(border=True):
+        st.caption("Tip: click any row to open the shipment detail view.")
         event = st.dataframe(
             df[[
                 "shipment_id", "ship_date", "carrier", "facility",
@@ -290,7 +295,7 @@ else:
                 "shipment_id":            "Shipment ID",
                 "ship_date":              "Ship Date",
                 "carrier":                "Carrier",
-                "facility":               "Facility",
+                "facility":               "Facility Type",
                 "weight_lbs":             "Weight (lbs)",
                 "miles":                  "Miles",
                 "risk_score":             "Risk Score",
@@ -319,4 +324,4 @@ else:
         st.session_state["selected_shipment"] = sid
         st.rerun()
 
-    st.caption("Click any row to view shipment detail.")
+    st.caption("Use filters to narrow by carrier, facility, tier, and risk score.")

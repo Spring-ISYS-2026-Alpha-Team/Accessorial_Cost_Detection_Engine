@@ -9,12 +9,12 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from auth_utils import check_auth
 from utils.doc_parser import parse_uploaded_document
-from utils.styling import NAVY_900, inject_css, top_nav  # noqa: F401
+from utils.styling import inject_css, top_nav  # noqa: F401
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="PACE — Upload",
-    page_icon="📁",
+    page_title="PACE | Upload",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -24,7 +24,7 @@ inject_css()
 # ── Auth guard ────────────────────────────────────────────────────────────────
 if not check_auth():
     st.warning("Please sign in to access this page.")
-    st.page_link("app.py", label="Go to Sign In", icon="🔑")
+    st.page_link("app.py", label="Go to Sign In")
     st.stop()
 
 username = st.session_state.get("username", "User")
@@ -221,7 +221,7 @@ def mock_score(df: pd.DataFrame) -> pd.DataFrame:
 st.markdown("## Upload Shipment Data")
 st.caption("Upload a shipment file to validate your data and generate risk predictions.")
 
-with st.expander("📋 File Requirements", expanded=False):
+with st.expander("File Requirements", expanded=False):
     st.markdown(
         """
 **Required columns:**
@@ -240,6 +240,11 @@ with st.expander("📋 File Requirements", expanded=False):
     )
 
 st.divider()
+
+# Subtle guidance (matches spec tone)
+st.info(
+    "Tip: start with sample data to explore the workflow, then upload a real file when ready.",
+)
 
 # ── Upload zone ───────────────────────────────────────────────────────────────
 uploaded_file = st.file_uploader(
@@ -319,7 +324,7 @@ if st.session_state.get("upload_df") is not None:
         s1, s2, s3 = st.columns(3)
         with s1:
             st.markdown(
-                f"<div style='font-size:15px; font-weight:600; color:#059669;'>✅ {pass_count:,} rows passed</div>",
+                f"<div style='font-size:15px; font-weight:600; color:#059669;'>{pass_count:,} rows passed</div>",
                 unsafe_allow_html=True,
             )
         with s2:
@@ -329,7 +334,7 @@ if st.session_state.get("upload_df") is not None:
             )
         with s3:
             st.markdown(
-                f"<div style='font-size:15px; font-weight:600; color:#DC2626;'>❌ {fail_count:,} rows failed</div>",
+                f"<div style='font-size:15px; font-weight:600; color:#DC2626;'>{fail_count:,} rows failed</div>",
                 unsafe_allow_html=True,
             )
 
@@ -339,7 +344,7 @@ if st.session_state.get("upload_df") is not None:
             st.success("All rows passed validation — ready to score.")
 
         if errs:
-            with st.expander(f"❌ Errors ({len(errs)})", expanded=True):
+            with st.expander(f"Errors ({len(errs)})", expanded=True):
                 for e in errs[:50]:
                     st.markdown(
                         f"<p style='margin:4px 0; font-size:13px; color:#DC2626;'>• {e}</p>",
@@ -375,7 +380,7 @@ if st.session_state.get("upload_df") is not None:
             )
 
         if errs:
-            st.caption("⚠️ Resolve all errors before scoring.")
+            st.caption("Resolve all errors before scoring.")
 
         preview = raw_df.head(25)
         if st.session_state.get("upload_scored") is not None:

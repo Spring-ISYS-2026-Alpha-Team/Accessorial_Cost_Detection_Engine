@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PACE — User Home</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./shared.css" />
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="topbar-inner">
+        <a class="logo" href="./user-home.html" aria-label="PACE Home">
+          <span class="logo-badge" aria-hidden="true"></span>
+          <span>PACE</span>
+        </a>
+
+        <div class="nav-spacer"></div>
+
+        <a class="btn btn-ghost" href="./dashboards.html">Dashboards</a>
+        <a class="btn btn-ghost" href="./components.html">Risk Estimator</a>
+        <a class="btn btn-ghost" href="./components.html">Routes</a>
+        <a class="btn btn-ghost" href="./components.html">Carriers</a>
+        <a class="btn btn-ghost" href="./components.html">Accessorial</a>
+
+        <div class="nav-spacer"></div>
+
+        <span class="pill" aria-label="User chip">Kirsten • Analyst</span>
+        <a class="btn btn-secondary" href="./login.html">Sign Out</a>
+      </div>
+    </div>
+
+    <main class="container">
+      <h1 class="page-title">Welcome back, Kirsten!</h1>
+      <p class="page-subtitle">
+        Your network summary is below. Start with a quick risk estimate, or jump into dashboards.
+      </p>
+
+      <div class="route-anim" aria-label="Freight animation placeholder">
+        <div class="line" aria-hidden="true"></div>
+        <div class="truck" aria-hidden="true" title="Animated truck"></div>
+      </div>
+
+      <section class="section" aria-label="Quick stats">
+        <div class="stats-grid">
+          <div class="stat">
+            <div class="label">Total shipments (month)</div>
+            <div class="value">1,284</div>
+            <div class="meta">Across all carriers</div>
+          </div>
+          <div class="stat">
+            <div class="label">High-risk pending</div>
+            <div class="value">52</div>
+            <div class="meta"><span class="badge high">High</span></div>
+          </div>
+          <div class="stat">
+            <div class="label">Average risk score</div>
+            <div class="value">46%</div>
+            <div class="meta"><span class="badge med">Medium</span></div>
+          </div>
+          <div class="stat">
+            <div class="label">Estimated exposure</div>
+            <div class="value">$82k</div>
+            <div class="meta">Modeled from historical accessorials</div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap;">
+          <a class="btn btn-primary" href="./components.html">New Risk Estimate</a>
+          <a class="btn btn-secondary" href="./dashboards.html">View Dashboards</a>
+        </div>
+      </section>
+    </main>
+
+    <script src="./shared.js"></script>
+  </body>
+</html>
+

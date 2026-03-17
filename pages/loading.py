@@ -13,10 +13,11 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from auth_utils import check_auth
+from utils.styling import _role_normalize
 
 st.set_page_config(
-    page_title="PACE — Loading",
-    page_icon="⬡",
+    page_title="PACE | Loading",
+    page_icon="",
     layout="centered",
     initial_sidebar_state="collapsed",
 )
@@ -33,70 +34,28 @@ if st.session_state.get("_data_preloaded"):
     st.switch_page(dest)
     st.stop()
 
-# ── Loading page CSS ───────────────────────────────────────────────────────────
-def _bg_css() -> str:
-    img = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "background.png")
-    if os.path.exists(img):
-        with open(img, "rb") as f:
-            b64 = base64.b64encode(f.read()).decode()
-        return (f"background-image:url('data:image/png;base64,{b64}');"
-                "background-size:cover;background-position:center;")
-    return "background:linear-gradient(155deg,#060012 0%,#09021a 40%,#06010f 100%);"
-
-_bg_props = _bg_css()
-
-st.markdown(f"""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-
-@keyframes pace-in {{
-    from {{ opacity: 0; transform: translateY(8px); }}
-    to   {{ opacity: 1; transform: translateY(0); }}
-}}
-
-.stApp {{
-    background: none;
-    font-family: 'Inter', sans-serif;
-    animation: pace-in 0.4s ease-out;
-}}
-
-/* Blurred background layer */
-.stApp::before {{
-    content: '';
-    position: fixed;
-    inset: -20px;
-    z-index: -1;
-    {_bg_props}
-    filter: blur(2px);
-}}
-
-/* Dot grid overlay */
-.stApp::after {{
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: radial-gradient(rgba(180,80,220,0.06) 1px, transparent 1px);
-    background-size: 28px 28px;
-    pointer-events: none;
-    z-index: 0;
-}}
-
-#MainMenu, header, footer {{ visibility:hidden; }}
-[data-testid="stSidebar"], [data-testid="collapsedControl"] {{ display:none !important; }}
-.block-container {{ position:relative; z-index:1; padding-top:0 !important; }}
-
-[data-testid="stProgressBar"] > div > div {{
-    background: linear-gradient(90deg, #9333EA, #E040FB) !important;
-    border-radius: 4px !important;
-    box-shadow: 0 0 12px rgba(147,51,234,0.6) !important;
-}}
-[data-testid="stProgressBar"] > div {{
-    background: rgba(30,10,60,0.6) !important;
-    border-radius: 4px !important;
-    border: 1px solid rgba(180,80,220,0.25) !important;
-}}
-</style>
-""", unsafe_allow_html=True)
+# ── Loading page CSS (aligned with global styling) ────────────────────────────
+st.markdown(
+    """
+    <style>
+    #loading-logo img {
+        width: 180px;
+        filter: none;
+    }
+    [data-testid="stProgressBar"] > div > div {
+        background: rgba(255,255,255,0.6) !important;
+        border-radius: 2px !important;
+        box-shadow: none !important;
+    }
+    [data-testid="stProgressBar"] > div {
+        background: rgba(255,255,255,0.06) !important;
+        border-radius: 2px !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 # ── Logo ───────────────────────────────────────────────────────────────────────
 _logo = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "logo.png")
@@ -104,24 +63,21 @@ if os.path.exists(_logo):
     with open(_logo, "rb") as f:
         _lb64 = base64.b64encode(f.read()).decode()
     st.markdown(
-        f'<div style="text-align:center;padding:52px 0 28px;">'
-        f'<img src="data:image/png;base64,{_lb64}" '
-        f'style="width:180px;filter:drop-shadow(0 0 28px rgba(180,80,220,0.7));"/>'
+        f'<div id="loading-logo" style="text-align:center;padding:52px 0 28px;">'
+        f'<img src="data:image/png;base64,{_lb64}" />'
         f'</div>',
         unsafe_allow_html=True,
     )
 else:
-    st.markdown("""
-    <div style="text-align:center;padding:60px 0 28px;">
-        <div style="font-size:56px;filter:drop-shadow(0 0 20px rgba(147,51,234,0.8));">⬡</div>
-        <h1 style="font-size:38px;font-weight:800;letter-spacing:3px;margin:10px 0 4px;
-                   background:linear-gradient(135deg,#9333EA,#E040FB);
-                   -webkit-background-clip:text;-webkit-text-fill-color:transparent;">PACE</h1>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        "<div style='text-align:center;padding:60px 0 28px;'>"
+        "<div style='font-size:38px;color:#f0f0ee;letter-spacing:0.08em;text-transform:uppercase;'>PACE</div>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
 st.markdown(
-    "<p style='text-align:center;color:#CBD5E1;font-size:12px;margin:-12px 0 28px;'>"
+    "<p style='text-align:center;color:rgba(240,240,238,0.45);font-size:13px;margin:-12px 0 28px;'>"
     "Preparing your workspace…</p>",
     unsafe_allow_html=True,
 )
@@ -165,8 +121,8 @@ try:
             st.session_state["_login_error"] = _err
             st.switch_page("app.py")
             st.stop()
-        st.session_state["role"] = verified_role
-        dest = "pages/8_Admin.py" if verified_role == "admin" else "pages/0_Home.py"
+        st.session_state["role"] = _role_normalize(verified_role)
+        dest = "pages/8_Admin.py" if st.session_state["role"] == "admin" else "pages/0_Home.py"
         st.session_state["post_load_dest"] = dest
 
     _step("Loading shipment records", 20)

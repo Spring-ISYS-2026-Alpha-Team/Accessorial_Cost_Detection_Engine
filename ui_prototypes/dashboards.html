@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PACE | Dashboards</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./shared.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="topbar-inner">
+        <a class="logo" href="./user-home.html" aria-label="PACE Home">
+          <span class="logo-badge" aria-hidden="true"></span>
+          <span>PACE</span>
+        </a>
+
+        <div class="nav-spacer"></div>
+
+        <a class="btn btn-ghost" href="./user-home.html">Home</a>
+        <a class="btn btn-ghost" href="./dashboards.html" style="color:var(--text); background:rgba(241,245,249,.06);">Dashboards</a>
+        <a class="btn btn-ghost" href="./components.html">Risk Estimator</a>
+        <a class="btn btn-ghost" href="./components.html">Routes</a>
+        <a class="btn btn-ghost" href="./components.html">Carriers</a>
+        <a class="btn btn-ghost" href="./components.html">Accessorial</a>
+
+        <div class="nav-spacer"></div>
+        <span class="pill">Kirsten • Analyst</span>
+        <a class="btn btn-secondary" href="./login.html">Sign Out</a>
+      </div>
+    </div>
+
+    <main class="container">
+      <h1 class="page-title">Dashboards</h1>
+      <p class="page-subtitle">
+        Summary KPIs and analytics for shipments, risk tiers, carriers, and accessorial exposure.
+      </p>
+
+      <section class="section" aria-label="KPI summary">
+        <div class="stats-grid">
+          <div class="stat">
+            <div class="label">Total shipments</div>
+            <div class="value">1,284</div>
+            <div class="meta">Current period</div>
+          </div>
+          <div class="stat">
+            <div class="label">Average risk score</div>
+            <div class="value">46%</div>
+            <div class="meta"><span class="badge med">Medium</span></div>
+          </div>
+          <div class="stat">
+            <div class="label">High-risk shipments</div>
+            <div class="value">52</div>
+            <div class="meta"><span class="badge high">High</span></div>
+          </div>
+          <div class="stat">
+            <div class="label">Estimated accessorial costs</div>
+            <div class="value">$82k</div>
+            <div class="meta">Modeled</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" aria-label="Charts">
+        <div class="two-col">
+          <div class="chart-card">
+            <div class="chart-head">
+              <div>
+                <h3 class="chart-title">Risk Distribution</h3>
+                <p class="chart-sub">Shipments by calculatedrisk bracket</p>
+              </div>
+              <span class="pill">0–100%</span>
+            </div>
+            <div class="canvas-wrap" style="height:260px;">
+              <canvas id="riskDist" data-pace-chart="1"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-head">
+              <div>
+                <h3 class="chart-title">Average Risk Score by Carrier</h3>
+                <p class="chart-sub">Ranked carrier risk (%)</p>
+              </div>
+              <span class="pill">Top carriers</span>
+            </div>
+            <div class="canvas-wrap" style="height:260px;">
+              <canvas id="riskByCarrier" data-pace-chart="1"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div style="height:14px"></div>
+
+        <div class="two-col">
+          <div class="chart-card">
+            <div class="chart-head">
+              <div>
+                <h3 class="chart-title">Risk Tier Breakdown</h3>
+                <p class="chart-sub">Counts and expected cost by tier</p>
+              </div>
+              <span class="pill">Low / Medium / High</span>
+            </div>
+            <div class="canvas-wrap" style="height:260px;">
+              <canvas id="tierBreakdown" data-pace-chart="1"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-head">
+              <div>
+                <h3 class="chart-title">Shipments Over Time</h3>
+                <p class="chart-sub">Volume with risk overlay</p>
+              </div>
+              <span class="pill">Weekly</span>
+            </div>
+            <div class="canvas-wrap" style="height:260px;">
+              <canvas id="shipmentsOverTime" data-pace-chart="1"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" aria-label="Shipments table">
+        <div class="table-card">
+          <div class="table-head">
+            <div>
+              <h3 class="chart-title" style="margin:0;">Shipments</h3>
+              <p class="chart-sub" style="margin:4px 0 0;">Searchable table with actions</p>
+            </div>
+            <input class="search" type="text" placeholder="Search shipment ID…" aria-label="Search shipment ID" />
+          </div>
+
+          <div style="overflow:auto;">
+            <table aria-label="Shipments table">
+              <thead>
+                <tr>
+                  <th>Shipment ID</th>
+                  <th>Origin / Destination</th>
+                  <th>Carrier</th>
+                  <th>Risk</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>SHP-00842</td>
+                  <td>Dallas, TX → Memphis, TN</td>
+                  <td>Carrier D</td>
+                  <td><span class="badge high">82%</span></td>
+                  <td>Pending</td>
+                  <td class="actions"><a href="#" onclick="alert('Prototype: open shipment details view.')">View Details</a></td>
+                </tr>
+                <tr>
+                  <td>SHP-00843</td>
+                  <td>Atlanta, GA → Nashville, TN</td>
+                  <td>Carrier B</td>
+                  <td><span class="badge med">54%</span></td>
+                  <td>Scheduled</td>
+                  <td class="actions"><a href="#" onclick="alert('Prototype: open shipment details view.')">View Details</a></td>
+                </tr>
+                <tr>
+                  <td>SHP-00844</td>
+                  <td>Chicago, IL → St. Louis, MO</td>
+                  <td>Carrier A</td>
+                  <td><span class="badge low">22%</span></td>
+                  <td>In Transit</td>
+                  <td class="actions"><a href="#" onclick="alert('Prototype: open shipment details view.')">View Details</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:12px; color:var(--muted); font-size:13px;">
+            <span>Showing 1–3 of 1,284</span>
+            <div style="display:flex; gap:10px;">
+              <button class="btn btn-secondary" type="button" disabled style="opacity:.6; cursor:not-allowed;">Prev</button>
+              <button class="btn btn-secondary" type="button" onclick="alert('Prototype: paginate.')">Next</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="./shared.js"></script>
+  </body>
+</html>
+

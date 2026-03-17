@@ -11,13 +11,12 @@ from utils.database import get_connection, get_shipments_with_charges
 from utils.mock_data import generate_mock_shipments
 from utils.styling import (
     inject_css, top_nav,
-    NAVY_500, NAVY_900, NAVY_100,
     RISK_HIGH_FG, RISK_MED_FG, RISK_LOW_FG,
 )
 
 st.set_page_config(
-    page_title="PACE — Accessorial Tracker",
-    page_icon="📋",
+    page_title="PACE | Accessorial Cost Overview",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -25,7 +24,7 @@ inject_css()
 
 if not check_auth():
     st.warning("Please sign in to access this page.")
-    st.page_link("app.py", label="Go to Sign In", icon="🔑")
+    st.page_link("app.py", label="Go to Sign In")
     st.stop()
 
 username = st.session_state.get("username", "User")
@@ -37,7 +36,7 @@ if df_raw.empty:
     _mock = generate_mock_shipments(300)
     df_raw = _mock[_mock["accessorial_charge_usd"] > 0].copy()
     df_raw["accessorial_type"] = df_raw.get("accessorial_type", "Unknown")
-    st.info("Live database unavailable — showing demo data.", icon="ℹ️")
+    st.info("Live database unavailable — showing demo data.")
 
 df_raw["ship_date_dt"] = pd.to_datetime(df_raw["ship_date"])
 df_all = df_raw  # module-level alias used by dialogs
@@ -84,31 +83,37 @@ def _sort_buttons(chart_key: str):
 
 # ── Chart-builder functions ───────────────────────────────────────────────────
 def _build_donut_fig(df_with_acc: pd.DataFrame, total_acc: float,
-                     height=280) -> go.Figure:
+                     height=280, metric: str = "dollars") -> go.Figure:
     type_data = (
         df_with_acc.groupby("accessorial_type")["accessorial_charge_usd"]
         .agg(total="sum", count="count")
         .reset_index()
         .sort_values("total", ascending=False)
     )
+    values = type_data["total"] if metric == "dollars" else type_data["count"]
+    center = f"${total_acc:,.0f}" if metric == "dollars" else f"{int(type_data['count'].sum()):,}"
     fig = go.Figure(go.Pie(
         labels=type_data["accessorial_type"],
-        values=type_data["total"],
+        values=values,
         hole=0.55,
-        marker_colors=[RISK_HIGH_FG, RISK_MED_FG, NAVY_500, "#7C3AED"],
+        marker_colors=[RISK_HIGH_FG, RISK_MED_FG, "#1B435E", "#563457", "#2DD4BF"],
         textinfo="label+percent",
-        hovertemplate="<b>%{label}</b><br>Total: $%{value:,.0f}<br>Share: %{percent}<extra></extra>",
+        hovertemplate=(
+            "<b>%{label}</b><br>"
+            + ("Total: $%{value:,.0f}<br>" if metric == "dollars" else "Count: %{value:,}<br>")
+            + "Share: %{percent}<extra></extra>"
+        ),
     ))
     fig.add_annotation(
-        text=f"${total_acc:,.0f}", x=0.5, y=0.5,
-        font_size=16, font_color="#111827", showarrow=False, font_family="Inter",
+        text=center, x=0.5, y=0.5,
+        font_size=16, font_color="#F1F5F9", showarrow=False, font_family="Inter",
     )
     fig.update_layout(
         margin=dict(l=0, r=0, t=8, b=0), height=height,
-        paper_bgcolor="#0f0a1e", showlegend=True,
-        font=dict(color="#A78BFA"),
+        paper_bgcolor="rgba(0,0,0,0)", showlegend=True,
+        font=dict(color="#94A3B8"),
         legend=dict(orientation="v", x=1.0, y=0.5,
-                    bgcolor="rgba(15,10,30,0.7)", font=dict(color="#FFFFFF")),
+                    bgcolor="rgba(14,16,44,0.85)", font=dict(color="#F1F5F9")),
     )
     return fig
 
@@ -131,7 +136,7 @@ def _build_carrier_acc_fig(df_with_acc: pd.DataFrame, height=280, sort_by="Value
         x=carrier_acc["total"],
         y=carrier_acc["carrier"],
         orientation="h",
-        marker_color="#9333EA",
+        marker_color="#563457",
         text=carrier_acc["total"].apply(lambda v: f"${v:,.0f}"),
         textposition="outside",
         customdata=carrier_acc[["count", "avg"]].values,
@@ -144,12 +149,12 @@ def _build_carrier_acc_fig(df_with_acc: pd.DataFrame, height=280, sort_by="Value
     ))
     fig.update_layout(
         margin=dict(l=0, r=80, t=8, b=0), height=height,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
-        font=dict(color="#A78BFA"),
-        xaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)",
-                   color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
-        yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8",
-                   linecolor="rgba(150,50,200,0.2)"),
+        plot_bgcolor="rgba(0,0,0,0.16)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#94A3B8"),
+        xaxis=dict(tickprefix="$", gridcolor="rgba(241,245,249,0.08)",
+                   color="#94A3B8", linecolor="rgba(241,245,249,0.10)"),
+        yaxis=dict(gridcolor="rgba(241,245,249,0.08)", color="#94A3B8",
+                   linecolor="rgba(241,245,249,0.10)"),
     )
     return fig
 
@@ -178,12 +183,12 @@ def _build_facility_fig(df_with_acc: pd.DataFrame, height=260, sort_by="Value �
     ))
     fig.update_layout(
         margin=dict(l=0, r=80, t=8, b=0), height=height,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
-        font=dict(color="#A78BFA"),
-        xaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)",
-                   color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
-        yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8",
-                   linecolor="rgba(150,50,200,0.2)"),
+        plot_bgcolor="rgba(0,0,0,0.16)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#94A3B8"),
+        xaxis=dict(tickprefix="$", gridcolor="rgba(241,245,249,0.08)",
+                   color="#94A3B8", linecolor="rgba(241,245,249,0.10)"),
+        yaxis=dict(gridcolor="rgba(241,245,249,0.08)", color="#94A3B8",
+                   linecolor="rgba(241,245,249,0.10)"),
     )
     return fig
 
@@ -207,12 +212,12 @@ def _build_trend_fig(df_with_acc: pd.DataFrame, height=260) -> go.Figure:
     ))
     fig.update_layout(
         margin=dict(l=0, r=0, t=8, b=0), height=height,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
-        font=dict(color="#A78BFA"),
-        xaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8",
-                   linecolor="rgba(150,50,200,0.2)"),
-        yaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)",
-                   color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+        plot_bgcolor="rgba(0,0,0,0.16)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#94A3B8"),
+        xaxis=dict(gridcolor="rgba(241,245,249,0.08)", color="#94A3B8",
+                   linecolor="rgba(241,245,249,0.10)"),
+        yaxis=dict(tickprefix="$", gridcolor="rgba(241,245,249,0.08)",
+                   color="#94A3B8", linecolor="rgba(241,245,249,0.10)"),
     )
     return fig
 
@@ -304,6 +309,15 @@ st.markdown("## Accessorial Cost Tracker")
 st.caption("Understand where unexpected charges come from, which lanes carry the most risk, and why costs vary.")
 st.divider()
 
+# ── Toggle: dollars vs count (spec) ────────────────────────────────────────────
+metric_mode = st.radio(
+    "View mode",
+    ["Dollars ($)", "Count"],
+    horizontal=True,
+    help="Toggle charts between dollars and occurrence counts (where applicable).",
+)
+metric = "dollars" if metric_mode.startswith("Dollars") else "count"
+
 # ── KPI row ───────────────────────────────────────────────────────────────────
 total_acc       = df["accessorial_charge_usd"].sum()
 shipments_w_acc = len(df_with_acc)
@@ -347,7 +361,7 @@ with col_l:
             .sort_values("total", ascending=False)
         )
         if not type_data.empty:
-            st.plotly_chart(_build_donut_fig(df_with_acc, total_acc),
+            st.plotly_chart(_build_donut_fig(df_with_acc, total_acc, metric=metric),
                             width="stretch")
             st.dataframe(
                 type_data.rename(columns={
@@ -371,7 +385,7 @@ with col_r:
             st.markdown("#### Accessorial Costs by Carrier")
             st.caption("Which carriers generate the most unexpected charges?")
         with btn:
-            if st.button("⤢", key="exp_carrier_acc", help="Expand chart"):
+            if st.button("Expand", key="exp_carrier_acc", help="Expand chart"):
                 _popup_carrier_acc()
 
         if not df_with_acc.empty:
@@ -408,7 +422,7 @@ with col_b:
             st.markdown("#### Accessorial Cost Trend")
             st.caption("Weekly accessorial spend over time")
         with btn:
-            if st.button("⤢", key="exp_trend", help="Expand chart"):
+            if st.button("Expand", key="exp_trend", help="Expand chart"):
                 _popup_trend()
 
         if not df_with_acc.empty:
@@ -455,10 +469,10 @@ with st.container(border=True):
             if tier not in tier_map:
                 st.markdown(
                     f"<div style='border-left:4px solid {color}; padding:12px 16px; "
-                    f"background:#FAFAFA; border-radius:0 8px 8px 0; margin-bottom:8px;'>"
+                    f"background:rgba(255,255,255,0.05); border-radius:0 10px 10px 0; margin-bottom:8px;'>"
                     f"<div style='font-size:13px; font-weight:700; color:{color}; "
                     f"text-transform:uppercase; letter-spacing:0.5px;'>{tier} Risk</div>"
-                    f"<div style='font-size:14px; color:#6B7280; margin-top:8px;'>No shipments</div>"
+                    f"<div style='font-size:14px; color:#94A3B8; margin-top:8px;'>No shipments</div>"
                     f"</div>",
                     unsafe_allow_html=True,
                 )
@@ -466,14 +480,14 @@ with st.container(border=True):
                 row = tier_map[tier]
                 st.markdown(
                     f"<div style='border-left:4px solid {color}; padding:12px 16px; "
-                    f"background:#FAFAFA; border-radius:0 8px 8px 0; margin-bottom:8px;'>"
+                    f"background:rgba(255,255,255,0.05); border-radius:0 10px 10px 0; margin-bottom:8px;'>"
                     f"<div style='font-size:13px; font-weight:700; color:{color}; "
                     f"text-transform:uppercase; letter-spacing:0.5px;'>{tier} Risk</div>"
-                    f"<div style='font-size:22px; font-weight:700; color:#111827; margin:6px 0;'>"
+                    f"<div style='font-size:22px; font-weight:800; color:#F1F5F9; margin:6px 0;'>"
                     f"${row['avg_acc']:,.2f}</div>"
-                    f"<div style='font-size:12px; color:#6B7280;'>avg accessorial charge</div>"
-                    f"<hr style='border:none; border-top:1px solid #E5E7EB; margin:10px 0;'>"
-                    f"<div style='font-size:12px; color:#374151;'>"
+                    f"<div style='font-size:12px; color:#94A3B8;'>avg accessorial charge</div>"
+                    f"<hr style='border:none; border-top:1px solid rgba(241,245,249,0.10); margin:10px 0;'>"
+                    f"<div style='font-size:12px; color:#CBD5E1;'>"
                     f"<b>{row['pct_with_acc']:.0f}%</b> of shipments charged<br>"
                     f"<b>{row['count']:.0f}</b> total shipments<br>"
                     f"Avg total cost: <b>${row['avg_total']:,.2f}</b>"
@@ -560,11 +574,10 @@ if risk_df.empty:
     st.info(
         "Risk explanations are generated by the ML pipeline. "
         "Run `python scripts/ml_pipeline.py` to populate this section.",
-        icon="ℹ️",
     )
 else:
     # ── Filters ───────────────────────────────────────────────────────────────
-    with st.expander("⚙️ Risk Detail Filters", expanded=False):
+    with st.expander("Risk Detail Filters", expanded=False):
         rd1, rd2, rd3 = st.columns(3)
         with rd1:
             tier_opts = sorted(risk_df["risk_tier"].dropna().astype(str).unique().tolist())

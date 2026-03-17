@@ -6,16 +6,8 @@ from auth_utils import check_auth
 
 
 def _bg_css() -> str:
-    """Return background CSS props for the ::before blur layer."""
-    img_path = os.path.join(os.path.dirname(__file__), "assets", "background.png")
-    if os.path.exists(img_path):
-        with open(img_path, "rb") as f:
-            b64 = base64.b64encode(f.read()).decode()
-        return (
-            f"background-image:url('data:image/png;base64,{b64}');"
-            "background-size:cover;background-position:center;"
-        )
-    return "background:linear-gradient(155deg,#060012 0%,#09021a 40%,#06010f 100%);"
+    """Return background CSS props for the ::before blur layer (login page)."""
+    return "background:#0e0e1a;"
 
 
 _bg_props = _bg_css()
@@ -23,51 +15,31 @@ _bg_props = _bg_css()
 # ── Fallback users if DB unavailable ──────────────────────────────────────────
 _FALLBACK = {
     "admin": {"password": "admin", "role": "admin"},
-    "user":  {"password": "user",  "role": "user"},
+    "user":  {"password": "user",  "role": "analyst"},
 }
 
 st.set_page_config(
     page_title="PACE — Sign In",
-    page_icon="📦",
+    page_icon="",
     layout="centered",
     initial_sidebar_state="collapsed",
 )
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&display=swap');
 
-@keyframes pace-in {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ── App shell — no direct background, handled by ::before ── */
 .stApp {
     background: none;
-    font-family: 'Inter', 'Segoe UI', sans-serif;
-    animation: pace-in 0.4s ease-out;
+    font-family: "Söhne","DM Sans",system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
 }
 
-/* ── Blurred background layer ── */
 .stApp::before {
     content: '';
     position: fixed;
-    inset: -20px;
+    inset: 0;
     z-index: -1;
     """ + _bg_props + """
-    filter: blur(2px);
-}
-
-/* ── Dot grid overlay ── */
-.stApp::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: radial-gradient(rgba(180,80,220,0.06) 1px, transparent 1px);
-    background-size: 28px 28px;
-    pointer-events: none;
-    z-index: 0;
 }
 
 #MainMenu, header, footer { visibility: hidden; }
@@ -76,57 +48,62 @@ st.markdown("""
 .block-container {
     position: relative;
     z-index: 1;
-    padding-top: 0 !important;
+    max-width: 420px !important;
+    margin: 0 auto !important;
+    padding-top: 48px !important;
 }
 
-/* Glass login card */
+/* Login card */
 [data-testid="stVerticalBlockBorderWrapper"] > div {
-    background: rgba(12, 6, 30, 0.82) !important;
-    backdrop-filter: blur(14px) !important;
-    -webkit-backdrop-filter: blur(14px) !important;
-    border: 1px solid rgba(180, 80, 220, 0.28) !important;
-    border-radius: 14px !important;
-    box-shadow: 0 0 24px rgba(150,50,200,0.18), 0 4px 32px rgba(0,0,0,0.5) !important;
+    background: rgba(255,255,255,0.03) !important;
+    border-top: 1px solid rgba(255,255,255,0.10) !important;
+    border-radius: 4px !important;
+    box-shadow: none !important;
 }
 
 /* Form inputs */
 [data-testid="stTextInput"] input, [data-baseweb="input"] {
-    background: rgba(20,8,50,0.75) !important;
-    border: 1px solid rgba(180,80,220,0.35) !important;
-    border-radius: 8px !important;
-    color: #F1F5F9 !important;
-    transition: border-color 0.2s, box-shadow 0.2s !important;
+    background: rgba(255,255,255,0.03) !important;
+    border: 1px solid rgba(255,255,255,0.10) !important;
+    border-radius: 4px !important;
+    color: #f0f0ee !important;
 }
 [data-testid="stTextInput"] input:focus {
-    border-color: rgba(147,51,234,0.8) !important;
-    box-shadow: 0 0 0 3px rgba(147,51,234,0.18) !important;
+    border-color: #c8a96e !important;
+    box-shadow: none !important;
     outline: none !important;
 }
-[data-testid="stTextInput"] label { color: #A78BFA !important; font-size: 13px !important; font-weight: 500 !important; letter-spacing: 0.3px !important; }
+[data-testid="stTextInput"] label {
+    color: rgba(240,240,238,0.45) !important;
+    font-size: 12px !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+}
 [data-testid="stForm"] { background: transparent !important; border: none !important; }
 
-/* Sign In button */
-.stButton > button[kind="primary"], .stFormSubmitButton > button {
-    background: linear-gradient(135deg, #9333EA, #C2185B) !important;
-    color: #FFFFFF !important;
-    border: none !important;
-    border-radius: 8px !important;
-    font-weight: 600 !important;
-    font-size: 14px !important;
-    box-shadow: 0 0 20px rgba(147,51,234,0.45) !important;
-    transition: box-shadow 0.2s !important;
+/* Buttons — match editorial primary */
+.stButton > button, .stFormSubmitButton > button {
+    background: transparent !important;
+    color: #f0f0ee !important;
+    border: 1px solid rgba(240,240,238,0.3) !important;
+    border-radius: 4px !important;
+    font-size: 13px !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    padding: 14px 32px !important;
 }
-.stButton > button[kind="primary"]:hover, .stFormSubmitButton > button:hover {
-    box-shadow: 0 0 36px rgba(147,51,234,0.7) !important;
+.stButton > button:hover, .stFormSubmitButton > button:hover {
+    border-color: #c8a96e !important;
+    color: #c8a96e !important;
 }
 
-h4, h5 { color: #E2E8F0 !important; }
-p, .stMarkdown p { color: #94A3B8 !important; }
+h4, h5 { color: #f0f0ee !important; }
+p, .stMarkdown p { color: rgba(240,240,238,0.45) !important; }
 [data-testid="stAlert"] {
-    background: rgba(20,8,50,0.7) !important;
-    border: 1px solid rgba(180,80,220,0.3) !important;
-    border-radius: 8px !important;
-    color: #F1F5F9 !important;
+    background: rgba(255,255,255,0.03) !important;
+    border: 1px solid rgba(255,255,255,0.10) !important;
+    border-radius: 4px !important;
+    color: #f0f0ee !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -144,6 +121,19 @@ if check_auth():
             else "pages/0_Home.py"
         )
         st.switch_page("pages/loading.py")
+else:
+    # First-time / unauthenticated visits should land on the public Home page
+    if not st.session_state.get("show_login"):
+        st.switch_page("pages/9_Landing.py")
+
+# Public entry points (UI refresh)
+top_links = st.columns([1, 1, 1])
+with top_links[0]:
+    st.page_link("pages/9_Landing.py", label="Home")
+with top_links[1]:
+    st.page_link("pages/10_Create_Account.py", label="Create Account")
+with top_links[2]:
+    st.markdown("")
 
 # ── Logo header ───────────────────────────────────────────────────────────────
 _logo_path = os.path.join(os.path.dirname(__file__), "assets", "logo.png")
@@ -151,52 +141,45 @@ if os.path.exists(_logo_path):
     with open(_logo_path, "rb") as _f:
         _logo_b64 = base64.b64encode(_f.read()).decode()
     st.markdown(
-        f"""<div style="text-align:center; padding:36px 0 24px;">
-            <div style="display:inline-block; padding:3px; border-radius:50%;
-                        background:linear-gradient(135deg,#9333EA,#C2185B);
-                        box-shadow:0 0 32px rgba(147,51,234,0.45);">
-                <div style="width:108px; height:108px; border-radius:50%;
-                            overflow:hidden; background:#0a041a;">
-                    <img src="data:image/png;base64,{_logo_b64}"
-                         style="width:100%; height:100%; object-fit:cover;" />
-                </div>
-            </div>
-            <h1 style="font-size:26px; font-weight:800; letter-spacing:5px; margin:14px 0 4px;
-                       background:linear-gradient(135deg,#A78BFA,#E040FB);
-                       -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
-                P.A.C.E
+        f"""<div style="text-align:center; padding:32px 0 24px;">
+            <img src="data:image/png;base64,{_logo_b64}"
+                 style="width:200px; max-width:60vw; height:auto;" />
+            <h1 style="font-family:'Tiempos Headline','Georgia',serif;
+                       font-size:28px; font-weight:300; letter-spacing:0.08em;
+                       margin:18px 0 4px; text-transform:uppercase; color:#f0f0ee;">
+                PACE
             </h1>
-            <p style="color:#64748B; font-size:11px; margin:0; letter-spacing:2px;
-                      text-transform:uppercase;">
+            <p style="color:rgba(240,240,238,0.45); font-size:12px; margin:0;
+                      letter-spacing:0.12em; text-transform:uppercase;">
                 Predictive Accessorial Cost Engine
             </p>
         </div>""",
         unsafe_allow_html=True,
     )
 else:
-    st.markdown("""
-    <div style="text-align:center; padding:52px 0 32px;">
-        <div style="font-size:52px; line-height:1; filter:drop-shadow(0 0 18px rgba(147,51,234,0.7));">⬡</div>
-        <h1 style="font-size:36px; font-weight:800; letter-spacing:3px; margin:12px 0 4px;
-                   background:linear-gradient(135deg,#9333EA,#E040FB);
-                   -webkit-background-clip:text; -webkit-text-fill-color:transparent;">PACE</h1>
-        <p style="color:#64748B; font-size:11px; margin:0; letter-spacing:2px; text-transform:uppercase;">
-            Predictive Accessorial Cost Engine
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        "<div style='text-align:center; padding:40px 0 24px;'>"
+        "<div style=\"font-family:'Tiempos Headline','Georgia',serif;"
+        "font-size:28px; font-weight:300; letter-spacing:0.08em; text-transform:uppercase; color:#f0f0ee;\">"
+        "PACE</div>"
+        "<p style='color:rgba(240,240,238,0.45); font-size:12px; margin:4px 0 0;"
+        "letter-spacing:0.12em; text-transform:uppercase;'>Predictive Accessorial Cost Engine</p>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
 # ── Login card ─────────────────────────────────────────────────────────────────
 with st.container(border=True):
     st.markdown("""
-    <div style="margin:-4px -4px 16px -4px;">
-        <div style="height:3px; border-radius:3px 3px 0 0;
-                    background:linear-gradient(90deg,#9333EA,#C2185B,transparent);"></div>
-    </div>
     <div style="padding:0 2px 12px;">
-        <h3 style="color:#F1F5F9; font-weight:700; font-size:20px; margin:0 0 4px;
-                   letter-spacing:0.2px;">Welcome back</h3>
-        <p style="color:#64748B; font-size:13px; margin:0;">Sign in to your PACE account</p>
+        <h3 style="font-family:'Tiempos Headline','Georgia',serif;
+                   font-size:22px; font-weight:300; margin:0 0 4px;
+                   letter-spacing:-0.03em; color:#f0f0ee;">
+            Sign in to PACE
+        </h3>
+        <p style="color:rgba(240,240,238,0.45); font-size:13px; margin:0;">
+            Predictive Accessorial Cost Engine
+        </p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -238,7 +221,7 @@ with st.container(border=True):
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("""
-<p style="text-align:center; color:#475569; font-size:11px; margin-top:28px; letter-spacing:0.3px;">
+<p style="text-align:center; color:rgba(240,240,238,0.45); font-size:11px; margin-top:28px; letter-spacing:0.3px;">
     © 2026 PACE &nbsp;·&nbsp; University of Arkansas &nbsp;·&nbsp; ISYS 43603
 </p>
 """, unsafe_allow_html=True)

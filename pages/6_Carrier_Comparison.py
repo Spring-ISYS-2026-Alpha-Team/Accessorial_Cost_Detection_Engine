@@ -9,11 +9,11 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from auth_utils import check_auth
 from utils.database import get_connection, get_shipments
 from utils.mock_data import generate_mock_shipments
-from utils.styling import inject_css, top_nav, NAVY_500, NAVY_900
+from utils.styling import inject_css, top_nav
 
 st.set_page_config(
-    page_title="PACE — Carrier Comparison",
-    page_icon="🚛",
+    page_title="PACE | Carrier Overview",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -21,7 +21,7 @@ inject_css()
 
 if not check_auth():
     st.warning("Please sign in to access this page.")
-    st.page_link("app.py", label="Go to Sign In", icon="🔑")
+    st.page_link("app.py", label="Go to Sign In")
     st.stop()
 
 username = st.session_state.get("username", "User")
@@ -31,15 +31,15 @@ conn = get_connection()
 df_raw = get_shipments(conn) if conn is not None else pd.DataFrame()
 if df_raw.empty:
     df_raw = generate_mock_shipments(300)
-    st.info("Live database unavailable — showing demo data.", icon="ℹ️")
+    st.info("Live database unavailable — showing demo data.")
 df_raw["ship_date_dt"] = pd.to_datetime(df_raw["ship_date"])
 df_all = df_raw  # module-level alias used by dialogs
 
 ALL_CARRIERS = sorted(df_all["carrier"].dropna().unique())
 
 CARRIER_COLORS = [
-    "#0F2B4A", "#2563A8", "#059669", "#D97706",
-    "#DC2626", "#7C3AED", "#0891B2", "#BE185D",
+    "#1B435E", "#563457", "#2DD4BF", "#10B981",
+    "#F59E0B", "#EF4444", "#38BDF8", "#BE185D",
 ]
 color_map = {c: CARRIER_COLORS[i % len(CARRIER_COLORS)]
              for i, c in enumerate(ALL_CARRIERS)}
@@ -102,12 +102,12 @@ def _build_cpm_fig(metrics: pd.DataFrame, height=280, sort_by="Value ↓") -> go
     ))
     fig.update_layout(
         margin=dict(l=0, r=0, t=36, b=0), height=height,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
-        font=dict(color="#A78BFA"),
-        yaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)",
-                   color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
-        xaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8",
-                   linecolor="rgba(150,50,200,0.2)"),
+        plot_bgcolor="rgba(0,0,0,0.16)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#94A3B8"),
+        yaxis=dict(tickprefix="$", gridcolor="rgba(241,245,249,0.08)",
+                   color="#94A3B8", linecolor="rgba(241,245,249,0.10)"),
+        xaxis=dict(gridcolor="rgba(241,245,249,0.08)", color="#94A3B8",
+                   linecolor="rgba(241,245,249,0.10)"),
         showlegend=False,
     )
     return fig
@@ -131,12 +131,12 @@ def _build_high_risk_fig(metrics: pd.DataFrame, height=280, sort_by="Value ↓")
     ))
     fig.update_layout(
         margin=dict(l=0, r=0, t=36, b=0), height=height,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
-        font=dict(color="#A78BFA"),
-        yaxis=dict(ticksuffix="%", gridcolor="rgba(150,50,200,0.15)",
-                   color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
-        xaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8",
-                   linecolor="rgba(150,50,200,0.2)"),
+        plot_bgcolor="rgba(0,0,0,0.16)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#94A3B8"),
+        yaxis=dict(ticksuffix="%", gridcolor="rgba(241,245,249,0.08)",
+                   color="#94A3B8", linecolor="rgba(241,245,249,0.10)"),
+        xaxis=dict(gridcolor="rgba(241,245,249,0.08)", color="#94A3B8",
+                   linecolor="rgba(241,245,249,0.10)"),
         showlegend=False,
     )
     return fig
@@ -158,12 +158,12 @@ def _build_acc_rate_fig(metrics: pd.DataFrame, height=260, sort_by="Value ↓") 
     ))
     fig.update_layout(
         margin=dict(l=0, r=0, t=36, b=0), height=height,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
-        font=dict(color="#A78BFA"),
-        yaxis=dict(ticksuffix="%", gridcolor="rgba(150,50,200,0.15)",
-                   color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
-        xaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8",
-                   linecolor="rgba(150,50,200,0.2)"),
+        plot_bgcolor="rgba(0,0,0,0.16)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#94A3B8"),
+        yaxis=dict(ticksuffix="%", gridcolor="rgba(241,245,249,0.08)",
+                   color="#94A3B8", linecolor="rgba(241,245,249,0.10)"),
+        xaxis=dict(gridcolor="rgba(241,245,249,0.08)", color="#94A3B8",
+                   linecolor="rgba(241,245,249,0.10)"),
         showlegend=False,
     )
     return fig
@@ -201,9 +201,9 @@ def _build_radar_fig(metrics: pd.DataFrame, height=260) -> go.Figure:
         polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
         margin=dict(l=20, r=20, t=20, b=20),
         height=height,
-        paper_bgcolor="#0f0a1e",
-        font=dict(color="#A78BFA"),
-        legend=dict(bgcolor="rgba(15,10,30,0.7)", font=dict(size=10, color="#FFFFFF")),
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#94A3B8"),
+        legend=dict(bgcolor="rgba(14,16,44,0.85)", font=dict(size=10, color="#F1F5F9")),
     )
     return radar_fig
 
@@ -296,12 +296,25 @@ if not active_carriers:
 df = df_all[df_all["carrier"].isin(active_carriers)].copy()
 
 # ── Header ────────────────────────────────────────────────────────────────────
-st.markdown("## Carrier Comparison")
-st.caption(f"Comparing {len(active_carriers)} carrier{'s' if len(active_carriers) != 1 else ''} across cost, risk, and performance metrics.")
+st.markdown("## Carriers")
+st.caption(f"Comparing {len(active_carriers)} carrier{'s' if len(active_carriers) != 1 else ''} across cost, risk, and accessorial metrics.")
 st.divider()
 
 # ── Build carrier metrics table ───────────────────────────────────────────────
 metrics = _build_metrics(df)
+
+# ── Summary statistics (spec) ────────────────────────────────────────────────
+overall_avg_cpm = float(metrics["avg_cpm"].mean()) if not metrics.empty else 0.0
+overall_high_risk = float(metrics["high_risk_pct"].mean()) if not metrics.empty else 0.0
+overall_acc_rate = float(metrics["accessorial_rate"].mean()) if not metrics.empty else 0.0
+
+s1, s2, s3 = st.columns(3)
+with s1:
+    st.metric("Average Cost per Mile (overall)", f"${overall_avg_cpm:.2f}")
+with s2:
+    st.metric("High-Risk Shipment Rate (avg)", f"{overall_high_risk:.1f}%")
+with s3:
+    st.metric("Accessorial Cost Rate (avg)", f"{overall_acc_rate:.1f}%")
 
 # ── Summary metrics table ─────────────────────────────────────────────────────
 with st.container(border=True):
@@ -350,7 +363,7 @@ with ch1:
         with hdr:
             st.markdown("#### Avg Cost per Mile")
         with btn:
-            if st.button("⤢", key="exp_cpm", help="Expand chart"):
+            if st.button("Expand", key="exp_cpm", help="Expand chart"):
                 _popup_cpm()
         st.plotly_chart(_build_cpm_fig(metrics), width="stretch")
 
@@ -375,7 +388,7 @@ with ch3:
             st.markdown("#### Accessorial Cost Rate")
             st.caption("Accessorial charges as % of total spend")
         with btn:
-            if st.button("⤢", key="exp_acc_rate", help="Expand chart"):
+            if st.button("Expand", key="exp_acc_rate", help="Expand chart"):
                 _popup_acc_rate()
         st.plotly_chart(_build_acc_rate_fig(metrics), width="stretch")
 
@@ -386,6 +399,25 @@ with ch4:
             st.markdown("#### Carrier Performance Radar")
             st.caption("Normalized across cost, risk, and accessorial rate (lower = better)")
         with btn:
-            if st.button("⤢", key="exp_radar", help="Expand chart"):
+            if st.button("Expand", key="exp_radar", help="Expand chart"):
                 _popup_radar()
         st.plotly_chart(_build_radar_fig(metrics), width="stretch")
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ── Carrier detail view pattern (spec) ─────────────────────────────────────────
+with st.container(border=True):
+    st.markdown("#### Carrier Detail View")
+    st.caption("Select a carrier to view focused performance metrics (prototype layout).")
+    sel = st.selectbox("Carrier", options=sorted(active_carriers), key="carrier_detail_sel")
+    row = metrics[metrics["carrier"] == sel].head(1)
+    if not row.empty:
+        r = row.iloc[0]
+        d1, d2, d3, d4 = st.columns(4)
+        d1.metric("Shipment Volume", f"{int(r['shipments']):,}")
+        d2.metric("Avg Risk Score", f"{float(r['avg_risk'])*100:.1f}%")
+        d3.metric("Cost per Mile", f"${float(r['avg_cpm']):.2f}")
+        d4.metric("Accessorial Rate", f"{float(r['accessorial_rate']):.1f}%")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.caption("Add: carrier profile (DOT, safety rating) from `Carriers` table when available.")

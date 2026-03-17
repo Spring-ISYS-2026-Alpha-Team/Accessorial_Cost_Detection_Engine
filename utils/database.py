@@ -57,7 +57,7 @@ def get_connection():
             tds_version="7.4",
         )
     except Exception as e:
-        st.warning(f"Database connection failed: {e}", icon="⚠️")
+        st.warning(f"Database connection failed: {e}")
         return None
 
 

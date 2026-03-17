@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PACE | Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./shared.css" />
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="topbar-inner">
+        <a class="logo" href="./index.html" aria-label="PACE Home">
+          <span class="logo-badge" aria-hidden="true"></span>
+          <span>PACE</span>
+        </a>
+        <div class="nav-spacer"></div>
+        <a class="btn btn-secondary" href="./index.html">Homepage</a>
+      </div>
+    </div>
+
+    <main class="auth-wrap">
+      <section class="auth-card" aria-label="Login form">
+        <div class="auth-brand">
+          <span class="logo-badge" aria-hidden="true"></span>
+          <div>
+            <h1 class="auth-title">Sign in to PACE</h1>
+            <p class="auth-sub">Predictive Accessorial Cost Engine</p>
+          </div>
+        </div>
+
+        <form>
+          <div class="field">
+            <label for="username">Username or Email</label>
+            <input id="username" type="text" placeholder="e.g., kirsten@company.com" autocomplete="username" />
+          </div>
+
+          <div class="field">
+            <label for="password">Password</label>
+            <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
+          </div>
+
+          <button class="btn btn-primary btn-block" type="button" onclick="location.href='./user-home.html'">
+            Sign In
+          </button>
+
+          <div class="linkrow">
+            <a href="./components.html">Create Account</a>
+            <a href="#" onclick="alert('Prototype: wire up reset flow in Streamlit.')">Forgot Password?</a>
+          </div>
+        </form>
+
+        <p class="help" style="margin-top:16px;">
+          Prototype note: successful sign-in routes to the authenticated landing page.
+        </p>
+      </section>
+    </main>
+
+    <script src="./shared.js"></script>
+  </body>
+</html>
+

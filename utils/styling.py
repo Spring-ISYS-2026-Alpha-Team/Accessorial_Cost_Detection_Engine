@@ -1,7 +1,9 @@
-"""
-utils/styling.py
-Dark glass theme — PACE Predictive Accessorial Cost Engine.
-Purple-magenta background image, glass cards, glowing accents.
+"""Global styling utilities for PACE.
+
+Mara-inspired editorial system:
+- Dark neutral background
+- Warm off-white typography
+- Gold accent for subtle states
 """
 import os
 import base64
@@ -9,128 +11,112 @@ import streamlit as st
 
 
 def _bg_css() -> str:
-    """Return background CSS props for the ::before blur layer."""
-    _root = os.path.dirname(os.path.dirname(__file__))
-    img_path = os.path.join(_root, "assets", "background.png")
-    if os.path.exists(img_path):
-        with open(img_path, "rb") as f:
-            b64 = base64.b64encode(f.read()).decode()
-        return (
-            f"background-image: url('data:image/png;base64,{b64}');"
-            "background-size: cover;"
-            "background-position: center center;"
-        )
-    return (
-        "background: "
-        "radial-gradient(ellipse 65% 55% at 8% 62%, rgba(120,20,180,0.45) 0%, transparent 58%),"
-        "radial-gradient(ellipse 55% 45% at 92% 18%, rgba(200,20,100,0.38) 0%, transparent 52%),"
-        "linear-gradient(155deg, #060012 0%, #09021a 40%, #06010f 100%);"
-    )
+    """Return background CSS props for the ::before layer."""
+    return "background:#0e0e0e;"
 
 
-# ── Color tokens ──────────────────────────────────────────────────────────────
+# ── Color tokens (Mara-inspired) ─────────────────────────────────────────────
 # Background / structure
-DARK_BASE    = "#060012"
-DARK_MID     = "#09021a"
-GLASS_BG     = "rgba(12, 6, 30, 0.82)"
-GLASS_BORDER = "rgba(180, 80, 220, 0.28)"
-GLASS_GLOW   = "rgba(150, 50, 200, 0.18)"
+BG_APP       = "#0e0e0e"  # near black
+SURFACE_SUBTLE = "rgba(255,255,255,0.03)"
+SURFACE_LIFT   = "rgba(255,255,255,0.04)"
+DIVIDER_SOFT   = "rgba(255,255,255,0.08)"
+CARD_TOP_BORDER = "rgba(255,255,255,0.10)"
 
-# Accent colors
-ACCENT_PURPLE = "#9333EA"
-ACCENT_SOFT   = "#A78BFA"
+# Typography colors
+TEXT_PRIMARY   = "#f0f0ee"
+TEXT_MUTED     = "rgba(240,240,238,0.45)"
 
-# Text
-TEXT_PRIMARY   = "#F1F5F9"
-TEXT_SECONDARY = "#94A3B8"
-TEXT_MUTED     = "#64748B"
+# Accent (used sparingly)
+ACCENT_GOLD    = "#c8a96e"
 
-# Legacy color tokens — kept so existing pages don't break
-NAVY_900 = "#0A0520"
-NAVY_700 = "#1A0A40"
-NAVY_500 = ACCENT_PURPLE    # purple (was blue)
-NAVY_100 = "#2D1B4E"        # dark purple fill
+# Risk tier colors — softened, non-neon
+RISK_HIGH_BG  = "rgba(190, 62, 62, 0.12)"
+RISK_HIGH_FG  = "#f2a0a0"
+RISK_MED_BG   = "rgba(200, 150, 80, 0.12)"
+RISK_MED_FG   = "#e7c599"
+RISK_LOW_BG   = "rgba(80, 150, 120, 0.12)"
+RISK_LOW_FG   = "#a6d7b8"
 
-# Risk tier colors — glowing on dark bg
-RISK_HIGH_BG  = "rgba(220, 38, 38, 0.18)"
-RISK_HIGH_FG  = "#F87171"
-RISK_MED_BG   = "rgba(217, 119, 6, 0.18)"
-RISK_MED_FG   = "#FCD34D"
-RISK_LOW_BG   = "rgba(5, 150, 105, 0.18)"
-RISK_LOW_FG   = "#34D399"
+# Chart theme defaults (neutral)
+CHART_BG      = "rgba(0,0,0,0.4)"
+CHART_GRID    = "rgba(240,240,238,0.10)"
+CHART_AXIS    = TEXT_MUTED
 
-# Chart theme defaults
-CHART_BG      = "#0f0a1e"
-CHART_GRID    = "rgba(150,50,200,0.18)"
-CHART_AXIS    = "#A78BFA"
-
-# Chart palette
-CHART_PURPLE   = "#9333EA"
-CHART_BLUE     = "#38BDF8"
-CHART_RED      = "#EF4444"
-CHART_BURGUNDY = "#9F1239"
-CHART_LAVENDER = "#C4B5FD"
+# Chart palette (muted)
+CHART_PURPLE   = "#5b5664"
+CHART_BLUE     = "#7d8fa3"
+CHART_RED      = "#b56a6a"
+CHART_BURGUNDY = "#7a4b52"
+CHART_LAVENDER = "#9a8fa6"
 
 
 def chart_theme(**overrides) -> dict:
     """Dark-themed Plotly layout defaults. Merge with page-specific layout kwargs."""
     base = {
         "plot_bgcolor":  CHART_BG,
-        "paper_bgcolor": "#0f0a1e",
-        "font":   {"color": CHART_AXIS, "family": "Inter, Segoe UI, sans-serif"},
-        "xaxis":  {"gridcolor": CHART_GRID, "color": CHART_AXIS,
-                   "linecolor": "rgba(150,50,200,0.25)", "zerolinecolor": "rgba(150,50,200,0.2)"},
-        "yaxis":  {"gridcolor": CHART_GRID, "color": CHART_AXIS,
-                   "linecolor": "rgba(150,50,200,0.25)", "zerolinecolor": "rgba(150,50,200,0.2)"},
-        "legend": {"bgcolor": "rgba(15,10,30,0.7)", "font": {"color": "#FFFFFF"},
-                   "bordercolor": "rgba(150,50,200,0.3)", "borderwidth": 1},
+        "paper_bgcolor": BG_APP,
+        "font":   {"color": CHART_AXIS, "family": "DM Sans, system-ui, -apple-system, BlinkMacSystemFont, sans-serif"},
+        "xaxis":  {"gridcolor": CHART_GRID, "color": CHART_AXIS},
+        "yaxis":  {"gridcolor": CHART_GRID, "color": CHART_AXIS},
+        "legend": {"bgcolor": "rgba(14,14,14,0.9)", "font": {"color": TEXT_MUTED}},
     }
     base.update(overrides)
     return base
 
 
-# ── Navigation pages ──────────────────────────────────────────────────────────
-_NAV_PAGES = [
-    ("Home",        "pages/0_Home.py"),
-    ("Dashboard",   "pages/1_Dashboard.py"),
-    ("Upload",      "pages/2_Upload.py"),
-    ("Shipments",   "pages/3_Shipments.py"),
-    ("Cost Est.",   "pages/4_Cost_Estimate.py"),
-    ("Routes",      "pages/5_Route_Analysis.py"),
-    ("Carriers",    "pages/6_Carrier_Comparison.py"),
-    ("Accessorial", "pages/7_Accessorial_Tracker.py"),
-    ("Admin",       "pages/8_Admin.py"),
-]
+def _role_normalize(role: str | None) -> str:
+    """Normalize legacy roles to the new RBAC names."""
+    r = (role or "").strip().lower()
+    if r in {"admin"}:
+        return "admin"
+    # legacy role names in this repo
+    if r in {"user", "pending", ""}:
+        return "analyst"
+    if r in {"analyst", "viewer"}:
+        return r
+    return "analyst"
+
+
+def nav_pages_for_role(role: str | None) -> list[tuple[str, str]]:
+    """Return nav items for a given role (RBAC)."""
+    r = _role_normalize(role)
+    base = [
+        ("Home",        "pages/0_Home.py"),
+        ("Dashboards",  "pages/1_Dashboard.py"),
+        ("Upload",      "pages/2_Upload.py"),
+        ("Risk Est.",   "pages/4_Cost_Estimate.py"),
+        ("Routes",      "pages/5_Route_Analysis.py"),
+        ("Carriers",    "pages/6_Carrier_Comparison.py"),
+        ("Accessorial", "pages/7_Accessorial_Tracker.py"),
+    ]
+    if r == "admin":
+        base.append(("Admin", "pages/8_Admin.py"))
+    return base
 
 # ── Base page CSS (injected on every page) ────────────────────────────────────
 _BASE_CSS = f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* Typography imports */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&display=swap');
 
-@keyframes pace-in {{
-    from {{ opacity: 0; transform: translateY(8px); }}
-    to   {{ opacity: 1; transform: translateY(0); }}
-}}
-
-/* ── App shell — no direct background ── */
-.stApp {{
+html, body, .stApp {{
     background: none;
-    font-family: 'Inter', 'Segoe UI', sans-serif;
     color: {TEXT_PRIMARY};
-    animation: pace-in 0.4s ease-out;
+    font-family: "Söhne", "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
 }}
 
-/* ── Blurred background layer ── */
 .stApp::before {{
     content: '';
     position: fixed;
-    inset: -20px;
+    inset: 0;
     z-index: -1;
     {_bg_css()}
-    filter: blur(2px);
 }}
 
-/* ── Hide Streamlit chrome and sidebar ── */
+/* Hide Streamlit chrome and sidebar */
 #MainMenu, header, footer {{ visibility: hidden; }}
 [data-testid="stSidebar"],
 [data-testid="collapsedControl"],
@@ -146,238 +132,214 @@ button[kind="header"],
     overflow: hidden !important;
 }}
 
-/* ── Page content padding ── */
+/* Content width and section spacing */
 .block-container {{
-    padding-top: 1rem !important;
-    padding-left: 2.5rem !important;
-    padding-right: 2.5rem !important;
-    max-width: 1400px !important;
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+    padding-left: 80px !important;
+    padding-right: 80px !important;
 }}
 
-/* ── Nav bar ── */
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"]) {{
-    background: {NAVY_900} !important;
-    border-bottom: 2px solid {NAVY_700} !important;
-    padding: 5px 16px !important;
-    margin-bottom: 1.5rem !important;
-    border-radius: 6px !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
-    align-items: center !important;
+section[data-testid="stVerticalBlock"] > div:has(> div[data-testid="stVerticalBlock"]) {{
+    padding-top: 120px !important;
+    padding-bottom: 120px !important;
+    border-top: 1px solid {DIVIDER_SOFT};
 }}
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
+
+/* Sticky nav */
+[data-testid="stHorizontalBlock"]:has([data-testid='pace-nav']) {{
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: rgba(14,14,14,0.88) !important;
+    backdrop-filter: blur(16px);
+    padding: 10px 0 !important;
+    margin-bottom: 40px !important;
+    border-bottom: 1px solid {DIVIDER_SOFT};
+}}
+[data-testid="stHorizontalBlock"]:has([data-testid='pace-nav'])
 > div[data-testid="stColumn"] > div {{
-    padding: 0 2px !important;
+    padding: 0 !important;
     gap: 0 !important;
 }}
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
-[data-testid="stPageLink"] {{
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    min-height: unset !important;
-}}
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
-[data-testid="stPageLink"] a,
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
-[data-testid="stPageLink"] a p,
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
-[data-testid="stPageLink"] a span,
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
-[data-testid="stPageLink"] a div {{
-    color: #FFFFFF !important;
-    font-size: 15px !important;
-    font-weight: 700 !important;
-    text-decoration: none !important;
-    white-space: nowrap !important;
-}}
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
-[data-testid="stPageLink"] a {{
-    padding: 4px 7px !important;
-    border-radius: 4px !important;
-    display: inline-block !important;
-    transition: background 0.15s !important;
-}}
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
-[data-testid="stPageLink"] a:hover,
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
-[data-testid="stPageLink"] a:hover p,
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
-[data-testid="stPageLink"] a:hover span {{
-    color: #FFFFFF !important;
-    background: rgba(255,255,255,0.12) !important;
-}}
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
+
+[data-testid="stHorizontalBlock"]:has([data-testid='pace-nav'])
 .stButton > button {{
-    background: rgba(147,51,234,0.15) !important;
-    color: rgba(220,200,255,0.8) !important;
-    border: 1px solid rgba(180,80,220,0.4) !important;
-    font-size: 12px !important;
-    padding: 4px 14px !important;
-    min-height: unset !important;
-    height: auto !important;
-    line-height: 1.4 !important;
-    border-radius: 5px !important;
+    background: transparent !important;
+    color: {TEXT_PRIMARY} !important;
+    border: 1px solid rgba(240,240,238,0.3) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 13px !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    padding: 14px 32px !important;
+    border-radius: 4px !important;
     white-space: nowrap !important;
 }}
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
+[data-testid="stHorizontalBlock"]:has([data-testid='pace-nav'])
 .stButton > button:hover {{
-    color: #FFFFFF !important;
-    border-color: rgba(255,255,255,0.5) !important;
-    background: rgba(255,255,255,0.1) !important;
+    border-color: {ACCENT_GOLD} !important;
+    color: {ACCENT_GOLD} !important;
 }}
 
-/* ── Metric Cards ── */
+/* Hide caret icon on nav popover so only menu lines show */
+[data-testid="stHorizontalBlock"]:has([data-testid='pace-nav'])
+button svg {{
+    display: none !important;
+}}
+
+/* Nav links (page_link) */
+[data-testid="stHorizontalBlock"]:has([data-testid='pace-nav']) a {{
+    background: transparent !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 14px !important;
+    font-size: 13px !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    color: {TEXT_MUTED} !important;
+    position: relative;
+}}
+[data-testid="stHorizontalBlock"]:has([data-testid='pace-nav']) a::after {{
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -6px;
+    height: 1px;
+    background: {ACCENT_GOLD};
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform 160ms ease-out;
+}}
+[data-testid="stHorizontalBlock"]:has([data-testid='pace-nav']) a:hover::after {{
+    transform: scaleX(1);
+}}
+[data-testid="stHorizontalBlock"]:has([data-testid='pace-nav']) a[aria-current="page"] {{
+    color: {TEXT_PRIMARY} !important;
+}}
+[data-testid="stHorizontalBlock"]:has([data-testid='pace-nav']) a[aria-current="page"]::after {{
+    transform: scaleX(1);
+}}
+
+/* Global buttons (primary style) */
+.stButton > button {{
+    background: transparent !important;
+    color: {TEXT_PRIMARY} !important;
+    border: 1px solid rgba(240,240,238,0.3) !important;
+    border-radius: 4px !important;
+    font-size: 13px !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    padding: 14px 32px !important;
+}}
+.stButton > button:hover {{
+    border-color: {ACCENT_GOLD} !important;
+    color: {ACCENT_GOLD} !important;
+}}
+
+/* Secondary text-only buttons (link-like) */
+button[kind="secondary"] {{
+    border: none !important;
+    background: transparent !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {{
+    color: {TEXT_PRIMARY} !important;
+    font-family: "Tiempos Headline", "Georgia", serif !important;
+    font-weight: 300 !important;
+    letter-spacing: -0.03em !important;
+}}
+h1 {{
+    font-size: clamp(2.5rem, 5vw, 4rem) !important;
+}}
+h2, h3 {{
+    font-size: 1.75rem !important;
+    font-weight: 400 !important;
+}}
+
+p, .stMarkdown p {{
+    color: {TEXT_MUTED} !important;
+    font-family: "Söhne", "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, sans-serif !important;
+}}
+
+.stCaption, [data-testid="stCaptionContainer"] p {{
+    color: {TEXT_MUTED} !important;
+    font-size: 13px !important;
+}}
+
+.stDivider hr {{
+    border-color: {DIVIDER_SOFT} !important;
+}}
+
+/* Metrics: typographic only */
 [data-testid="stMetric"] {{
-    background: rgba(12, 6, 30, 0.82) !important;
-    border: 1px solid rgba(180, 80, 220, 0.28) !important;
-    border-radius: 12px !important;
-    padding: 20px 24px !important;
-    box-shadow: 0 0 18px rgba(150,50,200,0.12), 0 4px 16px rgba(0,0,0,0.35) !important;
-    backdrop-filter: blur(10px) !important;
-    -webkit-backdrop-filter: blur(10px) !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
 }}
 [data-testid="stMetricLabel"] > div {{
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.8px !important;
-    color: {ACCENT_SOFT} !important;
+    font-size: 12px !important;
+    letter-spacing: 0.08em !important;
     text-transform: uppercase !important;
+    color: {TEXT_MUTED} !important;
 }}
 [data-testid="stMetricValue"] > div {{
-    font-size: 26px !important;
-    font-weight: 700 !important;
+    font-size: 32px !important;
+    font-weight: 400 !important;
     color: {TEXT_PRIMARY} !important;
 }}
-[data-testid="stMetricDelta"] > div {{
-    font-size: 12px !important;
-    color: {TEXT_SECONDARY} !important;
+
+/* Cards / containers */
+[data-testid="stVerticalBlockBorderWrapper"] > div {{
+    background: {SURFACE_SUBTLE} !important;
+    border-top: 1px solid {CARD_TOP_BORDER} !important;
+    border-radius: 4px !important;
+    box-shadow: none !important;
 }}
 
-/* ── Buttons ── */
-.stButton > button[kind="primary"] {{
-    background-color: {NAVY_900} !important;
-    color: #FFFFFF !important;
+/* DataFrames */
+[data-testid="stDataFrame"] {{
     border: none !important;
-    border-radius: 8px !important;
-    font-weight: 600 !important;
-}}
-.stButton > button[kind="primary"]:hover {{
-    box-shadow: 0 0 28px rgba(147,51,234,0.65) !important;
-    background: linear-gradient(135deg, #A855F7, #E91E8C) !important;
-}}
-.stButton > button:not([kind="primary"]) {{
-    background: rgba(30,10,60,0.7) !important;
-    color: {TEXT_PRIMARY} !important;
-    border: 1px solid rgba(180,80,220,0.35) !important;
-    border-radius: 8px !important;
-}}
-.stButton > button:not([kind="primary"]):hover {{
-    background: rgba(60,20,100,0.7) !important;
-    border-color: rgba(224,64,251,0.55) !important;
+    border-radius: 0 !important;
 }}
 
-/* ── Headings ── */
-h1 {{ color: #FFFFFF !important; font-weight: 700 !important; text-shadow: 0 0 30px rgba(180,80,220,0.4); }}
-h2 {{ color: #F1F5F9 !important; font-weight: 600 !important; }}
-h3 {{ color: #E2E8F0 !important; font-weight: 600 !important; }}
-h4, h5, h6 {{ color: #CBD5E1 !important; font-weight: 600 !important; }}
-p, .stMarkdown p {{ color: #CBD5E1 !important; }}
-strong, b {{ color: #F1F5F9 !important; }}
-.stCaption, [data-testid="stCaptionContainer"] p {{ color: #94A3B8 !important; font-size: 13px !important; }}
-.stDivider hr {{ border-color: rgba(180,80,220,0.25) !important; }}
-
-/* ── Plotly chart containers ── */
-[data-testid="stPlotlyChart"] {{
-    background: transparent !important;
-    border-radius: 8px !important;
-    overflow: hidden !important;
-}}
-[data-testid="stPlotlyChart"] > div {{
-    background: transparent !important;
-}}
-
-/* ── Hide Plotly modebar ── */
-.modebar-container {{ display: none !important; }}
-
-/* ── Hide "Running..." status widget ── */
-[data-testid="stStatusWidget"] {{ display: none !important; }}
-
-/* ── Expand (⤢) buttons ── */
-[data-testid="stVerticalBlockBorderWrapper"] [data-testid="baseButton-secondary"] {{
-    background: rgba(20, 8, 50, 0.7) !important;
-    border: 1px solid rgba(180,80,220,0.3) !important;
-    border-radius: 10px !important;
-    color: {ACCENT_SOFT} !important;
-    font-size: 16px !important;
-    padding: 6px 10px !important;
-    line-height: 1 !important;
-    box-shadow: 0 0 12px rgba(150,50,200,0.12) !important;
-    backdrop-filter: blur(10px) !important;
-    transition: box-shadow 0.2s, border-color 0.2s, color 0.2s !important;
-}}
-[data-testid="stVerticalBlockBorderWrapper"] [data-testid="baseButton-secondary"]:hover {{
-    background: rgba(30, 10, 70, 0.85) !important;
-    border-color: rgba(180,80,220,0.6) !important;
-    color: #FFFFFF !important;
-    box-shadow: 0 0 20px rgba(150,50,200,0.35) !important;
-}}
-
-/* ── Chart container hover elevation ── */
-[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stPlotlyChart"]) > div {{
-    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1),
-                box-shadow 0.3s ease !important;
-    cursor: pointer;
-}}
-[data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stPlotlyChart"]) > div:hover {{
-    transform: translateY(-6px) scale(1.012) !important;
-    box-shadow: 0 20px 60px rgba(150,50,200,0.5),
-                0 0 40px rgba(150,50,200,0.3),
-                0 0 0 1px rgba(180,80,220,0.45) !important;
-}}
-
-/* ── Inputs & Forms ── */
+/* Inputs */
 [data-testid="stTextInput"] input,
 [data-testid="stNumberInput"] input,
 [data-testid="stSelectbox"] > div > div,
 [data-testid="stMultiSelect"] > div > div,
 [data-baseweb="input"],
 [data-baseweb="select"] {{
-    background: rgba(20,8,50,0.75) !important;
-    border: 1px solid rgba(180,80,220,0.35) !important;
-    border-radius: 8px !important;
+    background: rgba(255,255,255,0.03) !important;
+    border: 1px solid {DIVIDER_SOFT} !important;
+    border-radius: 4px !important;
     color: {TEXT_PRIMARY} !important;
 }}
 [data-testid="stTextInput"] input:focus,
 [data-testid="stNumberInput"] input:focus {{
-    border-color: {ACCENT_PURPLE} !important;
-    box-shadow: 0 0 12px rgba(147,51,234,0.3) !important;
+    border-color: {ACCENT_GOLD} !important;
+    box-shadow: none !important;
 }}
-[data-testid="stForm"] {{
+
+/* Plotly */
+[data-testid="stPlotlyChart"] > div {{
     background: transparent !important;
-    border: none !important;
 }}
+.modebar-container {{ display: none !important; }}
 
-/* ── Dataframe ── */
-[data-testid="stDataFrame"] {{
-    border: 1px solid rgba(180,80,220,0.3) !important;
-    border-radius: 0 !important;
-    overflow: hidden !important;
+/* Alerts */
+[data-testid="stAlert"] {{
+    border-radius: 4px !important;
+    background: {SURFACE_LIFT} !important;
+    border: 1px solid {DIVIDER_SOFT} !important;
 }}
-[data-testid="stDataFrame"] ::-webkit-scrollbar {{
-    width: 6px !important;
-    height: 6px !important;
-}}
-[data-testid="stDataFrame"] ::-webkit-scrollbar-track {{
-    background: #0f0a1e !important;
-}}
-[data-testid="stDataFrame"] ::-webkit-scrollbar-thumb {{
-    background: rgba(147,51,234,0.5) !important;
-    border-radius: 0 !important;
-}}
-
-/* ── Alerts ── */
-[data-testid="stAlert"] {{ border-radius: 8px !important; }}
 </style>
 """
 
@@ -393,32 +355,40 @@ def top_nav(username: str) -> None:
     stays within the existing WebSocket session (no page reload, no auth loss).
     Call this at the top of every authenticated page, after inject_css().
     """
-    logo_col, *page_cols, user_col, out_col = st.columns(
-        [1.4] + [1.0] * 9 + [1.0, 0.7]
-    )
+    role = _role_normalize(st.session_state.get("role"))
+    pages = nav_pages_for_role(role)
 
-    with logo_col:
-        st.markdown(
-            f"<div style='color:#FFFFFF; font-size:15px; font-weight:700; "
-            f"letter-spacing:1px; padding:4px 0;'>📦 PACE</div>",
-            unsafe_allow_html=True,
-        )
+    with st.container():
+        # Logo left, compact hamburger + user + signout on the right.
+        left, right = st.columns([1.5, 3.5])
 
-    for col, (label, page) in zip(page_cols, _NAV_PAGES):
-        with col:
-            st.page_link(page, label=label)
+        with left:
+            st.markdown(
+                "<div data-testid='pace-nav' style=\"font-family:'Tiempos Headline','Georgia',serif;"
+                "font-size:18px;letter-spacing:0.08em;text-transform:uppercase;\">PACE</div>",
+                unsafe_allow_html=True,
+            )
 
-    with user_col:
-        st.markdown(
-            f"<div style='color:rgba(255,255,255,0.7); font-size:11px; "
-            f"text-align:right; padding:5px 4px 0;'>👤 {username}</div>",
-            unsafe_allow_html=True,
-        )
+        with right:
+            menu_col, user_col, out_col = st.columns([0.6, 1.4, 1.0])
 
-    with out_col:
-        if st.button("Sign Out", key="nav_signout"):
-            from auth_utils import logout
-            logout()
+            with menu_col:
+                with st.popover("≡", use_container_width=True):
+                    for label, page in pages:
+                        st.page_link(page, label=label)
+
+            with user_col:
+                st.markdown(
+                    f"<div style='color:{TEXT_MUTED}; font-size:13px; "
+                    f"letter-spacing:0.08em; text-transform:uppercase; text-align:right;'>"
+                    f"{username} · {role.title()}</div>",
+                    unsafe_allow_html=True,
+                )
+
+            with out_col:
+                if st.button("Sign Out", key="nav_signout"):
+                    from auth_utils import logout
+                    logout()
 
 
 def risk_badge_html(tier: str) -> str:

@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PACE — Predictive Accessorial Cost Engine</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./shared.css" />
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="topbar-inner">
+        <a class="logo" href="./index.html" aria-label="PACE Home">
+          <span class="logo-badge" aria-hidden="true"></span>
+          <span>PACE</span>
+        </a>
+
+        <div class="nav-spacer"></div>
+
+        <div class="dropdown" aria-label="Landing menu">
+          <button class="dropdown-trigger" type="button" aria-haspopup="true" aria-expanded="false">
+            Menu
+            <span aria-hidden="true">▾</span>
+          </button>
+          <div class="dropdown-menu" data-open="false" role="menu">
+            <a class="dropdown-item" href="#about" role="menuitem">
+              <div>
+                <div><strong>About</strong></div>
+                <small>Why accessorials hurt margins</small>
+              </div>
+            </a>
+            <a class="dropdown-item" href="#features" role="menuitem">
+              <div>
+                <div><strong>Features</strong></div>
+                <small>Prediction, estimates, analytics</small>
+              </div>
+            </a>
+            <a class="dropdown-item" href="#get-started" role="menuitem">
+              <div>
+                <div><strong>Get Started</strong></div>
+                <small>Start predicting in minutes</small>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <a class="btn btn-primary" href="./login.html">Login</a>
+      </div>
+    </div>
+
+    <main class="container">
+      <section class="hero" aria-label="Hero">
+        <div class="hero-grid">
+          <div>
+            <h1 class="headline">Predict accessorial costs before they hit your margin.</h1>
+            <p class="subhead">
+              PACE helps logistics teams forecast detention, lumper fees, layovers, and other surprise charges
+              <strong>before shipment execution</strong>—so you can choose better carriers, appointments, and routes.
+            </p>
+            <div style="display:flex; gap:12px; flex-wrap:wrap;">
+              <a class="btn btn-primary" href="#get-started">Get Started Today</a>
+              <a class="btn btn-secondary" href="#features">View Features</a>
+            </div>
+          </div>
+
+          <div class="hero-card" aria-label="Value snapshot">
+            <div class="pill">ML-powered risk scoring</div>
+            <h2 style="margin:10px 0 6px; font-size:22px;">Know the risk. Budget the impact. Act early.</h2>
+            <p style="margin:0; color:var(--muted); line-height:1.6;">
+              Get a single, decision-ready view: predicted risk tier, expected dollar exposure, and recommended actions.
+            </p>
+            <div class="kpis" aria-label="Sample KPIs">
+              <div class="kpi">
+                <div class="label">Avg Risk</div>
+                <div class="value">46%</div>
+                <div class="hint">Last 30 days</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Exposure</div>
+                <div class="value">$82k</div>
+                <div class="hint">Estimated</div>
+              </div>
+              <div class="kpi">
+                <div class="label">High-risk</div>
+                <div class="value">52</div>
+                <div class="hint">Pending</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Top driver</div>
+                <div class="value">Dwell</div>
+                <div class="hint">Facility type</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="about" class="section" aria-label="About">
+        <h2 class="section-title">About</h2>
+        <p class="section-desc">
+          Accessorial charges often arrive <strong>after shipment completion</strong>, when it’s too late to prevent them—
+          causing margin erosion, pricing surprises, and operational fire drills.
+        </p>
+        <div class="card">
+          <h3>PACE solution</h3>
+          <p>
+            Predictive analytics turn historical shipment and facility patterns into proactive insights.
+            PACE flags high-risk moves early and provides cost estimates so teams can adjust appointment type, carrier,
+            routing, and buffers before execution.
+          </p>
+        </div>
+      </section>
+
+      <section id="features" class="section" aria-label="Features">
+        <h2 class="section-title">Features</h2>
+        <p class="section-desc">Decision support built for dispatch, pricing, and operations.</p>
+        <div class="grid-3">
+          <div class="card">
+            <h3>Risk Prediction</h3>
+            <p>ML-powered accessorial probability scoring, tiered into Low / Medium / High risk.</p>
+          </div>
+          <div class="card">
+            <h3>Cost Estimation</h3>
+            <p>Expected dollar impact calculations based on historical averages and shipment context.</p>
+          </div>
+          <div class="card">
+            <h3>Carrier Analytics</h3>
+            <p>Performance insights by carrier, including risk trends, accessorial rates, and comparisons.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="get-started" class="section" aria-label="Get Started">
+        <h2 class="section-title">Get Started Today</h2>
+        <p class="section-desc">
+          Create an account, connect shipment data, and start forecasting accessorial exposure in minutes.
+        </p>
+        <div class="grid-3">
+          <div class="card">
+            <h3>1) Create your account</h3>
+            <p>Choose Analyst or Viewer role. Admin roles are assigned internally.</p>
+          </div>
+          <div class="card">
+            <h3>2) Add shipment context</h3>
+            <p>Select carriers, facilities, and appointment types. Connect to Azure SQL for full analytics.</p>
+          </div>
+          <div class="card">
+            <h3>3) Make proactive decisions</h3>
+            <p>Use dashboards and the risk estimator to reduce surprises and protect margin.</p>
+          </div>
+        </div>
+        <div style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap;">
+          <a class="btn btn-primary" href="./components.html">Create Account (Prototype)</a>
+          <a class="btn btn-secondary" href="./login.html">Sign In</a>
+        </div>
+      </section>
+
+      <footer class="footer" aria-label="Footer">
+        <div style="display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap;">
+          <div>© 2026 PACE — Predictive Accessorial Cost Engine</div>
+          <div style="display:flex; gap:14px;">
+            <a href="#" style="color:var(--muted); text-decoration:none;">Privacy</a>
+            <a href="#" style="color:var(--muted); text-decoration:none;">Terms</a>
+            <a href="#" style="color:var(--muted); text-decoration:none;">Support</a>
+          </div>
+        </div>
+      </footer>
+    </main>
+
+    <script src="./shared.js"></script>
+  </body>
+</html>
+

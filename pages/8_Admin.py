@@ -12,8 +12,8 @@ from utils.risk_model import retrain, incremental_update, rollback_to_version, l
 from utils.mock_data import generate_mock_shipments
 
 st.set_page_config(
-    page_title="PACE — Admin",
-    page_icon="🛠️",
+    page_title="PACE | Admin",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -21,13 +21,13 @@ inject_css()
 
 if not check_auth():
     st.warning("Please sign in to access this page.")
-    st.page_link("app.py", label="Go to Sign In", icon="🔑")
+    st.page_link("app.py", label="Go to Sign In")
     st.stop()
 
-role = st.session_state.get("role", "user")
-if role != "admin":
+role = st.session_state.get("role", "analyst")
+if str(role).lower() != "admin":
     st.error("Access denied. Admins only.")
-    st.page_link("pages/0_Home.py", label="Go to Home", icon="🏠")
+    st.page_link("pages/0_Home.py", label="Go to Home")
     st.stop()
 
 username = st.session_state.get("username", "Admin")
@@ -49,7 +49,7 @@ with col_form:
         with st.form("create_user_form"):
             new_username = st.text_input("Username")
             new_password = st.text_input("Password", type="password")
-            new_role = st.selectbox("Role", ["user", "admin"])
+            new_role = st.selectbox("Role", ["viewer", "analyst", "admin"])
             submitted = st.form_submit_button("Create User", width="stretch", type="primary")
             if submitted:
                 if not new_username or not new_password:
@@ -201,7 +201,7 @@ with col_controls:
             color  = "#22C55E" if abs(diff_m) <= 0.05 else "#F59E0B"
             st.markdown(
                 f"<p style='font-size:11px;color:{color};margin:-8px 0 8px;'>"
-                f"📊 Data suggests <strong>{sug_med}</strong> &nbsp;·&nbsp; "
+                f"Data suggests <strong>{sug_med}</strong> &nbsp;·&nbsp; "
                 f"current is {abs(diff_m):.2f} {arrow} recommendation</p>",
                 unsafe_allow_html=True,
             )

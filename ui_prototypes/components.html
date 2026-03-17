@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PACE — Components</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./shared.css" />
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="topbar-inner">
+        <a class="logo" href="./index.html" aria-label="PACE Home">
+          <span class="logo-badge" aria-hidden="true"></span>
+          <span>PACE</span>
+        </a>
+        <div class="nav-spacer"></div>
+        <a class="btn btn-secondary" href="./index.html">Home</a>
+        <a class="btn btn-secondary" href="./login.html">Login</a>
+        <a class="btn btn-secondary" href="./user-home.html">User Home</a>
+        <a class="btn btn-secondary" href="./dashboards.html">Dashboards</a>
+      </div>
+    </div>
+
+    <main class="container">
+      <h1 class="page-title">Component Library</h1>
+      <p class="page-subtitle">Styled elements and patterns to replicate in Streamlit.</p>
+
+      <section class="section">
+        <h2 class="section-title" style="font-size:22px;">Buttons</h2>
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <button class="btn btn-primary" type="button">Primary</button>
+          <button class="btn btn-secondary" type="button">Secondary</button>
+          <button class="btn btn-ghost" type="button">Ghost</button>
+          <button class="btn btn-danger" type="button">Danger</button>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2 class="section-title" style="font-size:22px;">Badges</h2>
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <span class="badge low">Low</span>
+          <span class="badge med">Medium</span>
+          <span class="badge high">High</span>
+          <span class="pill">Pill</span>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2 class="section-title" style="font-size:22px;">Forms (Risk Estimator - layout reference)</h2>
+        <div class="two-col">
+          <div class="card">
+            <h3 style="margin:0 0 10px;">Risk Estimator</h3>
+            <p style="margin:0 0 14px; color:var(--muted);">Input shipment details to calculate risk.</p>
+            <div class="field">
+              <label for="carrier">Carrier</label>
+              <select id="carrier">
+                <option>Carrier A</option>
+                <option>Carrier B</option>
+                <option>Carrier C</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="facility">Facility</label>
+              <select id="facility">
+                <option>DFW DC (Warehouse)</option>
+                <option>ATL Crossdock</option>
+                <option>MEM Plant</option>
+              </select>
+              <div class="help">Facility type shown alongside facility name in Streamlit.</div>
+            </div>
+            <div class="field">
+              <label for="appt">Appointment Type</label>
+              <select id="appt">
+                <option>Live Load</option>
+                <option>Drop</option>
+                <option>Preloaded</option>
+              </select>
+            </div>
+            <div class="two-col">
+              <div class="field">
+                <label for="weight">Weight (lbs)</label>
+                <input id="weight" type="number" placeholder="42000" />
+              </div>
+              <div class="field">
+                <label for="miles">Miles</label>
+                <input id="miles" type="number" placeholder="615" />
+              </div>
+            </div>
+            <button class="btn btn-primary btn-block" type="button">Calculate Risk</button>
+          </div>
+
+          <div class="card">
+            <h3 style="margin:0 0 10px;">Results</h3>
+            <div class="kpis">
+              <div class="kpi">
+                <div class="label">Risk score</div>
+                <div class="value">72%</div>
+                <div class="hint"><span class="badge high">High</span></div>
+              </div>
+              <div class="kpi">
+                <div class="label">Expected cost</div>
+                <div class="value">$640</div>
+                <div class="hint">Historical average</div>
+              </div>
+            </div>
+            <div style="margin-top:14px; padding:14px; border-radius:14px; border:1px solid rgba(241,245,249,.12); background:rgba(45,212,191,.06);">
+              <div style="font-weight:800; margin-bottom:8px;">Recommendation</div>
+              <div style="color:var(--muted); line-height:1.6;">
+                Consider changing appointment time or switching to a lower-risk carrier on this lane.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2 class="section-title" style="font-size:22px;">Tables</h2>
+        <div class="table-card">
+          <div class="table-head">
+            <div>
+              <h3 class="chart-title" style="margin:0;">Recent Calculations</h3>
+              <p class="chart-sub" style="margin:4px 0 0;">Optional history block</p>
+            </div>
+            <button class="btn btn-secondary" type="button">Save to Shipments</button>
+          </div>
+          <div style="overflow:auto;">
+            <table aria-label="Recent calculations">
+              <thead>
+                <tr>
+                  <th>Carrier</th>
+                  <th>Facility</th>
+                  <th>Appt Type</th>
+                  <th>Risk</th>
+                  <th>Est. Cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Carrier D</td>
+                  <td>DFW DC</td>
+                  <td>Live Load</td>
+                  <td><span class="badge high">72%</span></td>
+                  <td>$640</td>
+                </tr>
+                <tr>
+                  <td>Carrier A</td>
+                  <td>ATL Crossdock</td>
+                  <td>Drop</td>
+                  <td><span class="badge low">18%</span></td>
+                  <td>$85</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="./shared.js"></script>
+  </body>
+</html>
+

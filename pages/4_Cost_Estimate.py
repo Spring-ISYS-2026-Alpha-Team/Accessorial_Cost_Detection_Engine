@@ -10,13 +10,13 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from auth_utils import check_auth
 from utils.database import get_connection, get_shipments
 from utils.mock_data import generate_mock_shipments
-from utils.styling import inject_css, top_nav, NAVY_500
+from utils.styling import inject_css, top_nav
 from utils.cost_model import get_cost_model
 from utils.risk_model import get_risk_model, predict_risk
 
 st.set_page_config(
-    page_title="PACE — Cost Estimate",
-    page_icon="💰",
+    page_title="PACE | Cost & Risk Predictor",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -24,7 +24,7 @@ inject_css()
 
 if not check_auth():
     st.warning("Please sign in to access this page.")
-    st.page_link("app.py", label="Go to Sign In", icon="🔑")
+    st.page_link("app.py", label="Go to Sign In")
     st.stop()
 
 username = st.session_state.get("username", "User")
@@ -35,7 +35,7 @@ _conn   = get_connection()
 _df_raw = get_shipments(_conn) if _conn is not None else pd.DataFrame()
 if _df_raw.empty:
     _df_raw = generate_mock_shipments(300)
-    st.info("Live database unavailable — showing demo data.", icon="ℹ️")
+    st.info("Live database unavailable — showing demo data.")
 
 df = _df_raw.copy()
 if "AppointmentType" not in df.columns:
@@ -45,9 +45,36 @@ df["AppointmentType"] = df["AppointmentType"].fillna("Drop")
 cost_model = get_cost_model(len(df), df)
 risk_model, _ = get_risk_model(len(df), df)
 
+# ── Helpers ───────────────────────────────────────────────────────────────────
+def _risk_color(score01: float) -> str:
+    if score01 >= 0.70:
+        return "#EF4444"
+    if score01 >= 0.40:
+        return "#F59E0B"
+    return "#10B981"
+
+
+def _risk_tier(score01: float) -> str:
+    if score01 >= 0.70:
+        return "High"
+    if score01 >= 0.40:
+        return "Medium"
+    return "Low"
+
+
+def _recommendation(tier: str, appt: str) -> str:
+    if tier == "High":
+        return "Consider adjusting appointment type/time or selecting a lower-risk carrier/facility combination."
+    if tier == "Medium":
+        return "Monitor for delays and consider adding a modest accessorial buffer in pricing."
+    if str(appt).lower().strip() == "drop":
+        return "Low risk profile — maintain standard plan; confirm drop procedures to keep dwell time low."
+    return "Low risk profile — standard operating procedure applies."
+
+
 # ── Header ────────────────────────────────────────────────────────────────────
-st.markdown("## Cost & Risk Estimator")
-st.caption("Predict total shipment cost and accessorial risk using machine learning.")
+st.markdown("## Risk Estimator")
+st.caption("Enter shipment details to calculate accessorial risk and expected cost exposure.")
 st.divider()
 
 # ── Input form ────────────────────────────────────────────────────────────────
@@ -58,7 +85,7 @@ with form_col:
         st.markdown("#### Shipment Details")
         carriers_list   = sorted(df["carrier"].dropna().unique())
         facilities_list = sorted(df["facility"].dropna().unique())
-        appt_types_list = sorted(df["AppointmentType"].dropna().unique())
+        appt_types_list = ["Live Load", "Drop", "Preloaded"]
 
         carrier  = st.selectbox("Carrier",          carriers_list)
         facility = st.selectbox("Facility",         facilities_list)
@@ -67,10 +94,9 @@ with form_col:
                                    value=10_000, step=500)
         miles    = st.number_input("Miles",        min_value=50,   max_value=2_400,
                                    value=500,    step=50)
-        estimate_clicked = st.button("Estimate Cost & Risk →", type="primary",
-                                     width="stretch")
+        estimate_clicked = st.button("Calculate Risk", type="primary", width="stretch")
 
-    with st.expander("ℹ️ Model Info", expanded=False):
+    with st.expander("Model Info", expanded=False):
         st.markdown(f"""
 **Cost model:** Random Forest Regressor
 **Risk model:** LightGBM Regressor
@@ -108,225 +134,134 @@ with result_col:
             "appt": appt, "weight": weight, "miles": miles,
             "risk": risk,
         }
+        # Append to history
+        hist = st.session_state.get("estimator_history", [])
+        hist = list(hist)
+        hist.insert(0, {
+            "ts": pd.Timestamp.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
+            "carrier": carrier,
+            "facility": facility,
+            "appointment_type": appt,
+            "weight_lbs": int(weight),
+            "miles": int(miles),
+            "risk_score": float(risk["score"]) if risk else 0.0,
+            "risk_tier": str(risk["tier"]) if risk else "—",
+            "expected_cost": float(risk.get("expected_cost", 0.0)) if risk else 0.0,
+        })
+        st.session_state["estimator_history"] = hist[:25]
 
     if "last_estimate" in st.session_state:
         e    = st.session_state["last_estimate"]
         pred, lower, upper = e["pred"], e["lower"], e["upper"]
         risk = e.get("risk")
 
-        # ── Cost section ──────────────────────────────────────────────────────
-        with st.container(border=True):
-            st.markdown("#### ML Cost Prediction")
-            r1, r2, r3 = st.columns(3)
-            with r1:
-                st.metric("Predicted Total Cost", f"${pred:,.2f}")
-            with r2:
-                st.metric("95% Lower Bound", f"${lower:,.2f}")
-            with r3:
-                st.metric("95% Upper Bound", f"${upper:,.2f}")
-            st.markdown(
-                f"<div style='font-size:13px;color:#94A3B8;margin-top:8px;'>"
-                f"Confidence range: <b style='color:#E2E8F0;'>${lower:,.0f} – ${upper:,.0f}</b>"
-                f" &nbsp;|&nbsp; Spread: <b style='color:#E2E8F0;'>${upper - lower:,.0f}</b>"
-                f"</div>",
-                unsafe_allow_html=True,
-            )
-
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        # ── Risk section ──────────────────────────────────────────────────────
+        # ── Results summary (Risk + Expected Cost) ─────────────────────────────
         if risk:
-            with st.container(border=True):
-                st.markdown("#### Accessorial Risk Assessment")
+            score01 = float(risk.get("score", 0.0))
+            tier = _risk_tier(score01)
+            color = _risk_color(score01)
+            exp_cost = float(risk.get("expected_cost", 0.0))
 
-                gauge_col, factors_col = st.columns([1, 1], gap="large")
-
-                with gauge_col:
-                    gauge_fig = go.Figure(go.Indicator(
-                        mode="gauge+number",
-                        value=round(risk["score"] * 100, 1),
-                        number={
-                            "suffix": "%",
-                            "font": {"size": 38, "color": risk["color"]},
-                        },
-                        title={
-                            "text": f"<b>{risk['tier']} Risk</b>",
-                            "font": {"size": 15, "color": risk["color"]},
-                        },
-                        gauge={
-                            "axis": {
-                                "range": [0, 100],
-                                "tickcolor": "#475569",
-                                "tickfont": {"color": "#94A3B8", "size": 11},
-                            },
-                            "bar":     {"color": risk["color"], "thickness": 0.28},
-                            "bgcolor": "#0f0a1e",
-                            "borderwidth": 0,
-                            "steps": [
-                                {"range": [0,  34], "color": "rgba(5,150,105,0.15)"},
-                                {"range": [34, 67], "color": "rgba(217,119,6,0.15)"},
-                                {"range": [67,100], "color": "rgba(220,38,38,0.15)"},
-                            ],
-                            "threshold": {
-                                "line":      {"color": risk["color"], "width": 3},
-                                "thickness": 0.8,
-                                "value":     risk["score"] * 100,
-                            },
-                        },
-                    ))
-                    gauge_fig.update_layout(
-                        height=220,
-                        margin=dict(l=20, r=20, t=40, b=10),
-                        paper_bgcolor="#0f0a1e",
-                        font={"color": "#A78BFA"},
-                    )
-                    st.plotly_chart(gauge_fig, width="stretch")
-
-                with factors_col:
+            top_left, top_right = st.columns([2, 3], gap="medium")
+            with top_left:
+                with st.container(border=True):
+                    st.markdown("#### Risk Score")
                     st.markdown(
-                        "<p style='color:#94A3B8;font-size:12px;"
-                        "margin:0 0 10px;'>Key risk drivers</p>",
+                        f"<div style='font-size:46px;font-weight:800;line-height:1;"
+                        f"margin:6px 0;color:{color};'>{score01*100:.0f}%</div>",
                         unsafe_allow_html=True,
                     )
-                    sev_colors = {
-                        "high":    ("#F87171", "rgba(220,38,38,0.12)"),
-                        "low":     ("#34D399", "rgba(5,150,105,0.12)"),
-                        "neutral": ("#A78BFA", "rgba(147,51,234,0.12)"),
-                    }
-                    for label, detail, sev in risk["factors"]:
-                        fg, bg = sev_colors.get(sev, sev_colors["neutral"])
+                    st.markdown(
+                        f"<span style='display:inline-flex;align-items:center;"
+                        f"padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;"
+                        f"border:1px solid rgba(241,245,249,0.14);"
+                        f"background:rgba(255,255,255,0.04);color:{color};'>"
+                        f"{tier} Risk</span>",
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    st.metric("Expected Cost Estimate", f"${exp_cost:,.0f}")
+                    st.caption(_recommendation(tier, e.get("appt", "")))
+
+            with top_right:
+                with st.container(border=True):
+                    st.markdown("#### Key Drivers")
+                    st.caption("Top factors contributing to this prediction")
+                    for label, detail, sev in risk.get("factors", []):
+                        sev_fg = {"high": "#EF4444", "low": "#10B981", "neutral": "#2DD4BF"}.get(sev, "#2DD4BF")
+                        sev_bg = {"high": "rgba(239,68,68,0.10)", "low": "rgba(16,185,129,0.10)", "neutral": "rgba(45,212,191,0.10)"}.get(sev, "rgba(45,212,191,0.10)")
                         st.markdown(
-                            f"<div style='background:{bg};border-left:3px solid {fg};"
-                            f"border-radius:6px;padding:8px 12px;margin-bottom:8px;'>"
-                            f"<div style='color:{fg};font-size:12px;font-weight:600;"
-                            f"margin-bottom:2px;'>{label}</div>"
-                            f"<div style='color:#CBD5E1;font-size:12px;'>{detail}</div>"
+                            f"<div style='background:{sev_bg};border-left:3px solid {sev_fg};"
+                            f"border-radius:10px;padding:10px 12px;margin-bottom:10px;'>"
+                            f"<div style='color:{sev_fg};font-size:12px;font-weight:700;margin-bottom:2px;'>{label}</div>"
+                            f"<div style='color:#CBD5E1;font-size:12px;line-height:1.5;'>{detail}</div>"
                             f"</div>",
                             unsafe_allow_html=True,
                         )
 
-        st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
 
-        # ── Comparison section ────────────────────────────────────────────────
+        # ── Cost context ───────────────────────────────────────────────────────
         with st.container(border=True):
-            st.markdown("#### How This Compares")
+            st.markdown("#### Cost Context")
+            st.caption("ML cost prediction with confidence range and comparison baselines")
+            r1, r2, r3 = st.columns(3)
+            with r1:
+                st.metric("Predicted Total Cost", f"${pred:,.0f}")
+            with r2:
+                st.metric("95% Lower Bound", f"${lower:,.0f}")
+            with r3:
+                st.metric("95% Upper Bound", f"${upper:,.0f}")
+
+            st.markdown("<br>", unsafe_allow_html=True)
             simple_est = e["simple_est"]
             c1, c2, c3 = st.columns(3)
             with c1:
-                st.metric("ML Prediction",      f"${pred:,.2f}")
+                st.metric("ML Prediction", f"${pred:,.0f}")
             with c2:
-                st.metric("Avg Cost/Mile Est.", f"${simple_est:,.2f}",
-                          delta=f"${pred - simple_est:+,.2f} vs ML", delta_color="inverse")
+                st.metric("Avg Cost/Mile Est.", f"${simple_est:,.0f}", delta=f"${pred - simple_est:+,.0f}")
             with c3:
-                st.metric("Fleet Avg Total",    f"${avg_total:,.2f}",
-                          delta=f"${pred - avg_total:+,.2f} vs ML",  delta_color="inverse")
-
-            st.markdown("<br>", unsafe_allow_html=True)
-            comp_fig = go.Figure(go.Bar(
-                x=["ML Prediction",
-                   f"Avg Cost/Mile\n(${avg_cpm:.2f}/mi × {e['miles']} mi)",
-                   "Fleet Avg Total"],
-                y=[pred, simple_est, avg_total],
-                marker_color=["#9333EA", "#6D28D9", "#4C1D95"],
-                text=[f"${v:,.0f}" for v in [pred, simple_est, avg_total]],
-                textposition="outside",
-                textfont={"color": "#E2E8F0"},
-            ))
-            comp_fig.update_layout(
-                margin=dict(l=0, r=0, t=8, b=0), height=220,
-                plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
-                font=dict(color="#A78BFA"),
-                yaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)",
-                           color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
-                xaxis=dict(gridcolor="rgba(150,50,200,0.15)",
-                           color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
-                showlegend=False,
-            )
-            st.plotly_chart(comp_fig, width="stretch")
+                st.metric("Fleet Avg Total", f"${avg_total:,.0f}", delta=f"${pred - avg_total:+,.0f}")
 
     else:
         with st.container(border=True):
             st.markdown(
                 "<div style='text-align:center;padding:80px 20px;color:#9CA3AF;'>"
-                "<div style='font-size:36px;'>💰</div>"
                 "<div style='font-size:14px;margin-top:10px;'>"
-                "Fill in shipment details and click <b>Estimate Cost & Risk</b></div>"
+                "Fill in shipment details and click <b>Calculate Risk</b></div>"
                 "</div>",
                 unsafe_allow_html=True,
             )
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ── Feature importance ────────────────────────────────────────────────────────
+# ── Optional history ──────────────────────────────────────────────────────────
 with st.container(border=True):
-    st.markdown("#### What Drives Cost — Feature Importance")
-    st.caption("Relative contribution of each input to the cost model's predictions")
-
-    rf       = cost_model.named_steps["rf"]
-    pre      = cost_model.named_steps["pre"]
-    enc      = pre.named_transformers_["cat"]
-    cat_names = list(enc.get_feature_names_out(["carrier", "facility"]))
-    all_names = cat_names + ["weight_lbs", "miles"]
-
-    importance = pd.DataFrame({
-        "Feature":    all_names,
-        "Importance": rf.feature_importances_,
-    }).sort_values("Importance", ascending=True).tail(12)
-
-    importance["Feature"] = (
-        importance["Feature"]
-        .str.replace("carrier_",  "Carrier: ",   regex=False)
-        .str.replace("facility_", "Facility: ",  regex=False)
-        .str.replace("weight_lbs","Weight (lbs)", regex=False)
-        .str.replace("miles",     "Miles",        regex=False)
-    )
-
-    fi_fig = go.Figure(go.Bar(
-        x=importance["Importance"],
-        y=importance["Feature"],
-        orientation="h",
-        marker_color="#9333EA",
-        text=importance["Importance"].apply(lambda v: f"{v:.1%}"),
-        textposition="outside",
-        textfont={"color": "#E2E8F0"},
-    ))
-    fi_fig.update_layout(
-        margin=dict(l=0, r=60, t=8, b=0), height=340,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
-        font=dict(color="#A78BFA"),
-        xaxis=dict(tickformat=".0%", gridcolor="rgba(150,50,200,0.15)",
-                   color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
-        yaxis=dict(gridcolor="rgba(150,50,200,0.15)",
-                   color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
-    )
-    st.plotly_chart(fi_fig, width="stretch")
-
-# ── Historical distribution ───────────────────────────────────────────────────
-with st.container(border=True):
-    st.markdown("#### Historical Total Cost Distribution")
-    st.caption("Where your estimate falls relative to all past shipments")
-
-    hist_fig = go.Figure()
-    hist_fig.add_trace(go.Histogram(
-        x=df["total_cost_usd"], nbinsx=30,
-        marker_color="#2D1B4E", marker_line_color=NAVY_500, marker_line_width=1,
-        name="Historical",
-    ))
-    if "last_estimate" in st.session_state:
-        v = st.session_state["last_estimate"]["pred"]
-        hist_fig.add_vline(
-            x=v, line_width=2, line_dash="dash", line_color="#DC2626",
-            annotation_text=f"Your estimate: ${v:,.0f}",
-            annotation_position="top right",
-            annotation_font_color="#DC2626",
+    st.markdown("#### Recent Calculations")
+    hist = st.session_state.get("estimator_history", [])
+    if not hist:
+        st.caption("No calculations yet. Run the estimator to see history here.")
+    else:
+        hist_df = pd.DataFrame(hist)
+        st.dataframe(
+            hist_df.rename(columns={
+                "ts": "Time",
+                "carrier": "Carrier",
+                "facility": "Facility",
+                "appointment_type": "Appointment Type",
+                "weight_lbs": "Weight (lbs)",
+                "miles": "Miles",
+                "risk_score": "Risk Score",
+                "risk_tier": "Risk Tier",
+                "expected_cost": "Expected Cost ($)",
+            }),
+            width="stretch",
+            hide_index=True,
+            column_config={
+                "Risk Score": st.column_config.ProgressColumn(
+                    "Risk Score", format="%.0f%%", min_value=0, max_value=1
+                ),
+                "Expected Cost ($)": st.column_config.NumberColumn(format="$%.0f"),
+            },
+            height=260,
         )
-    hist_fig.update_layout(
-        margin=dict(l=0, r=0, t=8, b=0), height=220,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
-        font=dict(color="#A78BFA"),
-        xaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)",
-                   color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
-        yaxis=dict(gridcolor="rgba(150,50,200,0.15)",
-                   color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
-    )
-    st.plotly_chart(hist_fig, width="stretch")

@@ -10,11 +10,11 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from auth_utils import check_auth
 from utils.database import get_connection, get_shipments
 from utils.mock_data import generate_mock_shipments
-from utils.styling import inject_css, top_nav, NAVY_500, NAVY_900
+from utils.styling import inject_css, top_nav
 
 st.set_page_config(
-    page_title="PACE — Route Analysis",
-    page_icon="🗺️",
+    page_title="PACE | Route Overview",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -22,7 +22,7 @@ inject_css()
 
 if not check_auth():
     st.warning("Please sign in to access this page.")
-    st.page_link("app.py", label="Go to Sign In", icon="🔑")
+    st.page_link("app.py", label="Go to Sign In")
     st.stop()
 
 username = st.session_state.get("username", "User")
@@ -32,7 +32,7 @@ conn = get_connection()
 df_raw = get_shipments(conn) if conn is not None else pd.DataFrame()
 if df_raw.empty:
     df_raw = generate_mock_shipments(300)
-    st.info("Live database unavailable — showing demo data.", icon="ℹ️")
+    st.info("Live database unavailable — showing demo data.")
 df_raw["ship_date_dt"] = pd.to_datetime(df_raw["ship_date"])
 df_all = df_raw  # module-level alias used by dialogs
 
@@ -98,18 +98,25 @@ def _build_expensive_fig(lane_metrics: pd.DataFrame, label: str,
         x=top_exp["avg_cpm"],
         y=top_exp[label].apply(lambda v: v if len(v) <= 28 else v[:25] + "…"),
         orientation="h",
-        marker_color="#DC2626",
+        marker_color="#8B3A3A",
         text=top_exp["avg_cpm"].apply(lambda v: f"${v:.2f}/mi"),
         textposition="outside",
     ))
     fig.update_layout(
         margin=dict(l=0, r=160, t=8, b=0), height=height,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
-        font=dict(color="#A78BFA"),
-        xaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)",
-                   color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
-        yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8",
-                   linecolor="rgba(150,50,200,0.2)"),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="rgba(240,240,238,0.45)"),
+        xaxis=dict(
+            tickprefix="$",
+            gridcolor="rgba(240,240,238,0.04)",
+            color="rgba(240,240,238,0.3)",
+            linecolor="rgba(240,240,238,0.08)",
+        ),
+        yaxis=dict(
+            gridcolor="rgba(240,240,238,0.04)",
+            color="rgba(240,240,238,0.3)",
+            linecolor="rgba(240,240,238,0.08)",
+        ),
     )
     return fig
 
@@ -121,18 +128,25 @@ def _build_efficient_fig(lane_metrics: pd.DataFrame, label: str,
         x=top_cheap["avg_cpm"],
         y=top_cheap[label].apply(lambda v: v if len(v) <= 28 else v[:25] + "…"),
         orientation="h",
-        marker_color="#059669",
+        marker_color="#3A6B52",
         text=top_cheap["avg_cpm"].apply(lambda v: f"${v:.2f}/mi"),
         textposition="outside",
     ))
     fig.update_layout(
         margin=dict(l=0, r=160, t=8, b=0), height=height,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
-        font=dict(color="#A78BFA"),
-        xaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)",
-                   color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
-        yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8",
-                   linecolor="rgba(150,50,200,0.2)"),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="rgba(240,240,238,0.45)"),
+        xaxis=dict(
+            tickprefix="$",
+            gridcolor="rgba(240,240,238,0.04)",
+            color="rgba(240,240,238,0.3)",
+            linecolor="rgba(240,240,238,0.08)",
+        ),
+        yaxis=dict(
+            gridcolor="rgba(240,240,238,0.04)",
+            color="rgba(240,240,238,0.3)",
+            linecolor="rgba(240,240,238,0.08)",
+        ),
     )
     return fig
 
@@ -157,12 +171,19 @@ def _build_scatter_fig(lane_metrics: pd.DataFrame, label: str,
     )
     scatter_fig.update_layout(
         margin=dict(l=0, r=0, t=8, b=0), height=height,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
-        font=dict(color="#A78BFA"),
-        xaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8",
-                   linecolor="rgba(150,50,200,0.2)"),
-        yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8",
-                   linecolor="rgba(150,50,200,0.2)", tickprefix="$"),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="rgba(240,240,238,0.45)"),
+        xaxis=dict(
+            gridcolor="rgba(240,240,238,0.04)",
+            color="rgba(240,240,238,0.3)",
+            linecolor="rgba(240,240,238,0.08)",
+        ),
+        yaxis=dict(
+            gridcolor="rgba(240,240,238,0.04)",
+            color="rgba(240,240,238,0.3)",
+            linecolor="rgba(240,240,238,0.08)",
+            tickprefix="$",
+        ),
     )
     return scatter_fig
 
@@ -222,15 +243,29 @@ def _popup_scatter():
 
 
 # ── Inline filters ────────────────────────────────────────────────────────────
+min_date = df_all["ship_date_dt"].min().date()
+max_date = df_all["ship_date_dt"].max().date()
+carrier_opts = sorted(df_all["carrier"].dropna().unique().tolist())
+
 with st.expander("⚙️ Filters", expanded=False):
-    f1, f2 = st.columns(2)
+    f1, f2, f3, f4 = st.columns(4)
     with f1:
-        min_vol = st.slider("Minimum shipments per lane", 1, 10, 2,
-                            help="Filter out low-volume lanes")
+        date_range = st.date_input("Date range", value=(min_date, max_date), min_value=min_date, max_value=max_date)
     with f2:
-        view_by = st.radio("Analyze by",
-                           ["Lane (Origin → Dest)", "Origin City", "Destination City"],
-                           horizontal=True, key="route_view_by")
+        sel_carriers = st.multiselect("Carrier", carrier_opts, default=carrier_opts)
+    with f3:
+        min_vol = st.slider("Min shipments per lane", 1, 20, 2, help="Filter out low-volume lanes")
+    with f4:
+        risk_threshold = st.slider("Risk threshold (avg)", 0.0, 1.0, 0.0, 0.01, help="Only include lanes with avg risk ≥ threshold")
+
+    view_by = st.radio(
+        "Analyze by",
+        ["Lane (Origin → Dest)", "Origin City", "Destination City"],
+        horizontal=True,
+        key="route_view_by",
+    )
+
+lane_search = st.text_input("Lane Search", placeholder="Search origin/destination (e.g., Dallas, TX or Memphis)", label_visibility="visible")
 
 # ── Header ────────────────────────────────────────────────────────────────────
 st.markdown("## Route Analysis")
@@ -246,7 +281,19 @@ else:
     label     = "Origin" if "Origin" in view_by else "Destination"
 
 df = df_raw.copy()
+if len(date_range) == 2:
+    start, end = pd.Timestamp(date_range[0]), pd.Timestamp(date_range[1])
+    df = df[(df["ship_date_dt"] >= start) & (df["ship_date_dt"] <= end)]
+if sel_carriers:
+    df = df[df["carrier"].isin(sel_carriers)]
 lane_metrics = _build_lane_metrics(df, group_col, label, min_vol=min_vol)
+if risk_threshold > 0:
+    lane_metrics = lane_metrics[lane_metrics["avg_risk"] >= risk_threshold].copy()
+if lane_search.strip():
+    s = lane_search.strip().lower()
+    lane_metrics = lane_metrics[
+        lane_metrics[label].astype(str).str.lower().str.contains(s, na=False)
+    ].copy()
 
 # ── KPI row ───────────────────────────────────────────────────────────────────
 total_lanes   = len(lane_metrics)
@@ -276,7 +323,7 @@ with chart_l:
             st.markdown("#### Most Expensive Lanes")
             st.caption("Top 8 by average cost per mile")
         with btn:
-            if st.button("⤢", key="exp_expensive", help="Expand chart"):
+            if st.button("Expand", key="exp_expensive", help="Expand chart"):
                 _popup_expensive()
         st.plotly_chart(_build_expensive_fig(lane_metrics, label),
                         width="stretch")
@@ -288,7 +335,7 @@ with chart_r:
             st.markdown("#### Most Efficient Lanes")
             st.caption("Top 8 by lowest average cost per mile")
         with btn:
-            if st.button("⤢", key="exp_efficient", help="Expand chart"):
+            if st.button("Expand", key="exp_efficient", help="Expand chart"):
                 _popup_efficient()
         st.plotly_chart(_build_efficient_fig(lane_metrics, label),
                         width="stretch")
@@ -302,44 +349,48 @@ with st.container(border=True):
         st.markdown("#### Lane Volume vs Avg Cost")
         st.caption("Identify high-volume expensive lanes — biggest opportunity for savings")
     with btn:
-        if st.button("⤢", key="exp_scatter", help="Expand chart"):
+        if st.button("Expand", key="exp_scatter", help="Expand chart"):
             _popup_scatter()
     st.plotly_chart(_build_scatter_fig(lane_metrics, label),
                     width="stretch")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ── Full lane table ───────────────────────────────────────────────────────────
-with st.container(border=True):
-    st.markdown("#### All Lanes — Full Breakdown")
-    display = lane_metrics.copy()
-    display["avg_cost"]  = display["avg_cost"].round(2)
-    display["avg_cpm"]   = display["avg_cpm"].round(3)
-    display["avg_miles"] = display["avg_miles"].round(0).astype(int)
-    display["avg_risk"]  = display["avg_risk"].round(3)
+st.markdown(
+    "<div class='route-section'><h4>All Lanes — Full Breakdown</h4></div>",
+    unsafe_allow_html=True,
+)
+display = lane_metrics.copy()
+display["avg_cost"]  = display["avg_cost"].round(2)
+display["avg_cpm"]   = display["avg_cpm"].round(3)
+display["avg_miles"] = display["avg_miles"].round(0).astype(int)
+display["avg_risk"]  = display["avg_risk"].round(3)
 
-    st.dataframe(
-        display[[label, "shipments", "avg_cost", "avg_cpm", "avg_miles",
-                 "avg_risk", "accessorial_rate", "high_risk_pct", "total_cost"]]
-        .rename(columns={
-            "shipments":       "Shipments",
-            "avg_cost":        "Avg Cost ($)",
-            "avg_cpm":         "Avg $/Mile",
-            "avg_miles":       "Avg Miles",
-            "avg_risk":        "Avg Risk",
-            "accessorial_rate":"Accessorial %",
-            "high_risk_pct":   "High Risk %",
-            "total_cost":      "Total Spend ($)",
-        })
-        .sort_values("Avg $/Mile", ascending=False),
-        width="stretch",
-        hide_index=True,
-        column_config={
-            "Avg Risk": st.column_config.ProgressColumn(
-                "Avg Risk", format="%.0f%%", min_value=0, max_value=1),
-            "Avg Cost ($)":    st.column_config.NumberColumn(format="$%.2f"),
-            "Avg $/Mile":      st.column_config.NumberColumn(format="$%.3f"),
-            "Total Spend ($)": st.column_config.NumberColumn(format="$%.0f"),
-        },
-        height=420,
-    )
+st.markdown("<div class='route-table'>", unsafe_allow_html=True)
+st.dataframe(
+    display[[label, "shipments", "avg_cost", "avg_cpm", "avg_miles",
+             "avg_risk", "accessorial_rate", "high_risk_pct", "total_cost"]]
+    .rename(columns={
+        "shipments":       "Shipments",
+        "avg_cost":        "Avg Cost ($)",
+        "avg_cpm":         "Avg $/Mile",
+        "avg_miles":       "Avg Miles",
+        "avg_risk":        "Avg Risk",
+        "accessorial_rate":"Accessorial %",
+        "high_risk_pct":   "High Risk %",
+        "total_cost":      "Total Spend ($)",
+    })
+    .sort_values("Avg $/Mile", ascending=False),
+    width="stretch",
+    hide_index=True,
+    column_config={
+        "Avg Risk": st.column_config.ProgressColumn(
+            "Avg Risk", format="%.0f%%", min_value=0, max_value=1),
+        "Avg Cost ($)":    st.column_config.NumberColumn(format="$%.2f"),
+        "Avg $/Mile":      st.column_config.NumberColumn(format="$%.3f"),
+        "Total Spend ($)": st.column_config.NumberColumn(format="$%.0f"),
+    },
+    height=420,
+)
+st.markdown("</div>", unsafe_allow_html=True)
+
