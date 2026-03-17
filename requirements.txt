@@ -1,7 +1,23 @@
 streamlit>=1.31.0
 pandas
-pyodbc
-python-dotenv
 numpy
 plotly
 scikit-learn
+lightgbm
+joblib
+requests
+python-dotenv
+openpyxl
+
+# Azure SQL (requires freetds — see packages.txt for system deps)
+pymssql
+
+# Document parsing + semantic column mapping
+pdfplumber
+Pillow
+pytesseract
+sentence-transformers
+
+# Geospatial routing
+geopy
+openrouteservice

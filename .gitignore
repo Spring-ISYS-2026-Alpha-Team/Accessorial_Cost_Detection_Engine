@@ -32,3 +32,7 @@ outputs/*.png
 
 # Saved ML models (too large for Git)
 models/*.joblib
+utils/*.joblib
+
+# Runtime model config state (per-deployment, not shared)
+utils/model_config.json

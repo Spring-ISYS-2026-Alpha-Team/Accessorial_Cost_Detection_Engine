@@ -1,21 +1,36 @@
+# File: app.py
+import os
+import base64
 import streamlit as st
 
+from auth_utils import check_auth
 
 
-# -------------------------
+def _bg_css() -> str:
+    """Return background CSS props for the ::before blur layer."""
+    img_path = os.path.join(os.path.dirname(__file__), "assets", "background.png")
+    if os.path.exists(img_path):
+        with open(img_path, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode()
+        return (
+            f"background-image:url('data:image/png;base64,{b64}');"
+            "background-size:cover;background-position:center;"
+        )
+    return "background:linear-gradient(155deg,#060012 0%,#09021a 40%,#06010f 100%);"
 
-# Page config
 
-# -------------------------
+_bg_props = _bg_css()
+
+# ── Fallback users if DB unavailable ──────────────────────────────────────────
+_FALLBACK = {
+    "admin": {"password": "admin", "role": "admin"},
+    "user":  {"password": "user",  "role": "user"},
+}
 
 st.set_page_config(
-
     page_title="PACE — Sign In",
-
     page_icon="📦",
-
-    layout="wide",
-
+    layout="centered",
     initial_sidebar_state="collapsed",
 
 )
@@ -34,11 +49,17 @@ st.markdown(
 
     <style>
 
+
+
+    /* Hide sidebar */
+
     [data-testid="stSidebar"] {display:none;}
 
     [data-testid="collapsedControl"] {display:none;}
 
 
+
+    /* White background */
 
     .stApp {
 
@@ -56,7 +77,9 @@ st.markdown(
 
 
 
-    div[data-testid="stVerticalBlock"] > div:has(div.stForm) {
+    /* Login card */
+
+    div[data-testid="stVerticalBlock"] > div:has(div.stForm){
 
         background: #F8FAFC;
 
@@ -70,61 +93,65 @@ st.markdown(
 
 
 
-    .pace-wrap {
+    /* Vertical PACE area */
+
+    .pace-wrap{
 
         height: 90vh;
 
-        display: flex;
+        display:flex;
 
-        align-items: center;
+        align-items:center;
 
-        justify-content: center;
-
-    }
-
-
-
-    .pace-vertical {
-
-        font-size: 170px;
-
-        font-weight: 900;
-
-        line-height: 0.9;
-
-        letter-spacing: 12px;
-
-        color: #0F2B4A;
-
-        text-align: center;
+        justify-content:center;
 
     }
 
 
 
-    .pace-sub {
+    .pace-vertical{
 
-        margin-top: 20px;
+        font-size:170px;
 
-        font-size: 18px;
+        font-weight:900;
 
-        color: #6B7280;
+        line-height:0.9;
 
-        text-align: center;
+        letter-spacing:12px;
+
+        color:#0F2B4A;
+
+        text-align:center;
+
+    }
+
+
+
+    .pace-sub{
+
+        margin-top:20px;
+
+        font-size:18px;
+
+        color:#6B7280;
+
+        text-align:center;
 
     }
 
 
 
-    .pace-foot {
+    .pace-foot{
 
-        color: #9CA3AF;
+        color:#9CA3AF;
 
-        font-size: 11px;
+        font-size:11px;
 
-        margin-top: 25px;
+        margin-top:25px;
 
     }
+
+
 
     </style>
 
@@ -133,6 +160,32 @@ st.markdown(
     unsafe_allow_html=True,
 
 )
+
+
+
+# -------------------------
+
+# Already logged in
+
+# -------------------------
+
+if check_auth():
+
+    role = st.session_state.get("role", "user")
+
+
+
+    if role == "admin":
+
+        st.switch_page("pages/8_Admin.py")
+
+    else:
+
+        st.switch_page("pages/0_Home.py")
+
+
+
+    st.stop()
 
 
 
@@ -154,33 +207,11 @@ USERS = {
 
 # -------------------------
 
-# Already logged in
-
-# -------------------------
-
-if st.session_state.get("authenticated", False):
-
-    role = st.session_state.get("role", "user")
-
-    if role == "admin":
-
-        st.switch_page("pages/8_Admin.py")
-
-    else:
-
-        st.switch_page("pages/0_Home.py")
-
-    st.stop()
-
-
-
-# -------------------------
-
 # Layout
 
 # -------------------------
 
-left, right = st.columns([1, 1.6])
+left, right = st.columns([1,1.6])
 
 
 
@@ -192,6 +223,8 @@ left, right = st.columns([1, 1.6])
 
 with left:
 
+
+
     st.markdown("### Sign in")
 
 
@@ -202,17 +235,17 @@ with left:
 
         password = st.text_input("Password", type="password")
 
+
+
         submitted = st.form_submit_button(
-
-            "Sign In",
-
-            use_container_width=True
-
+            "Sign In", width="stretch", type="primary"
         )
 
 
 
     if submitted:
+
+
 
         u = (username or "").strip()
 
@@ -224,25 +257,29 @@ with left:
 
             st.error("Please enter username and password")
 
+
+
         elif u in USERS and p == USERS[u]["password"]:
 
-            st.session_state["authenticated"] = True
-
-            st.session_state["username"] = u
-
-            st.session_state["role"] = USERS[u]["role"]
 
 
-
-            if USERS[u]["role"] == "admin":
-
-                st.switch_page("pages/8_Admin.py")
-
+                st.session_state["authenticated"] = True
+                st.session_state["username"] = u
+                st.session_state["role"] = role
+                st.session_state["_data_preloaded"] = False
+                st.session_state["post_load_dest"] = (
+                    "pages/8_Admin.py" if role == "admin" else "pages/0_Home.py"
+                )
+                st.switch_page("pages/loading.py")
             else:
 
                 st.switch_page("pages/0_Home.py")
 
+
+
             st.stop()
+
+
 
         else:
 
@@ -276,33 +313,45 @@ with left:
 
 with right:
 
+
+
     st.markdown(
 
         """
 
         <div class="pace-wrap">
 
-            <div>
 
-                <div class="pace-vertical">
 
-                    P<br>
+        <div>
 
-                    A<br>
 
-                    C<br>
 
-                    E
+        <div class="pace-vertical">
 
-                </div>
+        P<br>
 
-                <div class="pace-sub">
+        A<br>
 
-                    Predictive Accessorial Cost Engine
+        C<br>
 
-                </div>
+        E
 
-            </div>
+        </div>
+
+
+
+        <div class="pace-sub">
+
+        Predictive Accessorial Cost Engine
+
+        </div>
+
+
+
+        </div>
+
+
 
         </div>
 

@@ -9,7 +9,11 @@
       "Bash(git credential-manager --version)",
       "Bash(git credential-manager-core --version)",
       "Bash(git config --global credential.helper manager)",
-      "Bash(pip install python-dotenv plotly)"
+      "Bash(pip install python-dotenv plotly)",
+      "Bash(ls \"C:\\\\Users\\\\knife\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-knife-OneDrive-Desktop-Analysis-program-Accessorial-Cost-Detection-Engine\\\\tasks\"\" 2>/dev/null || echo \"dir not found \")",
+      "Bash(python -m streamlit --version)",
+      "Bash(python -c \"import pymssql; print\\(''pymssql OK:'', pymssql.__version__\\)\")",
+      "Bash(python -c \":*)"
     ]
   }
 }

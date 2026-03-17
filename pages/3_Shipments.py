@@ -6,7 +6,8 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from auth_utils import check_auth
-from utils.mock_data import generate_mock_shipments, CARRIERS, FACILITIES
+from utils.database import get_connection, get_shipments
+from utils.mock_data import generate_mock_shipments
 from utils.styling import (
     inject_css, top_nav,
     NAVY_500, NAVY_100,
@@ -33,24 +34,22 @@ if not check_auth():
 username = st.session_state.get("username", "User")
 top_nav(username)
 
-# ── Load data ─────────────────────────────────────────────────────────────────
-@st.cache_data
-def load_data():
-    return generate_mock_shipments(300)
-
-df_all = load_data()
+# ── Load data (live DB with mock fallback) ────────────────────────────────────
+conn = get_connection()
+df_all = get_shipments(conn) if conn is not None else pd.DataFrame()
+if df_all.empty:
+    df_all = generate_mock_shipments(300)
+    st.info("Live database unavailable — showing demo data.", icon="ℹ️")
 
 # ── Inline filters ────────────────────────────────────────────────────────────
 with st.expander("⚙️ Filters", expanded=False):
     f1, f2, f3 = st.columns(3)
     with f1:
-        sel_carriers = st.multiselect(
-            "Carrier", sorted(CARRIERS), default=sorted(CARRIERS), key="ship_carriers"
-        )
+        carriers = sorted(df_all["carrier"].dropna().unique())
+        sel_carriers = st.multiselect("Carrier", carriers, default=carriers, key="ship_carriers")
     with f2:
-        sel_facilities = st.multiselect(
-            "Facility", sorted(FACILITIES), default=sorted(FACILITIES), key="ship_facilities"
-        )
+        facilities = sorted(df_all["facility"].dropna().unique())
+        sel_facilities = st.multiselect("Facility", facilities, default=facilities, key="ship_facilities")
     with f3:
         sel_tiers = st.multiselect(
             "Risk Tier", ["Low", "Medium", "High"],
@@ -85,8 +84,8 @@ def render_detail(row: pd.Series):
         st.rerun()
 
     st.markdown(
-        f"<div style='font-size:12px; color:#9CA3AF; margin-bottom:12px;'>"
-        f"Shipments / <b style='color:#374151'>{row['shipment_id']}</b></div>",
+        f"<div style='font-size:12px; color:#94A3B8; margin-bottom:12px;'>"
+        f"Shipments / <b style='color:#E2E8F0'>{row['shipment_id']}</b></div>",
         unsafe_allow_html=True,
     )
 
@@ -112,7 +111,7 @@ def render_detail(row: pd.Series):
             st.write(row["facility"])
         with m3:
             st.markdown("**Ship Date**")
-            st.write(row["ship_date"])
+            st.write(str(row["ship_date"])[:10])
         with m4:
             st.markdown("**Base Freight**")
             st.write(f"${row['base_freight_usd']:,.2f}")
@@ -142,7 +141,7 @@ def render_detail(row: pd.Series):
 
             est = row["accessorial_charge_usd"]
             st.markdown(
-                f"<div style='font-size:13px; color:#6B7280; margin-top:8px;'>"
+                f"<div style='font-size:13px; color:#94A3B8; margin-top:8px;'>"
                 f"Estimated accessorial exposure: "
                 f"<b style='color:{fg};'>${est:,.2f}</b></div>",
                 unsafe_allow_html=True,
@@ -171,14 +170,14 @@ def render_detail(row: pd.Series):
                 fc1, fc2, fc3 = st.columns([3, 5, 1])
                 with fc1:
                     st.markdown(
-                        f"<span style='font-size:13px; color:#374151;'>{factor}</span>",
+                        f"<span style='font-size:13px; color:#CBD5E1;'>{factor}</span>",
                         unsafe_allow_html=True,
                     )
                 with fc2:
                     st.progress(pct / 100)
                 with fc3:
                     st.markdown(
-                        f"<span style='font-size:13px; font-weight:600; color:#111827;'>"
+                        f"<span style='font-size:13px; font-weight:600; color:#E2E8F0;'>"
                         f"{pct:.0f}%</span>",
                         unsafe_allow_html=True,
                     )
@@ -220,7 +219,7 @@ def render_detail(row: pd.Series):
                 f"width:22px; height:22px; min-width:22px; display:flex; "
                 f"align-items:center; justify-content:center; font-size:12px; "
                 f"font-weight:700;'>{i}</span>"
-                f"<span style='font-size:14px; color:#1F2937;'>{action}</span>"
+                f"<span style='font-size:14px; color:#E2E8F0;'>{action}</span>"
                 f"</div>",
                 unsafe_allow_html=True,
             )
@@ -236,20 +235,19 @@ def render_detail(row: pd.Series):
             df_all[df_all["carrier"] == row["carrier"]]
             .head(10)
             [["shipment_id", "ship_date", "facility", "risk_score",
-              "risk_tier", "accessorial_type", "accessorial_charge_usd"]]
+              "risk_tier", "accessorial_charge_usd"]]
             .rename(columns={
                 "shipment_id":            "Shipment ID",
                 "ship_date":              "Ship Date",
                 "facility":               "Facility",
                 "risk_score":             "Risk Score",
                 "risk_tier":              "Risk Tier",
-                "accessorial_type":       "Accessorial Type",
                 "accessorial_charge_usd": "Actual Charge ($)",
             })
         )
         st.dataframe(
             similar,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             column_config={
                 "Risk Score": st.column_config.ProgressColumn(
@@ -277,17 +275,17 @@ else:
     st.divider()
 
     search = st.text_input(
-        "", placeholder="🔍 Search by shipment ID…", label_visibility="collapsed"
+        "Search", placeholder="🔍 Search by shipment ID…", label_visibility="collapsed"
     )
     if search:
-        df = df[df["shipment_id"].str.contains(search.upper(), na=False)]
+        df = df[df["shipment_id"].astype(str).str.contains(search.upper(), na=False)]
 
     with st.container(border=True):
         event = st.dataframe(
             df[[
                 "shipment_id", "ship_date", "carrier", "facility",
                 "weight_lbs", "miles", "risk_score", "risk_tier",
-                "accessorial_type", "base_freight_usd", "accessorial_charge_usd",
+                "base_freight_usd", "accessorial_charge_usd",
             ]].rename(columns={
                 "shipment_id":            "Shipment ID",
                 "ship_date":              "Ship Date",
@@ -297,11 +295,10 @@ else:
                 "miles":                  "Miles",
                 "risk_score":             "Risk Score",
                 "risk_tier":              "Risk Tier",
-                "accessorial_type":       "Accessorial Type",
                 "base_freight_usd":       "Base Freight ($)",
                 "accessorial_charge_usd": "Est. Accessorial ($)",
             }),
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             on_select="rerun",
             selection_mode="single-row",

@@ -105,11 +105,7 @@ def logout():
 
 
     st.cache_data.clear()
-
     st.cache_resource.clear()
-
-
-
     st.switch_page("app.py")
 
 
