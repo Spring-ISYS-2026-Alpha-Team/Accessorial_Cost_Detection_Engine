@@ -10,7 +10,7 @@ import torch.nn as nn
 from typing import Dict, List, Optional
 from pipeline.config import (
     CONTINUOUS_COLUMNS, CATEGORICAL_COLUMNS, N_CLASSES,
-    MODEL_WEIGHTS_PATH, CHARGE_TYPE_LABELS, DOT_COLUMN,
+    MODEL_WEIGHTS_PATH, MODEL_ARTIFACTS_PATH, CHARGE_TYPE_LABELS, DOT_COLUMN,
     TD_HOST, TD_USERNAME, TD_PASSWORD, TD_DATABASE,
 )
 
@@ -106,7 +106,7 @@ class PACEInference:
     """
 
     def __init__(self, weights_path: str = MODEL_WEIGHTS_PATH,
-                 artifacts_path: str = "models/artifacts.pkl"):
+                 artifacts_path: str = MODEL_ARTIFACTS_PATH):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model       = None
         self.cat_encoder = None

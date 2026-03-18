@@ -33,7 +33,7 @@ from pipeline.config import (
     TD_HOST, TD_USERNAME, TD_PASSWORD, TD_DATABASE, TD_VIEW,
     ID_COLUMN, DATE_COLUMN, REGRESSION_TARGET, MULTICLASS_TARGET,
     N_CLASSES, CONTINUOUS_COLUMNS, CATEGORICAL_COLUMNS,
-    MODEL_WEIGHTS_PATH, RESULTS_DIR, CHUNK_SIZE, NUM_THREADS,
+    MODEL_WEIGHTS_PATH, MODEL_ARTIFACTS_PATH, RESULTS_DIR, CHUNK_SIZE, NUM_THREADS,
     CHARGE_TYPE_LABELS,
 )
 
@@ -430,9 +430,9 @@ def run_pipeline():
         "cont_cols":      cont_cols,
         "risk_score_max": float(max_score),
     }
-    with open("models/artifacts.pkl", "wb") as f:
+    with open(MODEL_ARTIFACTS_PATH, "wb") as f:
         pickle.dump(artifacts, f)
-    print("  Preprocessing artifacts saved to models/artifacts.pkl")
+    print(f"  Preprocessing artifacts saved to {MODEL_ARTIFACTS_PATH}")
     print(f"  Results saved to {output_dir}/")
 
 
