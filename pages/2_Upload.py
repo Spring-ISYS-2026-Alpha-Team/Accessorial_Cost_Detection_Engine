@@ -9,11 +9,11 @@ import streamlit as st
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from auth_utils import check_auth
+from auth_utils import require_auth
 from utils.doc_parser import parse_uploaded_document
-from utils.styling import inject_css, top_nav
+from utils.styling import inject_css, top_nav, TIER_COLORS
 from pipeline.data_pipeline import get_data_pipeline
-from pipeline.config import CHARGE_TYPE_LABELS
+from pipeline.config import CHARGE_TYPE_LABELS, is_pace_model_ready
 
 # ── Page config ───────────────────────────────────────────────────
 st.set_page_config(
@@ -25,27 +25,14 @@ st.set_page_config(
 inject_css()
 
 # ── Auth guard ────────────────────────────────────────────────────
-if not check_auth():
-    st.warning("Please sign in to access this page.")
-    st.page_link("app.py", label="Go to Sign In", icon="🔑")
-    st.stop()
-
+require_auth()
 username = st.session_state.get("username", "User")
 top_nav(username)
 
 # ── Model availability check ──────────────────────────────────────
-MODEL_READY = os.path.exists("models/pace_transformer_weights.pt") and \
-              os.path.exists("models/artifacts.pkl")
+MODEL_READY = is_pace_model_ready()
 
 # ── Helper: tier color ────────────────────────────────────────────
-TIER_COLORS = {
-    "Critical": "#F87171",
-    "High":     "#FB923C",
-    "Medium":   "#FCD34D",
-    "Low":      "#34D399",
-    "None":     "#94A3B8",
-}
-
 def tier_badge(label: str) -> str:
     color = TIER_COLORS.get(label, "#94A3B8")
     return (

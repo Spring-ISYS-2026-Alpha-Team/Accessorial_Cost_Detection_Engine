@@ -13,6 +13,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from auth_utils import check_auth
+from pipeline.config import is_pace_model_ready
 
 st.set_page_config(
     page_title="PACE — Loading",
@@ -205,7 +206,7 @@ try:
     _step("Loading PACE model", 95)
     try:
         from pipeline.inference import get_inference_engine
-        if os.path.exists("models/pace_transformer_weights.pt"):
+        if is_pace_model_ready():
             get_inference_engine()
     except Exception:
         pass  # Model not trained yet — skip silently

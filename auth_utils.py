@@ -19,3 +19,14 @@ def check_auth():
     Returns True if authenticated, False otherwise.
     """
     return st.session_state.get('authenticated', False)
+
+
+def require_auth() -> None:
+    """
+    Auth guard for protected pages.
+    Halts execution with a sign-in prompt if the user is not authenticated.
+    """
+    if not check_auth():
+        st.warning("Please sign in to access this page.")
+        st.page_link("app.py", label="Go to Sign In", icon="🔑")
+        st.stop()

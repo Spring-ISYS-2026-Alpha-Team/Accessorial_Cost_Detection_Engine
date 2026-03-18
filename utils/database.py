@@ -198,6 +198,17 @@ def verify_pace_user(_conn, username: str, password: str):
     return None
 
 
+def load_shipments_with_fallback(n_mock: int = 300) -> pd.DataFrame:
+    """Load shipments from the DB, falling back to mock data with an info banner."""
+    conn = get_connection()
+    df = get_shipments(conn) if conn is not None else pd.DataFrame()
+    if df.empty:
+        from utils.mock_data import generate_mock_shipments
+        df = generate_mock_shipments(n_mock)
+        st.info("Live database unavailable — showing demo data.", icon="ℹ️")
+    return df
+
+
 def get_pace_users(_conn) -> pd.DataFrame:
     """Return all PaceUsers rows (no password_hash)."""
     if _conn is None:

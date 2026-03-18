@@ -7,17 +7,14 @@ import streamlit as st
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from auth_utils import check_auth
-from utils.database import get_connection, get_shipments
-from utils.mock_data import generate_mock_shipments
+from auth_utils import require_auth
+from utils.database import load_shipments_with_fallback
 from utils.styling import (
     inject_css, top_nav,
     NAVY_500,
-    RISK_LOW_BG,  RISK_LOW_FG,
-    RISK_MED_BG,  RISK_MED_FG,
-    RISK_HIGH_BG, RISK_HIGH_FG,
+    TIER_BG_FG, CHARGE_COLORS,
 )
-from pipeline.config import CHARGE_TYPE_LABELS
+from pipeline.config import CHARGE_TYPE_LABELS, is_pace_model_ready
 
 st.set_page_config(
     page_title="PACE — Shipments",
@@ -27,44 +24,15 @@ st.set_page_config(
 )
 inject_css()
 
-if not check_auth():
-    st.warning("Please sign in to access this page.")
-    st.page_link("app.py", label="Go to Sign In", icon="🔑")
-    st.stop()
-
+require_auth()
 username = st.session_state.get("username", "User")
 top_nav(username)
 
 # ── Model availability ────────────────────────────────────────────
-MODEL_READY = (
-    os.path.exists("models/pace_transformer_weights.pt") and
-    os.path.exists("models/artifacts.pkl")
-)
-
-# ── Color maps ────────────────────────────────────────────────────
-TIER_COLORS = {
-    "Critical": ("#7F1D1D", "#F87171"),
-    "High":     (RISK_HIGH_BG, RISK_HIGH_FG),
-    "Medium":   (RISK_MED_BG,  RISK_MED_FG),
-    "Low":      (RISK_LOW_BG,  RISK_LOW_FG),
-    "None":     ("#1E293B", "#94A3B8"),
-}
-
-CHARGE_COLORS = {
-    "No Charge":            "#34D399",
-    "Detention":            "#FCD34D",
-    "Safety Surcharge":     "#FB923C",
-    "Compliance Fee":       "#F87171",
-    "Hazmat Fee":           "#C084FC",
-    "High Risk / Multiple": "#EF4444",
-}
+MODEL_READY = is_pace_model_ready()
 
 # ── Load data ─────────────────────────────────────────────────────
-conn   = get_connection()
-df_all = get_shipments(conn) if conn is not None else pd.DataFrame()
-if df_all.empty:
-    df_all = generate_mock_shipments(300)
-    st.info("Live database unavailable — showing demo data.", icon="ℹ️")
+df_all = load_shipments_with_fallback()
 
 # ── Normalize schema ──────────────────────────────────────────────
 # Support both old schema and PACE schema side by side
@@ -170,7 +138,7 @@ def render_detail(row: pd.Series):
     label   = str(row.get("risk_label", row.get("risk_tier", "Unknown")))
     score   = float(row.get("risk_score_pct", row.get("risk_score", 0) * 100))
     charge  = str(row.get("charge_type", row.get("accessorial_type", "Unknown")))
-    bg, fg  = TIER_COLORS.get(label, ("#1E293B", "#94A3B8"))
+    bg, fg  = TIER_BG_FG.get(label, ("#1E293B", "#94A3B8"))
     c_color = CHARGE_COLORS.get(charge, "#A78BFA")
     ship_id = row.get(ID_COL, "Unknown")
 

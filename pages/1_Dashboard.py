@@ -6,9 +6,8 @@ import sys, os
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from auth_utils import check_auth
-from utils.database import get_connection, get_shipments
-from utils.mock_data import generate_mock_shipments
+from auth_utils import require_auth
+from utils.database import load_shipments_with_fallback
 from utils.styling import inject_css, top_nav, NAVY_900, NAVY_500, chart_theme, risk_badge_html
 
 # ── Page config ───────────────────────────────────────────────────────────────
@@ -21,21 +20,12 @@ st.set_page_config(
 inject_css()
 
 # ── Auth guard ────────────────────────────────────────────────────────────────
-if not check_auth():
-    st.warning("Please sign in to access this page.")
-    st.page_link("app.py", label="Go to Sign In", icon="🔑")
-    st.stop()
-
+require_auth()
 username = st.session_state.get("username", "User")
 top_nav(username)
 
 # ── Load data (live DB with mock fallback) ────────────────────────────────────
-conn = get_connection()
-df_raw = get_shipments(conn) if conn is not None else pd.DataFrame()
-using_live = not df_raw.empty
-if not using_live:
-    df_raw = generate_mock_shipments(300)
-    st.info("Live database unavailable — showing demo data.", icon="ℹ️")
+df_raw = load_shipments_with_fallback()
 df_raw["ship_date_dt"] = pd.to_datetime(df_raw["ship_date"])
 df_all = df_raw  # module-level alias used by dialogs
 

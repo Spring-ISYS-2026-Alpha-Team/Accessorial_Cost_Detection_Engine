@@ -4,7 +4,7 @@ import sys, os
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from auth_utils import check_auth
+from auth_utils import require_auth
 from utils.database import get_connection, get_pace_users, create_pace_user, delete_pace_user
 from utils.styling import inject_css, top_nav, ACCENT_SOFT, TEXT_PRIMARY, TEXT_SECONDARY
 import utils.model_config as mcfg
@@ -19,10 +19,7 @@ st.set_page_config(
 )
 inject_css()
 
-if not check_auth():
-    st.warning("Please sign in to access this page.")
-    st.page_link("app.py", label="Go to Sign In", icon="🔑")
-    st.stop()
+require_auth()
 
 role = st.session_state.get("role", "user")
 if role != "admin":

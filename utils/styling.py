@@ -59,6 +59,34 @@ RISK_MED_FG   = "#FCD34D"
 RISK_LOW_BG   = "rgba(5, 150, 105, 0.18)"
 RISK_LOW_FG   = "#34D399"
 
+# Risk tier foreground colors (single hex — for text, borders, badges)
+TIER_COLORS = {
+    "Critical": "#F87171",
+    "High":     "#FB923C",
+    "Medium":   "#FCD34D",
+    "Low":      "#34D399",
+    "None":     "#94A3B8",
+}
+
+# Risk tier (bg, fg) pairs — for two-tone cell/card styling
+TIER_BG_FG = {
+    "Critical": ("#7F1D1D",   "#F87171"),
+    "High":     (RISK_HIGH_BG, RISK_HIGH_FG),
+    "Medium":   (RISK_MED_BG,  RISK_MED_FG),
+    "Low":      (RISK_LOW_BG,  RISK_LOW_FG),
+    "None":     ("#1E293B",   "#94A3B8"),
+}
+
+# Charge type foreground colors
+CHARGE_COLORS = {
+    "No Charge":            "#34D399",
+    "Detention":            "#FCD34D",
+    "Safety Surcharge":     "#FB923C",
+    "Compliance Fee":       "#F87171",
+    "Hazmat Fee":           "#C084FC",
+    "High Risk / Multiple": "#EF4444",
+}
+
 # Chart theme defaults
 CHART_BG      = "#0f0a1e"
 CHART_GRID    = "rgba(150,50,200,0.18)"

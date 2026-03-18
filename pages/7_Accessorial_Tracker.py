@@ -8,14 +8,11 @@ import streamlit as st
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from auth_utils import check_auth
+from auth_utils import require_auth
 from utils.database import get_connection, get_shipments_with_charges
 from utils.mock_data import generate_mock_shipments
-from utils.styling import (
-    inject_css, top_nav,
-    NAVY_500, RISK_HIGH_FG, RISK_MED_FG, RISK_LOW_FG,
-)
-from pipeline.config import CHARGE_TYPE_LABELS
+from utils.styling import inject_css, top_nav, NAVY_500, TIER_COLORS, CHARGE_COLORS
+from pipeline.config import CHARGE_TYPE_LABELS, is_pace_model_ready
 
 st.set_page_config(
     page_title="PACE — Accessorial Tracker",
@@ -25,37 +22,12 @@ st.set_page_config(
 )
 inject_css()
 
-if not check_auth():
-    st.warning("Please sign in to access this page.")
-    st.page_link("app.py", label="Go to Sign In", icon="🔑")
-    st.stop()
-
+require_auth()
 username = st.session_state.get("username", "User")
 top_nav(username)
 
 # ── Model availability ────────────────────────────────────────────
-MODEL_READY = (
-    os.path.exists("models/pace_transformer_weights.pt") and
-    os.path.exists("models/artifacts.pkl")
-)
-
-# ── PACE charge type colors ───────────────────────────────────────
-CHARGE_COLORS = {
-    "No Charge":            "#34D399",
-    "Detention":            "#FCD34D",
-    "Safety Surcharge":     "#FB923C",
-    "Compliance Fee":       "#F87171",
-    "Hazmat Fee":           "#C084FC",
-    "High Risk / Multiple": "#EF4444",
-}
-
-TIER_COLORS = {
-    "Critical": "#F87171",
-    "High":     "#FB923C",
-    "Medium":   "#FCD34D",
-    "Low":      "#34D399",
-    "None":     "#94A3B8",
-}
+MODEL_READY = is_pace_model_ready()
 
 # ── Load data ─────────────────────────────────────────────────────
 conn   = get_connection()

@@ -109,7 +109,13 @@ CTGAN_DISCRETE_COLUMNS = CATEGORICAL_COLUMNS + [
 
 # FT-Transformer settings
 MODEL_WEIGHTS_PATH = "models/pace_transformer_weights.pt"
+MODEL_ARTIFACTS_PATH = "models/artifacts.pkl"
 RESULTS_DIR = "outputs"
+
+
+def is_pace_model_ready() -> bool:
+    """Return True only when both PACE model artifact files exist on disk."""
+    return os.path.exists(MODEL_WEIGHTS_PATH) and os.path.exists(MODEL_ARTIFACTS_PATH)
 CHUNK_SIZE = 100000
 NUM_THREADS = 4
 
