@@ -160,7 +160,6 @@ def _st_map_columns(df: pd.DataFrame) -> pd.DataFrame:
     except ImportError:
         return ensure_expected_columns(df)
 
-    global _pace_embeddings_cache
 
     model_name = "all-MiniLM-L6-v2"
     if model_name not in _pace_embeddings_cache:

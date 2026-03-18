@@ -205,7 +205,7 @@ try:
            .reset_index().sort_values("cost_per_mile")
     )
 
-_step("Loading PACE model", 95)
+    _step("Loading PACE model", 95)
     try:
         from pipeline.inference import get_inference_engine
         if os.path.exists("models/pace_transformer_weights.pt"):
