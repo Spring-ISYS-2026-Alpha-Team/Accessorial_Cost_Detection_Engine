@@ -147,8 +147,7 @@ try:
         get_carriers, get_facilities, get_shipments_with_charges,
     )
     from utils.mock_data import generate_mock_shipments
-    from utils.cost_model import get_cost_model
-    from utils.risk_model import get_risk_model
+ 
 
     _step("Connecting to database", 5)
     conn = get_connection()
@@ -182,14 +181,12 @@ try:
     get_carriers(conn)
     get_facilities(conn)
 
-    _step("Training ML cost model", 68)
-    get_cost_model(len(df), df)
-
-    _step("Training risk model", 82)
-    get_risk_model(len(df), df)
+    _step("Initializing models", 75)
+    # PACE FT-Transformer replaces old LightGBM models
+    # Old get_cost_model / get_risk_model calls removed
 
     _step("Preparing dashboards", 90)
-    _df = df.copy()
+    _df = df.copy() 
     _df["ship_date_dt"] = pd.to_datetime(_df["ship_date"])
     _df["week"] = _df["ship_date_dt"].dt.to_period("W").dt.start_time
     st.session_state["_preload_df"] = _df
