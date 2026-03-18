@@ -1,8 +1,10 @@
 # File: pages/7_Accessorial_Tracker.py
-import streamlit as st
+import os
+import sys
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-import sys, os
+import streamlit as st
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
@@ -11,9 +13,9 @@ from utils.database import get_connection, get_shipments_with_charges
 from utils.mock_data import generate_mock_shipments
 from utils.styling import (
     inject_css, top_nav,
-    NAVY_500, NAVY_900, NAVY_100,
-    RISK_HIGH_FG, RISK_MED_FG, RISK_LOW_FG,
+    NAVY_500, RISK_HIGH_FG, RISK_MED_FG, RISK_LOW_FG,
 )
+from pipeline.config import CHARGE_TYPE_LABELS
 
 st.set_page_config(
     page_title="PACE — Accessorial Tracker",
@@ -31,174 +33,207 @@ if not check_auth():
 username = st.session_state.get("username", "User")
 top_nav(username)
 
-conn = get_connection()
+# ── Model availability ────────────────────────────────────────────
+MODEL_READY = (
+    os.path.exists("models/pace_transformer_weights.pt") and
+    os.path.exists("models/artifacts.pkl")
+)
+
+# ── PACE charge type colors ───────────────────────────────────────
+CHARGE_COLORS = {
+    "No Charge":            "#34D399",
+    "Detention":            "#FCD34D",
+    "Safety Surcharge":     "#FB923C",
+    "Compliance Fee":       "#F87171",
+    "Hazmat Fee":           "#C084FC",
+    "High Risk / Multiple": "#EF4444",
+}
+
+TIER_COLORS = {
+    "Critical": "#F87171",
+    "High":     "#FB923C",
+    "Medium":   "#FCD34D",
+    "Low":      "#34D399",
+    "None":     "#94A3B8",
+}
+
+# ── Load data ─────────────────────────────────────────────────────
+conn   = get_connection()
 df_raw = get_shipments_with_charges(conn) if conn is not None else pd.DataFrame()
+
 if df_raw.empty:
-    _mock = generate_mock_shipments(300)
+    _mock  = generate_mock_shipments(300)
     df_raw = _mock[_mock["accessorial_charge_usd"] > 0].copy()
-    df_raw["accessorial_type"] = df_raw.get("accessorial_type", "Unknown")
     st.info("Live database unavailable — showing demo data.", icon="ℹ️")
 
-df_raw["ship_date_dt"] = pd.to_datetime(df_raw["ship_date"])
-df_all = df_raw  # module-level alias used by dialogs
+# ── Normalize columns ─────────────────────────────────────────────
+# Support both old schema and new PACE schema
+if "accessorial_type" not in df_raw.columns:
+    df_raw["accessorial_type"] = "Unknown"
+if "charge_type" not in df_raw.columns:
+    df_raw["charge_type"] = df_raw.get("accessorial_type", "Unknown")
+if "risk_score_pct" not in df_raw.columns:
+    if "risk_score" in df_raw.columns:
+        df_raw["risk_score_pct"] = df_raw["risk_score"] * 100
+    else:
+        df_raw["risk_score_pct"] = 0.0
+if "risk_label" not in df_raw.columns:
+    if "risk_tier" in df_raw.columns:
+        df_raw["risk_label"] = df_raw["risk_tier"]
+    else:
+        df_raw["risk_label"] = df_raw["risk_score_pct"].apply(
+            lambda s: "Critical" if s >= 75 else
+                      "High"     if s >= 50 else
+                      "Medium"   if s >= 25 else
+                      "Low"      if s > 0  else "None"
+        )
+if "ship_date_dt" not in df_raw.columns:
+    if "ship_date" in df_raw.columns:
+        df_raw["ship_date_dt"] = pd.to_datetime(df_raw["ship_date"], errors="coerce")
+    else:
+        df_raw["ship_date_dt"] = pd.Timestamp.now()
+
+# Check if we have PACE scored data in session
+if st.session_state.get("upload_scored") is not None:
+    pace_scored = st.session_state["upload_scored"]
+    if "charge_type" in pace_scored.columns and "risk_score_pct" in pace_scored.columns:
+        st.success(
+            f"Showing PACE model predictions for {len(pace_scored):,} scored records. "
+            "Upload new data on the Upload page to refresh.",
+            icon="✅"
+        )
+        # Merge scored data into df_raw if dot_number available
+        if "dot_number" in pace_scored.columns and "dot_number" in df_raw.columns:
+            df_raw = df_raw.merge(
+                pace_scored[["dot_number", "charge_type", "risk_score_pct", "risk_label"]],
+                on="dot_number", how="left", suffixes=("", "_pace")
+            )
+            for col in ["charge_type", "risk_score_pct", "risk_label"]:
+                if f"{col}_pace" in df_raw.columns:
+                    df_raw[col] = df_raw[f"{col}_pace"].fillna(df_raw[col])
+                    df_raw.drop(columns=[f"{col}_pace"], inplace=True)
+
+df_all = df_raw.copy()
 
 
-# ── Date-range filter helpers ─────────────────────────────────────────────────
-def _filter_by_range(df: pd.DataFrame, sel: str) -> pd.DataFrame:
-    days_map = {"1M": 30, "3M": 90, "6M": 180, "1Y": 365}
-    if sel not in days_map:
-        return df
-    cutoff = df["ship_date_dt"].max() - pd.Timedelta(days=days_map[sel])
-    return df[df["ship_date_dt"] >= cutoff]
+# ── Chart builders ────────────────────────────────────────────────
 
-
-def _range_buttons(chart_key: str):
-    opts = ["1M", "3M", "6M", "1Y", "All"]
-    skey = f"popup_range_{chart_key}"
-    if skey not in st.session_state:
-        st.session_state[skey] = "All"
-    cols = st.columns(len(opts))
-    for col, lbl in zip(cols, opts):
-        with col:
-            kind = "primary" if st.session_state[skey] == lbl else "secondary"
-            if st.button(lbl, key=f"rb_{chart_key}_{lbl}", type=kind,
-                         width="stretch"):
-                st.session_state[skey] = lbl
-    return st.session_state[skey]
-
-
-def _sort_buttons(chart_key: str):
-    opts = ["Value ↑", "Value ↓", "A-Z"]
-    skey = f"sort_{chart_key}"
-    if skey not in st.session_state:
-        st.session_state[skey] = "Value ↓"
-    cols = st.columns(len(opts))
-    for col, lbl in zip(cols, opts):
-        with col:
-            kind = "primary" if st.session_state[skey] == lbl else "secondary"
-            if st.button(lbl, key=f"sb_{chart_key}_{lbl}", type=kind,
-                         width="stretch"):
-                st.session_state[skey] = lbl
-    return st.session_state[skey]
-
-
-# ── Chart-builder functions ───────────────────────────────────────────────────
-def _build_donut_fig(df_with_acc: pd.DataFrame, total_acc: float,
-                     height=280) -> go.Figure:
+def _build_donut_fig(df_in: pd.DataFrame, total_acc: float,
+                     height: int = 280) -> go.Figure:
+    # Use PACE charge_type if available, fall back to accessorial_type
+    type_col = "charge_type" if "charge_type" in df_in.columns else "accessorial_type"
     type_data = (
-        df_with_acc.groupby("accessorial_type")["accessorial_charge_usd"]
+        df_in.groupby(type_col)["accessorial_charge_usd"]
         .agg(total="sum", count="count")
         .reset_index()
         .sort_values("total", ascending=False)
     )
+    colors = [CHARGE_COLORS.get(t, "#7C3AED")
+              for t in type_data[type_col]]
     fig = go.Figure(go.Pie(
-        labels=type_data["accessorial_type"],
+        labels=type_data[type_col],
         values=type_data["total"],
         hole=0.55,
-        marker_colors=[RISK_HIGH_FG, RISK_MED_FG, NAVY_500, "#7C3AED"],
+        marker_colors=colors,
         textinfo="label+percent",
-        hovertemplate="<b>%{label}</b><br>Total: $%{value:,.0f}<br>Share: %{percent}<extra></extra>",
+        hovertemplate=(
+            "<b>%{label}</b><br>Total: $%{value:,.0f}"
+            "<br>Share: %{percent}<extra></extra>"
+        ),
     ))
     fig.add_annotation(
         text=f"${total_acc:,.0f}", x=0.5, y=0.5,
-        font_size=16, font_color="#111827", showarrow=False, font_family="Inter",
+        font_size=16, font_color="#E2E8F0", showarrow=False,
     )
     fig.update_layout(
         margin=dict(l=0, r=0, t=8, b=0), height=height,
         paper_bgcolor="#0f0a1e", showlegend=True,
         font=dict(color="#A78BFA"),
-        legend=dict(orientation="v", x=1.0, y=0.5,
-                    bgcolor="rgba(15,10,30,0.7)", font=dict(color="#FFFFFF")),
+        legend=dict(
+            orientation="v", x=1.0, y=0.5,
+            bgcolor="rgba(15,10,30,0.7)",
+            font=dict(color="#FFFFFF"),
+        ),
     )
     return fig
 
 
-def _build_carrier_acc_fig(df_with_acc: pd.DataFrame, height=280, sort_by="Value ↓") -> go.Figure:
-    carrier_acc = (
-        df_with_acc.groupby("carrier")
-        .agg(total=("accessorial_charge_usd", "sum"),
-             count=("accessorial_charge_usd", "count"),
-             avg  =("accessorial_charge_usd", "mean"))
-        .reset_index()
+def _build_risk_distribution_fig(df_in: pd.DataFrame,
+                                  height: int = 260) -> go.Figure:
+    """PACE risk score distribution by charge type."""
+    if "risk_score_pct" not in df_in.columns:
+        return go.Figure()
+    type_col = "charge_type" if "charge_type" in df_in.columns else "accessorial_type"
+    fig = go.Figure()
+    for charge in CHARGE_TYPE_LABELS:
+        subset = df_in[df_in[type_col] == charge]["risk_score_pct"]
+        if len(subset) > 0:
+            fig.add_trace(go.Box(
+                y=subset,
+                name=charge,
+                marker_color=CHARGE_COLORS.get(charge, "#A78BFA"),
+                boxmean=True,
+            ))
+    fig.update_layout(
+        margin=dict(l=0, r=0, t=8, b=0), height=height,
+        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+        font=dict(color="#A78BFA"),
+        xaxis=dict(color="#94A3B8",
+                   gridcolor="rgba(150,50,200,0.15)"),
+        yaxis=dict(title="Risk Score (%)", color="#94A3B8",
+                   gridcolor="rgba(150,50,200,0.15)", range=[0, 100]),
+        showlegend=False,
     )
-    if sort_by == "Value ↑":
-        carrier_acc = carrier_acc.sort_values("total", ascending=False)
-    elif sort_by == "Value ↓":
-        carrier_acc = carrier_acc.sort_values("total", ascending=True)
-    else:
-        carrier_acc = carrier_acc.sort_values("carrier", ascending=False)
+    return fig
+
+
+def _build_carrier_fig(df_in: pd.DataFrame,
+                        height: int = 280) -> go.Figure:
+    carrier_col = "carrier" if "carrier" in df_in.columns else "carrier_phy_state"
+    if carrier_col not in df_in.columns:
+        return go.Figure()
+    carrier_data = (
+        df_in.groupby(carrier_col)
+        .agg(
+            total=("accessorial_charge_usd", "sum"),
+            count=("accessorial_charge_usd", "count"),
+            avg_risk=("risk_score_pct", "mean") if "risk_score_pct" in df_in.columns
+                     else ("accessorial_charge_usd", "count"),
+        )
+        .reset_index()
+        .sort_values("total", ascending=True)
+        .tail(15)
+    )
     fig = go.Figure(go.Bar(
-        x=carrier_acc["total"],
-        y=carrier_acc["carrier"],
+        x=carrier_data["total"],
+        y=carrier_data[carrier_col],
         orientation="h",
         marker_color="#9333EA",
-        text=carrier_acc["total"].apply(lambda v: f"${v:,.0f}"),
+        text=carrier_data["total"].apply(lambda v: f"${v:,.0f}"),
         textposition="outside",
-        customdata=carrier_acc[["count", "avg"]].values,
-        hovertemplate=(
-            "<b>%{y}</b><br>"
-            "Total: $%{x:,.0f}<br>"
-            "Occurrences: %{customdata[0]}<br>"
-            "Avg per shipment: $%{customdata[1]:,.2f}<extra></extra>"
-        ),
+        textfont={"color": "#E2E8F0"},
     ))
     fig.update_layout(
         margin=dict(l=0, r=80, t=8, b=0), height=height,
         plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
         font=dict(color="#A78BFA"),
-        xaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)",
-                   color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
-        yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8",
-                   linecolor="rgba(150,50,200,0.2)"),
+        xaxis=dict(tickprefix="$",
+                   gridcolor="rgba(150,50,200,0.15)", color="#94A3B8"),
+        yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8"),
     )
     return fig
 
 
-def _build_facility_fig(df_with_acc: pd.DataFrame, height=260, sort_by="Value ↓") -> go.Figure:
-    fac_acc = (
-        df_with_acc.groupby("facility")
-        .agg(total=("accessorial_charge_usd", "sum"),
-             avg  =("accessorial_charge_usd", "mean"),
-             count=("accessorial_charge_usd", "count"))
-        .reset_index()
-    )
-    if sort_by == "Value ↑":
-        fac_acc = fac_acc.sort_values("total", ascending=False)
-    elif sort_by == "Value ↓":
-        fac_acc = fac_acc.sort_values("total", ascending=True)
-    else:
-        fac_acc = fac_acc.sort_values("facility", ascending=False)
-    fig = go.Figure(go.Bar(
-        x=fac_acc["total"],
-        y=fac_acc["facility"].apply(lambda v: v if len(v) <= 30 else v[:27] + "…"),
-        orientation="h",
-        marker_color=RISK_HIGH_FG,
-        text=fac_acc["total"].apply(lambda v: f"${v:,.0f}"),
-        textposition="outside",
-    ))
-    fig.update_layout(
-        margin=dict(l=0, r=80, t=8, b=0), height=height,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
-        font=dict(color="#A78BFA"),
-        xaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)",
-                   color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
-        yaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8",
-                   linecolor="rgba(150,50,200,0.2)"),
-    )
-    return fig
-
-
-def _build_trend_fig(df_with_acc: pd.DataFrame, height=260) -> go.Figure:
-    tmp = df_with_acc.copy()
+def _build_trend_fig(df_in: pd.DataFrame, height: int = 260) -> go.Figure:
+    tmp = df_in.copy()
     tmp["week"] = tmp["ship_date_dt"].dt.to_period("W").dt.start_time
-    weekly_acc = (
+    weekly = (
         tmp.groupby("week")["accessorial_charge_usd"]
-        .sum()
-        .reset_index()
+        .sum().reset_index()
         .rename(columns={"accessorial_charge_usd": "total"})
     )
     fig = go.Figure(go.Scatter(
-        x=weekly_acc["week"], y=weekly_acc["total"],
+        x=weekly["week"], y=weekly["total"],
         mode="lines+markers",
         line=dict(color=RISK_HIGH_FG, width=2),
         marker=dict(color=RISK_HIGH_FG, size=6),
@@ -209,88 +244,212 @@ def _build_trend_fig(df_with_acc: pd.DataFrame, height=260) -> go.Figure:
         margin=dict(l=0, r=0, t=8, b=0), height=height,
         plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
         font=dict(color="#A78BFA"),
-        xaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8",
-                   linecolor="rgba(150,50,200,0.2)"),
-        yaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)",
-                   color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
+        xaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8"),
+        yaxis=dict(tickprefix="$",
+                   gridcolor="rgba(150,50,200,0.15)", color="#94A3B8"),
     )
     return fig
 
 
-# ── Expand dialogs (module-level) ─────────────────────────────────────────────
-@st.dialog("Accessorial Costs by Type", width="large")
+def _build_risk_tier_fig(df_in: pd.DataFrame,
+                          height: int = 260) -> go.Figure:
+    """Bar chart of avg accessorial charge by PACE risk label."""
+    if "risk_label" not in df_in.columns:
+        return go.Figure()
+    tier_data = (
+        df_in.groupby("risk_label")
+        .agg(avg_acc=("accessorial_charge_usd", "mean"),
+             count=("accessorial_charge_usd", "count"))
+        .reset_index()
+    )
+    order = ["None", "Low", "Medium", "High", "Critical"]
+    tier_data["order"] = tier_data["risk_label"].map(
+        {t: i for i, t in enumerate(order)}
+    )
+    tier_data = tier_data.sort_values("order")
+    colors = [TIER_COLORS.get(t, "#94A3B8") for t in tier_data["risk_label"]]
+    fig = go.Figure(go.Bar(
+        x=tier_data["risk_label"],
+        y=tier_data["avg_acc"],
+        marker_color=colors,
+        text=tier_data["avg_acc"].apply(lambda v: f"${v:,.0f}"),
+        textposition="outside",
+        textfont={"color": "#E2E8F0"},
+    ))
+    fig.update_layout(
+        margin=dict(l=0, r=0, t=8, b=0), height=height,
+        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+        font=dict(color="#A78BFA"),
+        xaxis=dict(color="#94A3B8",
+                   gridcolor="rgba(150,50,200,0.15)"),
+        yaxis=dict(tickprefix="$", color="#94A3B8",
+                   gridcolor="rgba(150,50,200,0.15)"),
+    )
+    return fig
+
+
+# ── Dialogs ───────────────────────────────────────────────────────
+
+@st.dialog("Accessorial Costs by Charge Type", width="large")
 def _popup_donut():
     df_acc = df_all[df_all["accessorial_charge_usd"] > 0].copy()
-    total = df_acc["accessorial_charge_usd"].sum()
+    total  = df_acc["accessorial_charge_usd"].sum()
     st.caption(f"{len(df_acc):,} shipments with accessorial charges")
     if df_acc.empty:
         st.info("No accessorial charges available.")
     else:
-        st.plotly_chart(_build_donut_fig(df_acc, total, height=480),
-                        width="stretch")
+        st.plotly_chart(
+            _build_donut_fig(df_acc, total, height=480),
+            use_container_width=True,
+        )
+
+
+@st.dialog("Risk Score by Charge Type", width="large")
+def _popup_risk_dist():
+    df_acc = df_all[df_all["accessorial_charge_usd"] > 0].copy()
+    st.caption("Distribution of PACE risk scores across charge types")
+    if df_acc.empty:
+        st.info("No data available.")
+    else:
+        st.plotly_chart(
+            _build_risk_distribution_fig(df_acc, height=480),
+            use_container_width=True,
+        )
 
 
 @st.dialog("Accessorial Costs by Carrier", width="large")
-def _popup_carrier_acc():
-    sort_by = _sort_buttons("carrier_acc")
+def _popup_carrier():
     df_acc = df_all[df_all["accessorial_charge_usd"] > 0].copy()
     st.caption(f"{len(df_acc):,} shipments with accessorial charges")
     if df_acc.empty:
         st.info("No data available.")
     else:
-        st.plotly_chart(_build_carrier_acc_fig(df_acc, height=480, sort_by=sort_by),
-                        width="stretch")
-
-
-@st.dialog("Accessorial Costs by Facility", width="large")
-def _popup_facility():
-    sort_by = _sort_buttons("facility")
-    df_acc = df_all[df_all["accessorial_charge_usd"] > 0].copy()
-    st.caption(f"{len(df_acc):,} shipments with accessorial charges")
-    if df_acc.empty:
-        st.info("No data available.")
-    else:
-        st.plotly_chart(_build_facility_fig(df_acc, height=480, sort_by=sort_by),
-                        width="stretch")
+        st.plotly_chart(
+            _build_carrier_fig(df_acc, height=480),
+            use_container_width=True,
+        )
 
 
 @st.dialog("Accessorial Cost Trend", width="large")
 def _popup_trend():
-    sel = _range_buttons("trend")
-    df_f = _filter_by_range(df_all, sel)
-    df_f_acc = df_f[df_f["accessorial_charge_usd"] > 0].copy()
-    st.caption(f"{len(df_f):,} shipments · {sel} view")
-    if df_f_acc.empty:
-        st.info("No trend data for the selected range.")
+    df_acc = df_all[df_all["accessorial_charge_usd"] > 0].copy()
+    if df_acc.empty:
+        st.info("No trend data available.")
     else:
-        st.plotly_chart(_build_trend_fig(df_f_acc, height=480),
-                        width="stretch")
+        st.plotly_chart(
+            _build_trend_fig(df_acc, height=480),
+            use_container_width=True,
+        )
 
 
-# ── Inline filters ────────────────────────────────────────────────────────────
-acc_types = sorted(df_all["accessorial_type"].dropna().unique())
-min_date  = df_all["ship_date_dt"].min().date()
-max_date  = df_all["ship_date_dt"].max().date()
+@st.dialog("PACE Risk Score Detail", width="large")
+def _show_risk_detail(row: dict):
+    score  = float(row.get("risk_score_pct", 0))
+    label  = row.get("risk_label", "Unknown")
+    charge = row.get("charge_type",
+                     row.get("accessorial_type", "Unknown"))
+    color  = TIER_COLORS.get(label, "#94A3B8")
+    c_color = CHARGE_COLORS.get(charge, "#A78BFA")
+
+    h1, h2 = st.columns([4, 1])
+    with h1:
+        st.markdown(f"#### Shipment Risk Detail")
+    with h2:
+        st.markdown(
+            f"<div style='text-align:right;padding-top:6px;'>"
+            f"<span style='border:1px solid {color};color:{color};"
+            f"border-radius:4px;padding:3px 10px;font-size:13px;"
+            f"font-weight:700;'>{label}</span></div>",
+            unsafe_allow_html=True,
+        )
+    st.divider()
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Risk Score", f"{score:.1f}%")
+    c2.metric("Risk Label", label)
+    c3.metric("Predicted Charge", charge)
+
+    # Probabilities if available
+    prob_cols = [c for c in row.keys() if c.startswith("prob_")]
+    if prob_cols:
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("**Charge Type Probabilities**")
+        prob_data = {
+            col.replace("prob_", "").replace("_", " ").title(): float(row[col])
+            for col in prob_cols
+        }
+        prob_df = pd.DataFrame(
+            prob_data.items(), columns=["Charge Type", "Probability"]
+        ).sort_values("Probability", ascending=False)
+        prob_fig = go.Figure(go.Bar(
+            x=prob_df["Probability"] * 100,
+            y=prob_df["Charge Type"],
+            orientation="h",
+            marker_color=[
+                CHARGE_COLORS.get(ct, "#A78BFA")
+                for ct in prob_df["Charge Type"]
+            ],
+            text=[f"{v*100:.1f}%" for v in prob_df["Probability"]],
+            textposition="outside",
+            textfont={"color": "#E2E8F0"},
+        ))
+        prob_fig.update_layout(
+            margin=dict(l=0, r=60, t=8, b=0), height=200,
+            plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+            font=dict(color="#A78BFA"),
+            xaxis=dict(ticksuffix="%", range=[0, 110],
+                       color="#94A3B8",
+                       gridcolor="rgba(150,50,200,0.15)"),
+            yaxis=dict(color="#94A3B8",
+                       gridcolor="rgba(150,50,200,0.15)",
+                       autorange="reversed"),
+        )
+        st.plotly_chart(prob_fig, use_container_width=True)
+
+    # Raw row data
+    with st.expander("Raw Record", expanded=False):
+        st.json({k: str(v) for k, v in row.items()
+                 if not k.startswith("_")})
+
+
+# ── Filters ───────────────────────────────────────────────────────
+type_col = "charge_type" if "charge_type" in df_all.columns else "accessorial_type"
+all_types    = sorted(df_all[type_col].dropna().unique())
+carrier_col  = "carrier" if "carrier" in df_all.columns else None
+all_carriers = sorted(df_all[carrier_col].dropna().unique()) if carrier_col else []
+
+min_date = df_all["ship_date_dt"].min()
+max_date = df_all["ship_date_dt"].max()
+if pd.isna(min_date): min_date = pd.Timestamp("2020-01-01")
+if pd.isna(max_date): max_date = pd.Timestamp.now()
 
 with st.expander("⚙️ Filters", expanded=False):
     f1, f2, f3 = st.columns(3)
     with f1:
-        sel_types = st.multiselect("Accessorial Type", acc_types, default=acc_types)
-    with f2:
-        sel_carriers = st.multiselect(
-            "Carrier", sorted(df_all["carrier"].unique()),
-            default=sorted(df_all["carrier"].unique())
+        sel_types = st.multiselect(
+            "Charge Type", all_types, default=all_types
         )
+    with f2:
+        if all_carriers:
+            sel_carriers = st.multiselect(
+                "Carrier", all_carriers, default=all_carriers
+            )
+        else:
+            sel_carriers = []
     with f3:
-        date_range = st.date_input("Date Range", value=(min_date, max_date),
-                                   min_value=min_date, max_value=max_date)
+        date_range = st.date_input(
+            "Date Range",
+            value=(min_date.date(), max_date.date()),
+            min_value=min_date.date(),
+            max_value=max_date.date(),
+        )
 
-# ── Apply filters ─────────────────────────────────────────────────────────────
+# ── Apply filters ─────────────────────────────────────────────────
 df = df_all.copy()
 if sel_types:
-    df = df[df["accessorial_type"].isin(sel_types)]
-if sel_carriers:
-    df = df[df["carrier"].isin(sel_carriers)]
+    df = df[df[type_col].isin(sel_types)]
+if sel_carriers and carrier_col:
+    df = df[df[carrier_col].isin(sel_carriers)]
 if len(date_range) == 2:
     df = df[
         (df["ship_date_dt"] >= pd.Timestamp(date_range[0])) &
@@ -299,107 +458,132 @@ if len(date_range) == 2:
 
 df_with_acc = df[df["accessorial_charge_usd"] > 0].copy()
 
-# ── Header ────────────────────────────────────────────────────────────────────
+# ── Header ────────────────────────────────────────────────────────
 st.markdown("## Accessorial Cost Tracker")
-st.caption("Understand where unexpected charges come from, which lanes carry the most risk, and why costs vary.")
+st.caption(
+    "Track where unexpected charges come from, which carriers carry the "
+    "most risk, and how PACE risk scores correlate with actual charges."
+)
+
+if not MODEL_READY:
+    st.info(
+        "PACE model not yet trained — showing historical charge data. "
+        "Risk score columns will populate after training completes.",
+        icon="ℹ️"
+    )
+
 st.divider()
 
-# ── KPI row ───────────────────────────────────────────────────────────────────
-total_acc       = df["accessorial_charge_usd"].sum()
+# ── KPI row ───────────────────────────────────────────────────────
+total_acc       = df_with_acc["accessorial_charge_usd"].sum()
 shipments_w_acc = len(df_with_acc)
 total_shipments = len(df)
 acc_rate        = (shipments_w_acc / total_shipments * 100) if total_shipments else 0
-avg_acc         = df_with_acc["accessorial_charge_usd"].mean() if len(df_with_acc) else 0
-max_acc         = df_with_acc["accessorial_charge_usd"].max()  if len(df_with_acc) else 0
-pct_of_total    = (total_acc / df["total_cost_usd"].sum() * 100) if df["total_cost_usd"].sum() else 0
+avg_acc         = df_with_acc["accessorial_charge_usd"].mean() if shipments_w_acc else 0
+avg_risk        = df["risk_score_pct"].mean() if "risk_score_pct" in df.columns else 0
+pct_of_total    = (
+    total_acc / df["total_cost_usd"].sum() * 100
+    if "total_cost_usd" in df.columns and df["total_cost_usd"].sum() > 0
+    else 0
+)
 
 k1, k2, k3, k4, k5 = st.columns(5)
 with k1:
     st.metric("Total Accessorial", f"${total_acc:,.0f}")
 with k2:
-    st.metric("Affected Shipments", f"{shipments_w_acc:,} of {total_shipments:,}")
+    st.metric("Affected Shipments", f"{shipments_w_acc:,} / {total_shipments:,}")
 with k3:
     st.metric("Accessorial Rate", f"{acc_rate:.1f}%")
 with k4:
-    st.metric("Avg per Affected Shipment", f"${avg_acc:,.2f}")
+    st.metric("Avg per Shipment", f"${avg_acc:,.2f}")
 with k5:
-    st.metric("% of Total Spend", f"{pct_of_total:.1f}%")
+    st.metric("Avg PACE Risk Score",
+              f"{avg_risk:.1f}%" if MODEL_READY else "N/A")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ── Breakdown by type (donut) + by carrier (bar) ──────────────────────────────
+# ── Row 1: Donut + Risk distribution ─────────────────────────────
 col_l, col_r = st.columns(2, gap="medium")
 
 with col_l:
     with st.container(border=True):
         hdr, btn = st.columns([9, 1])
         with hdr:
-            st.markdown("#### Accessorial Costs by Type")
-            st.caption("Which charges are costing the most?")
+            st.markdown("#### Charges by Type")
+            st.caption("Which PACE charge types are costing the most?")
         with btn:
-            if st.button("⤢", key="exp_donut", help="Expand chart"):
+            if st.button("⤢", key="exp_donut"):
                 _popup_donut()
-
-        type_data = (
-            df_with_acc.groupby("accessorial_type")["accessorial_charge_usd"]
-            .agg(total="sum", count="count")
-            .reset_index()
-            .sort_values("total", ascending=False)
-        )
-        if not type_data.empty:
-            st.plotly_chart(_build_donut_fig(df_with_acc, total_acc),
-                            width="stretch")
+        if not df_with_acc.empty:
+            st.plotly_chart(
+                _build_donut_fig(df_with_acc, total_acc),
+                use_container_width=True,
+            )
+            type_summary = (
+                df_with_acc.groupby(type_col)["accessorial_charge_usd"]
+                .agg(Total="sum", Count="count")
+                .reset_index()
+                .rename(columns={type_col: "Charge Type"})
+                .sort_values("Total", ascending=False)
+            )
             st.dataframe(
-                type_data.rename(columns={
-                    "accessorial_type": "Type",
-                    "total":            "Total Cost ($)",
-                    "count":            "Occurrences",
-                }),
-                width="stretch",
+                type_summary,
                 hide_index=True,
+                use_container_width=True,
                 column_config={
-                    "Total Cost ($)": st.column_config.NumberColumn(format="$%.2f")
+                    "Total": st.column_config.NumberColumn(format="$%.2f")
                 },
             )
         else:
-            st.info("No accessorial charges match the current filters.")
+            st.info("No accessorial charges match current filters.")
 
 with col_r:
     with st.container(border=True):
         hdr, btn = st.columns([9, 1])
         with hdr:
-            st.markdown("#### Accessorial Costs by Carrier")
-            st.caption("Which carriers generate the most unexpected charges?")
+            st.markdown("#### Risk Score by Charge Type")
+            st.caption("PACE risk score distribution per charge category")
         with btn:
-            if st.button("⤢", key="exp_carrier_acc", help="Expand chart"):
-                _popup_carrier_acc()
-
-        if not df_with_acc.empty:
-            st.plotly_chart(_build_carrier_acc_fig(df_with_acc),
-                            width="stretch")
+            if st.button("⤢", key="exp_risk_dist"):
+                _popup_risk_dist()
+        if not df_with_acc.empty and MODEL_READY:
+            st.plotly_chart(
+                _build_risk_distribution_fig(df_with_acc),
+                use_container_width=True,
+            )
+        elif not MODEL_READY:
+            st.markdown(
+                "<div style='text-align:center;padding:60px 20px;"
+                "color:#9CA3AF;'>"
+                "<div style='font-size:32px;'>📊</div>"
+                "<div style='font-size:13px;margin-top:8px;'>"
+                "Available after PACE model training</div></div>",
+                unsafe_allow_html=True,
+            )
         else:
-            st.info("No data for the current filter selection.")
+            st.info("No data for current filters.")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ── By facility + trend over time ─────────────────────────────────────────────
+# ── Row 2: Carrier bar + trend ────────────────────────────────────
 col_a, col_b = st.columns(2, gap="medium")
 
 with col_a:
     with st.container(border=True):
         hdr, btn = st.columns([9, 1])
         with hdr:
-            st.markdown("#### Accessorial Costs by Facility")
-            st.caption("Which facilities trigger the most charges?")
+            st.markdown("#### Charges by Carrier")
+            st.caption("Top 15 carriers by total accessorial spend")
         with btn:
-            if st.button("⤢", key="exp_facility", help="Expand chart"):
-                _popup_facility()
-
+            if st.button("⤢", key="exp_carrier"):
+                _popup_carrier()
         if not df_with_acc.empty:
-            st.plotly_chart(_build_facility_fig(df_with_acc),
-                            width="stretch")
+            st.plotly_chart(
+                _build_carrier_fig(df_with_acc),
+                use_container_width=True,
+            )
         else:
-            st.info("No data for the current filter selection.")
+            st.info("No data for current filters.")
 
 with col_b:
     with st.container(border=True):
@@ -408,279 +592,142 @@ with col_b:
             st.markdown("#### Accessorial Cost Trend")
             st.caption("Weekly accessorial spend over time")
         with btn:
-            if st.button("⤢", key="exp_trend", help="Expand chart"):
+            if st.button("⤢", key="exp_trend"):
                 _popup_trend()
-
         if not df_with_acc.empty:
-            st.plotly_chart(_build_trend_fig(df_with_acc),
-                            width="stretch")
+            st.plotly_chart(
+                _build_trend_fig(df_with_acc),
+                use_container_width=True,
+            )
         else:
-            st.info("No trend data available for this filter.")
+            st.info("No trend data available.")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ── Why costs vary: risk tier analysis ───────────────────────────────────────
+# ── Row 3: Avg charge by PACE risk tier ───────────────────────────
 with st.container(border=True):
-    st.markdown("#### Why Do Some Shipments Cost So Much More?")
+    st.markdown("#### Avg Accessorial Charge by PACE Risk Label")
     st.caption(
-        "Shipments with high risk scores consistently have higher accessorial charges. "
-        "This table compares cost outcomes by risk tier."
+        "Higher PACE risk scores should correlate with higher actual charges. "
+        "This validates model accuracy over time."
     )
-
-    tier_analysis = (
-        df.groupby("risk_tier")
-        .agg(
-            count        =("shipment_id",            "count"),
-            avg_acc      =("accessorial_charge_usd", "mean"),
-            total_acc    =("accessorial_charge_usd", "sum"),
-            pct_with_acc =("accessorial_charge_usd",
-                           lambda x: (x > 0).mean() * 100),
-            avg_base     =("base_freight_usd",       "mean"),
-            avg_total    =("total_cost_usd",         "mean"),
+    if MODEL_READY and "risk_label" in df.columns:
+        tier_col, table_col = st.columns([3, 2], gap="large")
+        with tier_col:
+            st.plotly_chart(
+                _build_risk_tier_fig(df_with_acc),
+                use_container_width=True,
+            )
+        with table_col:
+            tier_table = (
+                df.groupby("risk_label")
+                .agg(
+                    Shipments   =("accessorial_charge_usd", "count"),
+                    Avg_Acc     =("accessorial_charge_usd", "mean"),
+                    Total_Acc   =("accessorial_charge_usd", "sum"),
+                    Pct_Charged =("accessorial_charge_usd",
+                                  lambda x: f"{(x > 0).mean()*100:.1f}%"),
+                    Avg_Risk    =("risk_score_pct", "mean"),
+                )
+                .reset_index()
+                .rename(columns={
+                    "risk_label":  "Risk Label",
+                    "Avg_Acc":     "Avg Charge ($)",
+                    "Total_Acc":   "Total Charge ($)",
+                    "Pct_Charged": "% Charged",
+                    "Avg_Risk":    "Avg Risk %",
+                })
+            )
+            order = ["None", "Low", "Medium", "High", "Critical"]
+            tier_table["_ord"] = tier_table["Risk Label"].map(
+                {t: i for i, t in enumerate(order)}
+            )
+            tier_table = tier_table.sort_values("_ord").drop(columns="_ord")
+            st.dataframe(
+                tier_table,
+                hide_index=True,
+                use_container_width=True,
+                column_config={
+                    "Avg Charge ($)":   st.column_config.NumberColumn(format="$%.2f"),
+                    "Total Charge ($)": st.column_config.NumberColumn(format="$%.2f"),
+                    "Avg Risk %":       st.column_config.NumberColumn(format="%.1f%%"),
+                },
+            )
+    else:
+        st.info(
+            "Risk tier analysis available after PACE model training. "
+            "Upload scored data on the Upload page to populate this section.",
+            icon="ℹ️"
         )
-        .reset_index()
-    )
-    tier_order = {"Low": 0, "Medium": 1, "High": 2}
-    tier_analysis["sort"] = tier_analysis["risk_tier"].map(tier_order)
-    tier_analysis = tier_analysis.sort_values("sort").drop(columns="sort")
-
-    t1, t2, t3 = st.columns(3)
-    tier_map = {r["risk_tier"]: r for _, r in tier_analysis.iterrows()}
-    for col_widget, tier, color in [
-        (t1, "Low",    RISK_LOW_FG),
-        (t2, "Medium", RISK_MED_FG),
-        (t3, "High",   RISK_HIGH_FG),
-    ]:
-        with col_widget:
-            if tier not in tier_map:
-                st.markdown(
-                    f"<div style='border-left:4px solid {color}; padding:12px 16px; "
-                    f"background:#FAFAFA; border-radius:0 8px 8px 0; margin-bottom:8px;'>"
-                    f"<div style='font-size:13px; font-weight:700; color:{color}; "
-                    f"text-transform:uppercase; letter-spacing:0.5px;'>{tier} Risk</div>"
-                    f"<div style='font-size:14px; color:#6B7280; margin-top:8px;'>No shipments</div>"
-                    f"</div>",
-                    unsafe_allow_html=True,
-                )
-            else:
-                row = tier_map[tier]
-                st.markdown(
-                    f"<div style='border-left:4px solid {color}; padding:12px 16px; "
-                    f"background:#FAFAFA; border-radius:0 8px 8px 0; margin-bottom:8px;'>"
-                    f"<div style='font-size:13px; font-weight:700; color:{color}; "
-                    f"text-transform:uppercase; letter-spacing:0.5px;'>{tier} Risk</div>"
-                    f"<div style='font-size:22px; font-weight:700; color:#111827; margin:6px 0;'>"
-                    f"${row['avg_acc']:,.2f}</div>"
-                    f"<div style='font-size:12px; color:#6B7280;'>avg accessorial charge</div>"
-                    f"<hr style='border:none; border-top:1px solid #E5E7EB; margin:10px 0;'>"
-                    f"<div style='font-size:12px; color:#374151;'>"
-                    f"<b>{row['pct_with_acc']:.0f}%</b> of shipments charged<br>"
-                    f"<b>{row['count']:.0f}</b> total shipments<br>"
-                    f"Avg total cost: <b>${row['avg_total']:,.2f}</b>"
-                    f"</div></div>",
-                    unsafe_allow_html=True,
-                )
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ── Top 15 most expensive shipments ──────────────────────────────────────────
+# ── Scored records table ──────────────────────────────────────────
 with st.container(border=True):
-    st.markdown("#### Top 15 Most Expensive Accessorial Shipments")
-    st.caption("Individual shipments with the highest unexpected charges")
-
-    top15 = (
-        df_with_acc.nlargest(15, "accessorial_charge_usd")
-        [[
-            "shipment_id", "ship_date", "carrier", "facility",
-            "accessorial_type", "accessorial_charge_usd",
-            "base_freight_usd", "total_cost_usd", "risk_tier",
-        ]]
-        .rename(columns={
-            "shipment_id":            "Shipment ID",
-            "ship_date":              "Ship Date",
-            "carrier":                "Carrier",
-            "facility":               "Facility",
-            "accessorial_type":       "Type",
-            "accessorial_charge_usd": "Accessorial ($)",
-            "base_freight_usd":       "Base Freight ($)",
-            "total_cost_usd":         "Total Cost ($)",
-            "risk_tier":              "Risk Tier",
-        })
-    )
-    st.dataframe(
-        top15,
-        width="stretch",
-        hide_index=True,
-        column_config={
-            "Accessorial ($)":  st.column_config.NumberColumn(format="$%.2f"),
-            "Base Freight ($)": st.column_config.NumberColumn(format="$%.2f"),
-            "Total Cost ($)":   st.column_config.NumberColumn(format="$%.2f"),
-        },
+    st.markdown("#### Shipment-Level PACE Predictions")
+    st.caption(
+        "Individual records with PACE risk scores and charge type predictions. "
+        "Click a row to view full detail."
     )
 
-st.markdown("<br>", unsafe_allow_html=True)
-
-# ── Risk Explanation & Recommended Actions (from ML pipeline write-back) ──────
-st.markdown("## Shipment Risk Details")
-st.caption(
-    "Individual shipment risk scores, explanations, and recommended actions "
-    "generated by the ML pipeline."
-)
-
-@st.cache_data(ttl=300)
-def load_risk_details(_conn):
-    """Load shipment risk details including ML-generated explanations."""
-    if _conn is None:
-        return pd.DataFrame()
-    query = """
-        SELECT TOP 500
-            s.ShipmentId,
-            s.ShipDate,
-            s.OriginRegion,
-            s.DestRegion,
-            s.AppointmentType,
-            s.DistanceMiles,
-            s.weight_lbs,
-            s.risk_score,
-            s.risk_tier,
-            s.risk_reason,
-            s.recommended_action
-        FROM Shipments s
-        WHERE s.risk_score IS NOT NULL
-        ORDER BY s.risk_score DESC
-    """
-    try:
-        return pd.read_sql(query, _conn)
-    except Exception:
-        return pd.DataFrame()
-
-risk_df = load_risk_details(conn)
-
-if risk_df.empty:
-    st.info(
-        "Risk explanations are generated by the ML pipeline. "
-        "Run `python scripts/ml_pipeline.py` to populate this section.",
-        icon="ℹ️",
-    )
-else:
-    # ── Filters ───────────────────────────────────────────────────────────────
-    with st.expander("⚙️ Risk Detail Filters", expanded=False):
-        rd1, rd2, rd3 = st.columns(3)
-        with rd1:
-            tier_opts = sorted(risk_df["risk_tier"].dropna().astype(str).unique().tolist())
-            sel_risk_tiers = st.multiselect("Risk Tier", tier_opts, default=tier_opts, key="risk_detail_tier")
-        with rd2:
-            min_s = float(risk_df["risk_score"].min())
-            max_s = float(risk_df["risk_score"].max())
-            score_range = st.slider("Risk Score Range", 0.0, 1.0,
-                                    (min_s, max_s), 0.01, key="risk_score_range")
-        with rd3:
-            search_id = st.text_input("Search Shipment ID", key="risk_search_id")
-
-    filtered_risk = risk_df.copy()
-    if sel_risk_tiers:
-        filtered_risk = filtered_risk[filtered_risk["risk_tier"].astype(str).isin(sel_risk_tiers)]
-    filtered_risk = filtered_risk[
-        (filtered_risk["risk_score"] >= score_range[0]) &
-        (filtered_risk["risk_score"] <= score_range[1])
+    # Build display columns from whatever is available
+    candidate_cols = [
+        "unique_id", "shipment_id", "dot_number",
+        "ship_date", "carrier", "carrier_phy_state",
+        "risk_score_pct", "risk_label", "charge_type",
+        "accessorial_charge_usd",
     ]
-    if search_id.strip():
-        filtered_risk = filtered_risk[
-            filtered_risk["ShipmentId"].astype(str).str.contains(search_id.strip(), na=False)
-        ]
+    display_cols = [c for c in candidate_cols if c in df.columns]
 
-    # ── KPI row ───────────────────────────────────────────────────────────────
-    rk1, rk2, rk3, rk4 = st.columns(4)
-    with rk1:
-        st.metric("Shipments Shown", len(filtered_risk))
-    with rk2:
-        high_n = int((filtered_risk["risk_tier"].astype(str) == "High").sum())
-        st.metric("High Risk", high_n)
-    with rk3:
-        med_n = int((filtered_risk["risk_tier"].astype(str) == "Medium").sum())
-        st.metric("Medium Risk", med_n)
-    with rk4:
-        avg_s = filtered_risk["risk_score"].mean() if not filtered_risk.empty else 0
-        st.metric("Avg Risk Score", f"{avg_s:.3f}")
+    if not display_cols:
+        st.info("No displayable columns found in current dataset.")
+    else:
+        search = st.text_input(
+            "Search by ID or carrier",
+            placeholder="Type to filter...",
+            label_visibility="collapsed",
+        )
+        display_df = df[display_cols].copy()
 
-    st.markdown("<br>", unsafe_allow_html=True)
+        if search.strip():
+            str_cols = display_df.select_dtypes(include=["object"]).columns
+            mask = pd.Series(False, index=display_df.index)
+            for col in str_cols:
+                mask |= (
+                    display_df[col].astype(str)
+                    .str.contains(search.strip(), case=False, na=False)
+                )
+            display_df = display_df[mask]
 
-    # ── Risk detail popup ─────────────────────────────────────────────────────
-    @st.dialog("Shipment Risk Detail", width="large")
-    def _show_risk_detail(row_data: dict):
-        tier  = str(row_data.get("risk_tier", "Unknown"))
-        score = float(row_data.get("risk_score", 0))
-        badge = {"High": "🔴 High", "Medium": "🟠 Medium", "Low": "🟢 Low"}.get(tier, tier)
-        TIER_COLORS = {
-            "High":   (RISK_HIGH_FG, "#FEE2E2"),
-            "Medium": (RISK_MED_FG,  "#FEF3C7"),
-            "Low":    (RISK_LOW_FG,  "#D1FAE5"),
-        }
-        fg_c, bg_c = TIER_COLORS.get(tier, ("#6B7280", "#F3F4F6"))
-
-        hc1, hc2 = st.columns([5, 1])
-        with hc1:
-            st.markdown(f"#### Shipment #{row_data.get('ShipmentId', '')} — {badge}")
-        with hc2:
-            st.markdown(
-                f"<div style='text-align:right; padding-top:6px;'>"
-                f"<span style='background:{bg_c}; color:{fg_c}; padding:4px 12px; "
-                f"border-radius:4px; font-size:13px; font-weight:700;'>{score:.3f}</span></div>",
-                unsafe_allow_html=True,
+        col_config = {}
+        if "risk_score_pct" in display_df.columns:
+            col_config["risk_score_pct"] = st.column_config.ProgressColumn(
+                "Risk Score",
+                format="%.1f%%",
+                min_value=0,
+                max_value=100,
             )
 
-        st.divider()
-        ic1, ic2, ic3 = st.columns(3)
-        ic1.write(f"**Ship Date:** {row_data.get('ShipDate', '')}")
-        ic1.write(f"**Appointment:** {row_data.get('AppointmentType', '')}")
-        ic2.write(f"**Route:** {row_data.get('OriginRegion', '')} → {row_data.get('DestRegion', '')}")
-        ic2.write(f"**Distance:** {row_data.get('DistanceMiles', '')} mi")
-        ic3.write(f"**Weight:** {row_data.get('weight_lbs', '')} lbs")
-        ic3.write(f"**Risk Tier:** {tier}")
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        reason = row_data.get("risk_reason", "")
-        action = row_data.get("recommended_action", "")
-        st.markdown("**Why this shipment is risky**")
-        st.info(reason if pd.notna(reason) and str(reason).strip() else "No explanation available.")
-        st.markdown("**Recommended action**")
-        st.success(action if pd.notna(action) and str(action).strip() else "No recommendation available.")
-
-    # ── Shipment risk table ───────────────────────────────────────────────────
-    if filtered_risk.empty:
-        st.info("No shipments match the selected filters.")
-    else:
-        st.caption("Click any row to view risk explanation and recommended action.")
-        table_cols = ["ShipmentId", "ShipDate", "OriginRegion", "DestRegion",
-                      "risk_score", "risk_tier", "DistanceMiles", "weight_lbs"]
-        display_df = filtered_risk[
-            [c for c in table_cols if c in filtered_risk.columns]
-        ].rename(columns={
-            "ShipmentId":    "Shipment ID",
-            "ShipDate":      "Ship Date",
-            "OriginRegion":  "Origin",
-            "DestRegion":    "Destination",
-            "risk_score":    "Risk Score",
-            "risk_tier":     "Risk Tier",
-            "DistanceMiles": "Miles",
-            "weight_lbs":    "Weight (lbs)",
-        })
-
         event = st.dataframe(
-            display_df,
-            width="stretch",
+            display_df.head(500),
+            use_container_width=True,
             hide_index=True,
             on_select="rerun",
             selection_mode="single-row",
-            column_config={
-                "Risk Score": st.column_config.ProgressColumn(
-                    "Risk Score", format="%.3f", min_value=0, max_value=1
-                ),
-            },
-            height=min(400, 40 + len(display_df) * 35),
+            column_config=col_config,
+            height=min(420, 40 + len(display_df.head(500)) * 35),
         )
 
-        selected_rows = event.selection.get("rows", []) if hasattr(event, "selection") else []
-        if selected_rows:
-            row_data = filtered_risk.iloc[selected_rows[0]].to_dict()
+        selected = (
+            event.selection.get("rows", [])
+            if hasattr(event, "selection") else []
+        )
+        if selected:
+            row_data = df[display_cols].iloc[selected[0]].to_dict()
             _show_risk_detail(row_data)
+
+        if len(display_df) > 500:
+            st.caption(
+                f"Showing first 500 of {len(display_df):,} records. "
+                "Use filters above to narrow results."
+            )

@@ -1,18 +1,17 @@
 # File: pages/4_Cost_Estimate.py
-import streamlit as st
-import pandas as pd
+import os
+import sys
 import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
-import sys, os
+import streamlit as st
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from auth_utils import check_auth
-from utils.database import get_connection, get_shipments
-from utils.mock_data import generate_mock_shipments
-from utils.styling import inject_css, top_nav, NAVY_500
-from utils.cost_model import get_cost_model
-from utils.risk_model import get_risk_model, predict_risk
+from utils.styling import inject_css, top_nav
+from pipeline.data_pipeline import get_data_pipeline
+from pipeline.config import CHARGE_TYPE_LABELS, CATEGORICAL_COLUMNS, CONTINUOUS_COLUMNS
 
 st.set_page_config(
     page_title="PACE — Cost Estimate",
@@ -30,303 +29,469 @@ if not check_auth():
 username = st.session_state.get("username", "User")
 top_nav(username)
 
-# ── Load data ─────────────────────────────────────────────────────────────────
-_conn   = get_connection()
-_df_raw = get_shipments(_conn) if _conn is not None else pd.DataFrame()
-if _df_raw.empty:
-    _df_raw = generate_mock_shipments(300)
-    st.info("Live database unavailable — showing demo data.", icon="ℹ️")
+# ── Model availability ────────────────────────────────────────────
+MODEL_READY = (
+    os.path.exists("models/pace_transformer_weights.pt") and
+    os.path.exists("models/artifacts.pkl")
+)
 
-df = _df_raw.copy()
-if "AppointmentType" not in df.columns:
-    df["AppointmentType"] = "Drop"
-df["AppointmentType"] = df["AppointmentType"].fillna("Drop")
+# ── Constants ─────────────────────────────────────────────────────
+TIER_COLORS = {
+    "Critical": "#F87171",
+    "High":     "#FB923C",
+    "Medium":   "#FCD34D",
+    "Low":      "#34D399",
+    "None":     "#94A3B8",
+}
 
-cost_model = get_cost_model(len(df), df)
-risk_model, _ = get_risk_model(len(df), df)
+CHARGE_COLORS = {
+    "No Charge":         "#34D399",
+    "Detention":         "#FCD34D",
+    "Safety Surcharge":  "#FB923C",
+    "Compliance Fee":    "#F87171",
+    "Hazmat Fee":        "#C084FC",
+    "High Risk / Multiple": "#EF4444",
+}
 
-# ── Header ────────────────────────────────────────────────────────────────────
-st.markdown("## Cost & Risk Estimator")
-st.caption("Predict total shipment cost and accessorial risk using machine learning.")
+# ── US States for dropdowns ───────────────────────────────────────
+US_STATES = [
+    "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA",
+    "HI","ID","IL","IN","IA","KS","KY","LA","ME","MD",
+    "MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ",
+    "NM","NY","NC","ND","OH","OK","OR","PA","RI","SC",
+    "SD","TN","TX","UT","VT","VA","WA","WV","WI","WY",
+    "UNKNOWN",
+]
+
+CARRIER_OPERATIONS = ["A", "B", "C", "D", "E", "F", "UNKNOWN"]
+CARRIER_SIZES      = ["A", "B", "C", "D", "E", "F", "G", "UNKNOWN"]
+SAFETY_RATINGS     = ["SATISFACTORY", "CONDITIONAL", "UNSATISFACTORY", "UNKNOWN"]
+UNIT_TYPES         = [
+    "STRAIGHT TRUCK", "TRUCK TRACTOR", "TRAILER", "BUS",
+    "MOTOR COACH", "VAN", "UNKNOWN",
+]
+
+# ── Header ────────────────────────────────────────────────────────
+st.markdown("## Manual Shipment Estimator")
+st.caption("Enter carrier and shipment details to predict accessorial risk with the PACE model.")
+
+if not MODEL_READY:
+    st.info(
+        "The PACE model is not yet trained. Predictions will be available once "
+        "training completes. You can still fill in details and save them.",
+        icon="⏳"
+    )
+
 st.divider()
 
-# ── Input form ────────────────────────────────────────────────────────────────
+# ── Layout ────────────────────────────────────────────────────────
 form_col, result_col = st.columns([2, 3], gap="large")
 
 with form_col:
+
+    # ── Carrier Profile ───────────────────────────────────────────
     with st.container(border=True):
-        st.markdown("#### Shipment Details")
-        carriers_list   = sorted(df["carrier"].dropna().unique())
-        facilities_list = sorted(df["facility"].dropna().unique())
-        appt_types_list = sorted(df["AppointmentType"].dropna().unique())
+        st.markdown("#### Carrier Profile")
 
-        carrier  = st.selectbox("Carrier",          carriers_list)
-        facility = st.selectbox("Facility",         facilities_list)
-        appt     = st.selectbox("Appointment Type", appt_types_list)
-        weight   = st.number_input("Weight (lbs)", min_value=100,  max_value=44_000,
-                                   value=10_000, step=500)
-        miles    = st.number_input("Miles",        min_value=50,   max_value=2_400,
-                                   value=500,    step=50)
-        estimate_clicked = st.button("Estimate Cost & Risk →", type="primary",
-                                     width="stretch")
+        dot_number = st.number_input(
+            "DOT Number",
+            min_value=0, max_value=9999999, value=0, step=1,
+            help="Enter USDOT number to auto-fill carrier data (production only)"
+        )
 
-    with st.expander("ℹ️ Model Info", expanded=False):
-        st.markdown(f"""
-**Cost model:** Random Forest Regressor
-**Risk model:** LightGBM Regressor
-**Training samples:** {len(df):,}
-**Cost features:** Carrier, Facility, Weight, Miles
-**Risk features:** Carrier, Facility, Appointment Type, Weight, Miles
-**Risk target:** Accessorial risk score (0 – 1)
-        """)
-
-# ── Run predictions ───────────────────────────────────────────────────────────
-with result_col:
-    avg_cpm   = df["cost_per_mile"].mean()
-    avg_total = df["total_cost_usd"].mean()
-
-    if estimate_clicked:
-        # Cost prediction
-        X_cost = pd.DataFrame([{
-            "carrier": carrier, "facility": facility,
-            "weight_lbs": weight, "miles": miles,
-        }])
-        rf         = cost_model.named_steps["rf"]
-        X_trans    = cost_model.named_steps["pre"].transform(X_cost)
-        tree_preds = np.array([t.predict(X_trans)[0] for t in rf.estimators_])
-        pred       = tree_preds.mean()
-        lower      = max(0, pred - 1.96 * tree_preds.std())
-        upper      = pred + 1.96 * tree_preds.std()
-
-        # Risk prediction
-        risk = predict_risk(risk_model, carrier, facility, appt, weight, miles, df)
-
-        st.session_state["last_estimate"] = {
-            "pred": pred, "lower": lower, "upper": upper,
-            "simple_est": avg_cpm * miles, "avg_total": avg_total,
-            "carrier": carrier, "facility": facility,
-            "appt": appt, "weight": weight, "miles": miles,
-            "risk": risk,
-        }
-
-    if "last_estimate" in st.session_state:
-        e    = st.session_state["last_estimate"]
-        pred, lower, upper = e["pred"], e["lower"], e["upper"]
-        risk = e.get("risk")
-
-        # ── Cost section ──────────────────────────────────────────────────────
-        with st.container(border=True):
-            st.markdown("#### ML Cost Prediction")
-            r1, r2, r3 = st.columns(3)
-            with r1:
-                st.metric("Predicted Total Cost", f"${pred:,.2f}")
-            with r2:
-                st.metric("95% Lower Bound", f"${lower:,.2f}")
-            with r3:
-                st.metric("95% Upper Bound", f"${upper:,.2f}")
-            st.markdown(
-                f"<div style='font-size:13px;color:#94A3B8;margin-top:8px;'>"
-                f"Confidence range: <b style='color:#E2E8F0;'>${lower:,.0f} – ${upper:,.0f}</b>"
-                f" &nbsp;|&nbsp; Spread: <b style='color:#E2E8F0;'>${upper - lower:,.0f}</b>"
-                f"</div>",
-                unsafe_allow_html=True,
+        c1, c2 = st.columns(2)
+        with c1:
+            carrier_status = st.selectbox(
+                "Carrier Status", ["A", "I", "UNKNOWN"],
+                help="A=Active, I=Inactive"
+            )
+            carrier_operation = st.selectbox(
+                "Carrier Operation", CARRIER_OPERATIONS
+            )
+            carrier_fleetsize = st.selectbox(
+                "Fleet Size", CARRIER_SIZES
+            )
+            carrier_state = st.selectbox(
+                "Carrier State", US_STATES
             )
 
-        st.markdown("<br>", unsafe_allow_html=True)
+        with c2:
+            power_units = st.number_input(
+                "Power Units", min_value=0, max_value=100000, value=10, step=1
+            )
+            total_drivers = st.number_input(
+                "Total Drivers", min_value=0, max_value=500000, value=15, step=1
+            )
+            safety_rating = st.selectbox(
+                "Safety Rating", SAFETY_RATINGS
+            )
+            hm_ind = st.selectbox(
+                "Hazmat Carrier", ["N", "Y"]
+            )
 
-        # ── Risk section ──────────────────────────────────────────────────────
-        if risk:
-            with st.container(border=True):
-                st.markdown("#### Accessorial Risk Assessment")
+    # ── Inspection & Violations ───────────────────────────────────
+    with st.container(border=True):
+        st.markdown("#### Inspection & Violations")
 
-                gauge_col, factors_col = st.columns([1, 1], gap="large")
+        v1, v2, v3 = st.columns(3)
+        with v1:
+            oos_total      = st.number_input("OOS Total",      0, 1000, 0)
+            driver_oos     = st.number_input("Driver OOS",     0, 1000, 0)
+            vehicle_oos    = st.number_input("Vehicle OOS",    0, 1000, 0)
+        with v2:
+            basic_viol     = st.number_input("Basic Viol.",    0, 500, 0)
+            unsafe_viol    = st.number_input("Unsafe Viol.",   0, 500, 0)
+            vh_maint_viol  = st.number_input("Veh. Maint.",    0, 500, 0)
+        with v3:
+            fatigued_viol  = st.number_input("Fatigued Viol.", 0, 500, 0)
+            dr_fitness     = st.number_input("Driver Fitness", 0, 500, 0)
+            hm_viol        = st.number_input("Hazmat Viol.",   0, 500, 0)
 
-                with gauge_col:
-                    gauge_fig = go.Figure(go.Indicator(
-                        mode="gauge+number",
-                        value=round(risk["score"] * 100, 1),
-                        number={
-                            "suffix": "%",
-                            "font": {"size": 38, "color": risk["color"]},
-                        },
-                        title={
-                            "text": f"<b>{risk['tier']} Risk</b>",
-                            "font": {"size": 15, "color": risk["color"]},
-                        },
-                        gauge={
-                            "axis": {
-                                "range": [0, 100],
-                                "tickcolor": "#475569",
-                                "tickfont": {"color": "#94A3B8", "size": 11},
-                            },
-                            "bar":     {"color": risk["color"], "thickness": 0.28},
-                            "bgcolor": "#0f0a1e",
-                            "borderwidth": 0,
-                            "steps": [
-                                {"range": [0,  34], "color": "rgba(5,150,105,0.15)"},
-                                {"range": [34, 67], "color": "rgba(217,119,6,0.15)"},
-                                {"range": [67,100], "color": "rgba(220,38,38,0.15)"},
-                            ],
-                            "threshold": {
-                                "line":      {"color": risk["color"], "width": 3},
-                                "thickness": 0.8,
-                                "value":     risk["score"] * 100,
-                            },
-                        },
-                    ))
-                    gauge_fig.update_layout(
-                        height=220,
-                        margin=dict(l=20, r=20, t=40, b=10),
-                        paper_bgcolor="#0f0a1e",
-                        font={"color": "#A78BFA"},
-                    )
-                    st.plotly_chart(gauge_fig, width="stretch")
+    # ── Crash History ─────────────────────────────────────────────
+    with st.container(border=True):
+        st.markdown("#### Crash History")
+        cr1, cr2, cr3 = st.columns(3)
+        with cr1:
+            crash_count    = st.number_input("Crash Count",    0, 10000, 0)
+        with cr2:
+            crash_injuries = st.number_input("Injuries",       0, 10000, 0)
+        with cr3:
+            crash_fatals   = st.number_input("Fatalities",     0, 1000,  0)
 
-                with factors_col:
-                    st.markdown(
-                        "<p style='color:#94A3B8;font-size:12px;"
-                        "margin:0 0 10px;'>Key risk drivers</p>",
-                        unsafe_allow_html=True,
-                    )
-                    sev_colors = {
-                        "high":    ("#F87171", "rgba(220,38,38,0.12)"),
-                        "low":     ("#34D399", "rgba(5,150,105,0.12)"),
-                        "neutral": ("#A78BFA", "rgba(147,51,234,0.12)"),
-                    }
-                    for label, detail, sev in risk["factors"]:
-                        fg, bg = sev_colors.get(sev, sev_colors["neutral"])
-                        st.markdown(
-                            f"<div style='background:{bg};border-left:3px solid {fg};"
-                            f"border-radius:6px;padding:8px 12px;margin-bottom:8px;'>"
-                            f"<div style='color:{fg};font-size:12px;font-weight:600;"
-                            f"margin-bottom:2px;'>{label}</div>"
-                            f"<div style='color:#CBD5E1;font-size:12px;'>{detail}</div>"
-                            f"</div>",
-                            unsafe_allow_html=True,
-                        )
+    # ── Context ───────────────────────────────────────────────────
+    with st.container(border=True):
+        st.markdown("#### Shipment Context")
+        ctx1, ctx2 = st.columns(2)
+        with ctx1:
+            origin_state = st.selectbox("Origin State", US_STATES, key="orig_st")
+            unit_type    = st.selectbox("Unit Type", UNIT_TYPES)
+            insp_month   = st.slider("Month", 1, 12, 6)
+        with ctx2:
+            dest_state   = st.selectbox("Dest. State", US_STATES, key="dest_st")
+            insp_dow     = st.selectbox(
+                "Day of Week",
+                ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
+            )
+            is_holiday   = st.toggle("Holiday Period")
 
-        st.markdown("<br>", unsafe_allow_html=True)
+    estimate_clicked = st.button(
+        "Predict Accessorial Risk →",
+        type="primary",
+        use_container_width=True,
+        disabled=not MODEL_READY,
+    )
 
-        # ── Comparison section ────────────────────────────────────────────────
+    if not MODEL_READY:
+        st.caption("⏳ Available after model training completes")
+
+    # ── Model info ────────────────────────────────────────────────
+    with st.expander("ℹ️ Model Info", expanded=False):
+        st.markdown(f"""
+**Model:** PACE FT-Transformer
+**Architecture:** Feature Tokenizer + Transformer Encoder
+**Regression target:** Accessorial risk score (0–100)
+**Classification target:** Charge type ({len(CHARGE_TYPE_LABELS)} classes)
+**Categorical features:** {len(CATEGORICAL_COLUMNS)}
+**Continuous features:** {len(CONTINUOUS_COLUMNS)}
+**Data source:** FMCSA SAFER + EIA + FRED + NWS
+        """)
+
+# ── Results column ────────────────────────────────────────────────
+with result_col:
+
+    if estimate_clicked and MODEL_READY:
+        # Build input dict
+        dow_map = {
+            "Monday": 0, "Tuesday": 1, "Wednesday": 2,
+            "Thursday": 3, "Friday": 4, "Saturday": 5, "Sunday": 6
+        }
+        user_inputs = {
+            "dot_number":                dot_number,
+            "carrier_status_code":       carrier_status,
+            "carrier_carrier_operation": carrier_operation,
+            "carrier_fleetsize":         carrier_fleetsize,
+            "carrier_power_units":       power_units,
+            "carrier_truck_units":       power_units,
+            "carrier_total_drivers":     total_drivers,
+            "carrier_total_cdl":         total_drivers,
+            "carrier_phy_state":         carrier_state,
+            "carrier_phy_country":       "US",
+            "carrier_safety_rating":     safety_rating,
+            "carrier_hm_ind":            hm_ind,
+            "oos_total":                 oos_total,
+            "driver_oos_total":          driver_oos,
+            "vehicle_oos_total":         vehicle_oos,
+            "basic_viol":                basic_viol,
+            "unsafe_viol":               unsafe_viol,
+            "vh_maint_viol":             vh_maint_viol,
+            "fatigued_viol":             fatigued_viol,
+            "dr_fitness_viol":           dr_fitness,
+            "hm_viol":                   hm_viol,
+            "crash_count":               crash_count,
+            "crash_injuries_total":      crash_injuries,
+            "crash_fatalities_total":    crash_fatals,
+            "crash_avg_severity": (
+                (crash_fatals * 3 + crash_injuries * 2) / max(crash_count, 1)
+            ),
+            "insp_month":                insp_month,
+            "insp_dow":                  dow_map.get(insp_dow, 0),
+            "is_holiday":                int(is_holiday),
+            "is_near_holiday":           int(is_holiday),
+            "unit_type_desc":            unit_type,
+            "report_state":              origin_state,
+            "carrier_crgo_genfreight":   "X",
+        }
+
+        try:
+            from pipeline.inference import get_inference_engine
+            from pipeline.data_pipeline import get_data_pipeline
+
+            dp       = get_data_pipeline()
+            engine   = get_inference_engine()
+            features = dp.process_manual(user_inputs)
+            result   = engine.predict_single(features)
+
+            st.session_state["last_estimate"] = {
+                "result":      result,
+                "user_inputs": user_inputs,
+            }
+
+        except Exception as e:
+            st.error(f"Prediction failed: {e}")
+
+    # ── Display results ───────────────────────────────────────────
+    if "last_estimate" in st.session_state:
+        e      = st.session_state["last_estimate"]
+        result = e["result"]
+        score  = result["risk_score"]
+        label  = result["risk_label"]
+        charge = result["charge_type"]
+        probs  = result["probabilities"]
+        color  = TIER_COLORS.get(label, "#94A3B8")
+        c_color = CHARGE_COLORS.get(charge, "#A78BFA")
+
+        # ── Risk score gauge ──────────────────────────────────────
         with st.container(border=True):
-            st.markdown("#### How This Compares")
-            simple_est = e["simple_est"]
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                st.metric("ML Prediction",      f"${pred:,.2f}")
-            with c2:
-                st.metric("Avg Cost/Mile Est.", f"${simple_est:,.2f}",
-                          delta=f"${pred - simple_est:+,.2f} vs ML", delta_color="inverse")
-            with c3:
-                st.metric("Fleet Avg Total",    f"${avg_total:,.2f}",
-                          delta=f"${pred - avg_total:+,.2f} vs ML",  delta_color="inverse")
+            st.markdown("#### Accessorial Risk Score")
 
-            st.markdown("<br>", unsafe_allow_html=True)
-            comp_fig = go.Figure(go.Bar(
-                x=["ML Prediction",
-                   f"Avg Cost/Mile\n(${avg_cpm:.2f}/mi × {e['miles']} mi)",
-                   "Fleet Avg Total"],
-                y=[pred, simple_est, avg_total],
-                marker_color=["#9333EA", "#6D28D9", "#4C1D95"],
-                text=[f"${v:,.0f}" for v in [pred, simple_est, avg_total]],
+            gauge_col, info_col = st.columns([1, 1], gap="large")
+
+            with gauge_col:
+                gauge_fig = go.Figure(go.Indicator(
+                    mode="gauge+number",
+                    value=round(score, 1),
+                    number={
+                        "suffix": "%",
+                        "font": {"size": 42, "color": color},
+                    },
+                    title={
+                        "text": f"<b>{label} Risk</b>",
+                        "font": {"size": 16, "color": color},
+                    },
+                    gauge={
+                        "axis": {
+                            "range": [0, 100],
+                            "tickcolor": "#475569",
+                            "tickfont": {"color": "#94A3B8", "size": 11},
+                        },
+                        "bar":      {"color": color, "thickness": 0.28},
+                        "bgcolor":  "#0f0a1e",
+                        "borderwidth": 0,
+                        "steps": [
+                            {"range": [0,  25], "color": "rgba(5,150,105,0.15)"},
+                            {"range": [25, 50], "color": "rgba(251,146,60,0.10)"},
+                            {"range": [50, 75], "color": "rgba(217,119,6,0.15)"},
+                            {"range": [75,100], "color": "rgba(220,38,38,0.15)"},
+                        ],
+                        "threshold": {
+                            "line":      {"color": color, "width": 3},
+                            "thickness": 0.8,
+                            "value":     score,
+                        },
+                    },
+                ))
+                gauge_fig.update_layout(
+                    height=240,
+                    margin=dict(l=20, r=20, t=50, b=10),
+                    paper_bgcolor="#0f0a1e",
+                    font={"color": "#A78BFA"},
+                )
+                st.plotly_chart(gauge_fig, use_container_width=True)
+
+            with info_col:
+                st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
+
+                # Predicted charge type
+                st.markdown(
+                    f"<div style='background:rgba(0,0,0,0.3);border:1px solid "
+                    f"{c_color};border-radius:8px;padding:14px;margin-bottom:12px;'>"
+                    f"<div style='color:#94A3B8;font-size:11px;font-weight:600;"
+                    f"letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;'>"
+                    f"Predicted Charge Type</div>"
+                    f"<div style='color:{c_color};font-size:20px;font-weight:700;'>"
+                    f"{charge}</div>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+
+                # Quick stats
+                viol_total = sum([
+                    basic_viol, unsafe_viol, vh_maint_viol,
+                    fatigued_viol, dr_fitness, hm_viol
+                ])
+                st.markdown(
+                    f"<div style='background:rgba(147,51,234,0.08);border-radius:8px;"
+                    f"padding:12px;font-size:13px;color:#CBD5E1;'>"
+                    f"<div>OOS Total: <b style='color:#E2E8F0;'>{oos_total}</b></div>"
+                    f"<div>Total Violations: <b style='color:#E2E8F0;'>{viol_total}</b></div>"
+                    f"<div>Crash Count: <b style='color:#E2E8F0;'>{crash_count}</b></div>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # ── Charge type probabilities ─────────────────────────────
+        with st.container(border=True):
+            st.markdown("#### Charge Type Probabilities")
+
+            prob_data = sorted(probs.items(), key=lambda x: x[1], reverse=True)
+            labels    = [p[0] for p in prob_data]
+            values    = [round(p[1] * 100, 1) for p in prob_data]
+            bar_colors = [CHARGE_COLORS.get(l, "#A78BFA") for l in labels]
+
+            prob_fig = go.Figure(go.Bar(
+                x=values,
+                y=labels,
+                orientation="h",
+                marker_color=bar_colors,
+                text=[f"{v:.1f}%" for v in values],
                 textposition="outside",
                 textfont={"color": "#E2E8F0"},
             ))
-            comp_fig.update_layout(
-                margin=dict(l=0, r=0, t=8, b=0), height=220,
+            prob_fig.update_layout(
+                margin=dict(l=0, r=60, t=8, b=0), height=260,
                 plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
                 font=dict(color="#A78BFA"),
-                yaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)",
-                           color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
-                xaxis=dict(gridcolor="rgba(150,50,200,0.15)",
-                           color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
-                showlegend=False,
+                xaxis=dict(
+                    ticksuffix="%", range=[0, 110],
+                    gridcolor="rgba(150,50,200,0.15)", color="#94A3B8",
+                ),
+                yaxis=dict(
+                    gridcolor="rgba(150,50,200,0.15)", color="#94A3B8",
+                    autorange="reversed",
+                ),
             )
-            st.plotly_chart(comp_fig, width="stretch")
+            st.plotly_chart(prob_fig, use_container_width=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # ── Risk breakdown ────────────────────────────────────────
+        with st.container(border=True):
+            st.markdown("#### Risk Factor Breakdown")
+
+            factors = []
+
+            # OOS risk
+            if oos_total > 5:
+                factors.append(("OOS Violations",
+                    f"{oos_total} total OOS events — significantly above average",
+                    "high"))
+            elif oos_total > 0:
+                factors.append(("OOS Violations",
+                    f"{oos_total} OOS event(s) recorded",
+                    "medium"))
+
+            # Violation risk
+            viol_sum = basic_viol + unsafe_viol + vh_maint_viol
+            if viol_sum > 10:
+                factors.append(("Safety Violations",
+                    f"{viol_sum} combined basic/unsafe/maintenance violations",
+                    "high"))
+            elif viol_sum > 0:
+                factors.append(("Safety Violations",
+                    f"{viol_sum} violation(s) on record",
+                    "medium"))
+
+            # Crash risk
+            if crash_count > 3:
+                factors.append(("Crash History",
+                    f"{crash_count} crashes — elevated accident exposure",
+                    "high"))
+            elif crash_count > 0:
+                factors.append(("Crash History",
+                    f"{crash_count} crash(es) on record",
+                    "medium"))
+
+            # Hazmat
+            if hm_viol > 0 or hm_ind == "Y":
+                factors.append(("Hazmat Exposure",
+                    "Hazmat carrier or violations — hazmat fee risk elevated",
+                    "high"))
+
+            # Driver fitness
+            if dr_fitness > 0 or fatigued_viol > 0:
+                factors.append(("Driver Compliance",
+                    f"{dr_fitness + fatigued_viol} driver fitness/fatigue violations",
+                    "high"))
+
+            # Safety rating
+            if safety_rating == "UNSATISFACTORY":
+                factors.append(("Safety Rating",
+                    "Unsatisfactory FMCSA safety rating — highest risk tier",
+                    "high"))
+            elif safety_rating == "CONDITIONAL":
+                factors.append(("Safety Rating",
+                    "Conditional safety rating — moderate compliance concern",
+                    "medium"))
+
+            # Friday dispatch
+            if insp_dow == "Friday":
+                factors.append(("Friday Dispatch",
+                    "Friday shipments have 2× higher weekend detention risk",
+                    "medium"))
+
+            # Peak season
+            if insp_month in (10, 11, 12):
+                factors.append(("Peak Season Q4",
+                    "Oct–Dec capacity crunch raises accessorial incidence 15–25%",
+                    "medium"))
+
+            if not factors:
+                factors.append(("Clean Profile",
+                    "No significant risk factors identified — low accessorial exposure",
+                    "low"))
+
+            sev_styles = {
+                "high":   ("#F87171", "rgba(220,38,38,0.12)"),
+                "medium": ("#FCD34D", "rgba(217,119,6,0.12)"),
+                "low":    ("#34D399", "rgba(5,150,105,0.12)"),
+            }
+
+            for f_label, f_detail, f_sev in factors[:5]:
+                fg, bg = sev_styles.get(f_sev, sev_styles["low"])
+                st.markdown(
+                    f"<div style='background:{bg};border-left:3px solid {fg};"
+                    f"border-radius:6px;padding:8px 12px;margin-bottom:8px;'>"
+                    f"<div style='color:{fg};font-size:12px;font-weight:600;"
+                    f"margin-bottom:2px;'>{f_label}</div>"
+                    f"<div style='color:#CBD5E1;font-size:12px;'>{f_detail}</div>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
 
     else:
+        # Empty state
         with st.container(border=True):
             st.markdown(
-                "<div style='text-align:center;padding:80px 20px;color:#9CA3AF;'>"
-                "<div style='font-size:36px;'>💰</div>"
-                "<div style='font-size:14px;margin-top:10px;'>"
-                "Fill in shipment details and click <b>Estimate Cost & Risk</b></div>"
+                "<div style='text-align:center;padding:100px 20px;color:#9CA3AF;'>"
+                "<div style='font-size:48px;'>🚛</div>"
+                "<div style='font-size:15px;font-weight:600;margin-top:16px;"
+                "color:#E2E8F0;'>Enter carrier details</div>"
+                "<div style='font-size:13px;margin-top:8px;'>"
+                "Fill in the form and click "
+                "<b style='color:#A78BFA;'>Predict Accessorial Risk</b>"
+                " to get a PACE prediction</div>"
                 "</div>",
                 unsafe_allow_html=True,
             )
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-# ── Feature importance ────────────────────────────────────────────────────────
-with st.container(border=True):
-    st.markdown("#### What Drives Cost — Feature Importance")
-    st.caption("Relative contribution of each input to the cost model's predictions")
-
-    rf       = cost_model.named_steps["rf"]
-    pre      = cost_model.named_steps["pre"]
-    enc      = pre.named_transformers_["cat"]
-    cat_names = list(enc.get_feature_names_out(["carrier", "facility"]))
-    all_names = cat_names + ["weight_lbs", "miles"]
-
-    importance = pd.DataFrame({
-        "Feature":    all_names,
-        "Importance": rf.feature_importances_,
-    }).sort_values("Importance", ascending=True).tail(12)
-
-    importance["Feature"] = (
-        importance["Feature"]
-        .str.replace("carrier_",  "Carrier: ",   regex=False)
-        .str.replace("facility_", "Facility: ",  regex=False)
-        .str.replace("weight_lbs","Weight (lbs)", regex=False)
-        .str.replace("miles",     "Miles",        regex=False)
-    )
-
-    fi_fig = go.Figure(go.Bar(
-        x=importance["Importance"],
-        y=importance["Feature"],
-        orientation="h",
-        marker_color="#9333EA",
-        text=importance["Importance"].apply(lambda v: f"{v:.1%}"),
-        textposition="outside",
-        textfont={"color": "#E2E8F0"},
-    ))
-    fi_fig.update_layout(
-        margin=dict(l=0, r=60, t=8, b=0), height=340,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
-        font=dict(color="#A78BFA"),
-        xaxis=dict(tickformat=".0%", gridcolor="rgba(150,50,200,0.15)",
-                   color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
-        yaxis=dict(gridcolor="rgba(150,50,200,0.15)",
-                   color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
-    )
-    st.plotly_chart(fi_fig, width="stretch")
-
-# ── Historical distribution ───────────────────────────────────────────────────
-with st.container(border=True):
-    st.markdown("#### Historical Total Cost Distribution")
-    st.caption("Where your estimate falls relative to all past shipments")
-
-    hist_fig = go.Figure()
-    hist_fig.add_trace(go.Histogram(
-        x=df["total_cost_usd"], nbinsx=30,
-        marker_color="#2D1B4E", marker_line_color=NAVY_500, marker_line_width=1,
-        name="Historical",
-    ))
-    if "last_estimate" in st.session_state:
-        v = st.session_state["last_estimate"]["pred"]
-        hist_fig.add_vline(
-            x=v, line_width=2, line_dash="dash", line_color="#DC2626",
-            annotation_text=f"Your estimate: ${v:,.0f}",
-            annotation_position="top right",
-            annotation_font_color="#DC2626",
-        )
-    hist_fig.update_layout(
-        margin=dict(l=0, r=0, t=8, b=0), height=220,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
-        font=dict(color="#A78BFA"),
-        xaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)",
-                   color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
-        yaxis=dict(gridcolor="rgba(150,50,200,0.15)",
-                   color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
-    )
-    st.plotly_chart(hist_fig, width="stretch")
