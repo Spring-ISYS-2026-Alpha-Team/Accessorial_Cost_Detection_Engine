@@ -1,10 +1,17 @@
 # ── PACE Pipeline Configuration ───────────────────────────────────
 
+import os
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # Teradata connection
-TD_HOST = "Uofaifx.walton.uark.edu"
-TD_USERNAME = "cjosef"
-TD_PASSWORD = "GohogsUA99"
-TD_DATABASE = "CTGAN"
+TD_HOST     = os.getenv("TD_HOST", "")
+TD_USERNAME = os.getenv("TD_USERNAME", "")
+TD_PASSWORD = os.getenv("TD_PASSWORD", "")
+TD_DATABASE = os.getenv("TD_DATABASE", "CTGAN")
 TD_SOURCE_TABLE = "ctgan_input"
 TD_SYNTHETIC_TABLE = "ctgan_synthetic"
 TD_VIEW = "pace_training_v"
