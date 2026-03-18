@@ -2,7 +2,7 @@
 import streamlit as st
 import sys, os
 
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from auth_utils import require_auth
 from utils.database import get_connection, get_pace_users, create_pace_user, delete_pace_user

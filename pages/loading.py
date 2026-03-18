@@ -10,7 +10,7 @@ import pandas as pd
 import streamlit as st
 import sys
 
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from auth_utils import check_auth
 from pipeline.config import is_pace_model_ready

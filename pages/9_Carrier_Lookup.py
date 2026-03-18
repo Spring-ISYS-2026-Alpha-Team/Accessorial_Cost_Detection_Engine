@@ -5,7 +5,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from auth_utils import require_auth
 from utils.styling import inject_css, top_nav, TIER_COLORS, CHARGE_COLORS

@@ -6,7 +6,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from auth_utils import require_auth
 from utils.database import get_connection, get_shipments_with_charges

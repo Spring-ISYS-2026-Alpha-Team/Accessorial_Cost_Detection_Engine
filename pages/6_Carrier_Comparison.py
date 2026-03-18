@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import sys, os
 
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from auth_utils import require_auth
 from utils.database import load_shipments_with_fallback
