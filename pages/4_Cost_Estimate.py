@@ -63,7 +63,7 @@ with form_col:
 
     # ── Step 1: DOT lookup ─────────────────────────────────────────
     with st.container(border=True):
-        st.markdown("#### Step 1 — Carrier DOT Number")
+        st.markdown("#### Carrier DOT Number")
 
         dot_col, btn_col = st.columns([3, 2], gap="small")
         with dot_col:
@@ -159,13 +159,21 @@ with form_col:
 
     # ── Step 2: Shipment context ───────────────────────────────────
     with st.container(border=True):
-        st.markdown("#### Step 2 — Shipment Context")
+        st.markdown("#### Shipment Context")
 
         ctx1, ctx2 = st.columns(2)
         with ctx1:
             origin_state = st.selectbox("Origin State", US_STATES, key="ce_orig")
             unit_type    = st.selectbox("Unit Type", UNIT_TYPES)
-            insp_month   = st.slider("Month", 1, 12, 6)
+            insp_month   = st.selectbox(
+                "Month",
+                options=list(range(1, 13)),
+                format_func=lambda m: [
+                    "January","February","March","April","May","June",
+                    "July","August","September","October","November","December"
+                ][m - 1],
+                index=5,
+            )
         with ctx2:
             dest_state = st.selectbox("Dest. State", US_STATES, key="ce_dest")
             insp_dow   = st.selectbox(
