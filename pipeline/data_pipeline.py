@@ -249,7 +249,22 @@ def clean_dataframe(df: pd.DataFrame) -> Tuple[pd.DataFrame, List[str]]:
     """
     warnings = []
     df = df.copy()
- 
+
+    # Deduplicate column names (duplicate cols make df[col] return a DataFrame,
+    # not a Series, which breaks .str access and causes AttributeError)
+    if df.columns.duplicated().any():
+        seen: dict = {}
+        new_cols = []
+        for c in df.columns:
+            if c in seen:
+                seen[c] += 1
+                new_cols.append(f"{c}_{seen[c]}")
+            else:
+                seen[c] = 0
+                new_cols.append(c)
+        df.columns = new_cols
+        warnings.append("Duplicate column names detected and renamed automatically.")
+
     # Strip string columns
     for col in df.select_dtypes(include=["object"]).columns:
         df[col] = df[col].astype(str).str.strip()
