@@ -2,7 +2,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-import sys, os
+import sys, os, base64
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -17,6 +17,73 @@ inject_css()
 require_auth()
 username = st.session_state.get("username", "User")
 top_nav(username)
+
+# ── Page-level dark CSS overrides ─────────────────────────────────────────────
+st.markdown(
+    '<style>'
+    '.stApp { background-color: #161638 !important; }'
+    '.stApp, .stApp p, .stApp span, .stApp label, .stApp .stMarkdown,'
+    ' .stApp [data-testid="stText"] { color: #F1F5F9 !important; }'
+    '.stApp h1, .stApp h2, .stApp h3, .stApp h4 { color: #F1F5F9 !important; }'
+    '.stApp .stCaption, .stApp small, .stApp [data-testid="stCaptionContainer"]'
+    '  { color: #94A3B8 !important; }'
+    '@keyframes fadeUp { from { opacity:0; transform:translateY(20px); }'
+    ' to { opacity:1; transform:translateY(0); } }'
+    '.anim1 { animation: fadeUp 0.5s ease-out forwards; }'
+    '.anim2 { animation: fadeUp 0.5s ease-out 0.1s forwards; opacity:0; }'
+    '.anim3 { animation: fadeUp 0.5s ease-out 0.25s forwards; opacity:0; }'
+    'hr { border-color: #38667E !important; }'
+    '.block-container { padding-top: 1rem !important; }'
+    '</style>',
+    unsafe_allow_html=True,
+)
+
+# ── Hero banner ───────────────────────────────────────────────────────────────
+@st.cache_data
+def _load_hero_image():
+    img_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            "assets", "shippingcontainers.jpg")
+    if os.path.exists(img_path):
+        with open(img_path, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    return None
+
+_hero_b64 = _load_hero_image()
+
+if _hero_b64:
+    _bg = (
+        "background: linear-gradient(160deg,"
+        " rgba(22,22,56,0.88) 0%, rgba(27,67,94,0.78) 40%,"
+        " rgba(58,43,80,0.72) 65%, rgba(22,22,56,0.90) 100%),"
+        f" url('data:image/jpeg;base64,{_hero_b64}');"
+        " background-size: cover; background-position: center;"
+    )
+else:
+    _bg = (
+        "background: linear-gradient(160deg, #161638 0%, #1B435E 40%,"
+        " #3A2B50 65%, #161638 100%);"
+    )
+
+st.markdown(
+    f'<div class="anim1" style="{_bg}'
+    ' border: 1px solid #38667E; border-radius: 20px; padding: 52px 52px 44px;'
+    ' margin-bottom: 24px; position: relative; overflow: hidden;">'
+    '<div style="position:relative; z-index:1;">'
+    '<div class="anim2" style="display:inline-block; background:rgba(45,212,191,0.12);'
+    ' border:1px solid rgba(45,212,191,0.25); border-radius:6px; padding:4px 12px;'
+    ' font-size:11px; font-weight:700; color:#2DD4BF; letter-spacing:2px;'
+    ' text-transform:uppercase; margin-bottom:18px;">PACE</div>'
+    '<h1 class="anim2" style="font-size:38px; font-weight:700; color:#F1F5F9 !important;'
+    ' margin:0 0 10px 0; letter-spacing:-1px; line-height:1.15;'
+    f' text-shadow: 0 2px 12px rgba(0,0,0,0.6);">Welcome back, {username}</h1>'
+    '<p class="anim3" style="font-size:15px; color:#CBD5E1; margin:0;'
+    ' max-width:520px; line-height:1.7;'
+    ' text-shadow: 0 1px 8px rgba(0,0,0,0.5);">'
+    'Your fleet performance at a glance — risk predictions, cost analytics,'
+    ' and carrier insights powered by machine learning.</p>'
+    '</div></div>',
+    unsafe_allow_html=True,
+)
 
 df_all = load_shipments_with_fallback()
 df_all["ship_date_dt"] = pd.to_datetime(df_all["ship_date"])
