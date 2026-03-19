@@ -56,77 +56,16 @@ def _login_page():
                 st.error("Please enter both username and password.")
 
 
-# ── Pre-warm caches (runs once per session after login) ───────────────────────
-def _preload():
-    if st.session_state.get("_data_preloaded"):
-        return
-
-    with st.spinner("Loading PACE workspace…"):
-        try:
-            import pandas as pd
-            from utils.database import (
-                get_connection, verify_pace_user,
-                get_shipments, get_accessorial_charges,
-                get_carriers, get_facilities, get_shipments_with_charges,
-            )
-            from utils.mock_data import generate_mock_shipments
-            from pipeline.config import is_pace_model_ready
-
-            conn = get_connection()
-
-            # Verify non-fallback users against the DB
-            if st.session_state.get("role") == "pending":
-                _u = st.session_state.get("username", "")
-                _p = st.session_state.pop("_pending_password", "")
-                verified_role = verify_pace_user(conn, _u, _p) if conn is not None else None
-                if verified_role is None:
-                    for key in list(st.session_state.keys()):
-                        del st.session_state[key]
-                    st.session_state["_login_error"] = "Invalid credentials or database unavailable."
-                    st.rerun()
-                st.session_state["role"] = verified_role
-
-            df = get_shipments(conn) if conn is not None else pd.DataFrame()
-            if df.empty:
-                df = generate_mock_shipments(1000)
-
-            get_accessorial_charges(conn)
-            get_shipments_with_charges(conn)
-            get_carriers(conn)
-            get_facilities(conn)
-
-            _df = df.copy()
-            _df["ship_date_dt"] = pd.to_datetime(_df["ship_date"])
-            _df["week"] = _df["ship_date_dt"].dt.to_period("W").dt.start_time
-            st.session_state["_preload_df"] = _df
-            st.session_state["_preload_weekly"] = (
-                _df.groupby("week")
-                   .agg(shipments=("shipment_id", "count"),
-                        revenue=("base_freight_usd", "sum"),
-                        total_cost=("total_cost_usd", "sum"))
-                   .reset_index()
-            )
-            st.session_state["_preload_carrier_cpm"] = (
-                _df.groupby("carrier")["cost_per_mile"].mean()
-                   .reset_index().sort_values("cost_per_mile")
-            )
-
-            try:
-                from pipeline.inference import get_inference_engine
-                if is_pace_model_ready():
-                    get_inference_engine()
-            except Exception:
-                pass
-
-        except Exception:
-            pass
-
-    st.session_state["_data_preloaded"] = True
-
-
 # ── Role-based navigation ──────────────────────────────────────────────────────
 if check_auth():
-    _preload()
+    # Show loading screen first — it pre-warms all caches then reruns here
+    if not st.session_state.get("_data_preloaded"):
+        pg = st.navigation(
+            [st.Page("pages/_loading.py", title="Loading", icon="⏳")],
+            position="hidden",
+        )
+        pg.run()
+        st.stop()
 
     role = st.session_state.get("role", "user")
 

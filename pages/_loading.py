@@ -24,14 +24,12 @@ st.set_page_config(
 
 # Redirect if not authenticated
 if not check_auth():
-    st.switch_page("app.py")
+    st.rerun()
     st.stop()
 
-dest = st.session_state.get("post_load_dest", "pages/0_Home.py")
-
-# If already loaded this session, skip straight to destination
+# If already loaded this session, rerun to let app.py route to full navigation
 if st.session_state.get("_data_preloaded"):
-    st.switch_page(dest)
+    st.rerun()
     st.stop()
 
 # ── Loading page CSS ───────────────────────────────────────────────────────────
@@ -48,7 +46,7 @@ _bg_props = _bg_css()
 
 st.markdown(f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&display=swap');
 
 @keyframes pace-in {{
     from {{ opacity: 0; transform: translateY(8px); }}
@@ -57,7 +55,7 @@ st.markdown(f"""
 
 .stApp {{
     background: none;
-    font-family: 'Inter', sans-serif;
+    font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     animation: pace-in 0.4s ease-out;
 }}
 
@@ -229,4 +227,4 @@ except Exception as e:
     time.sleep(0.3)
 
 st.session_state["_data_preloaded"] = True
-st.switch_page(dest)
+st.rerun()
