@@ -20,7 +20,7 @@ st.set_page_config(
     page_title="PACE — Shipments",
     page_icon="🚚",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 inject_css()
 

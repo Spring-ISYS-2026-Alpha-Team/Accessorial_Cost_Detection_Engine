@@ -128,6 +128,8 @@ _NAV_PAGES = [
     ("Carriers",    "pages/6_Carrier_Comparison.py"),
     ("Accessorial", "pages/7_Accessorial_Tracker.py"),
     ("Admin",       "pages/8_Admin.py"),
+    ("Lookup",      "pages/9_Carrier_Lookup.py"),
+    ("Chatbot",     "pages/chatbot.py"),
 ]
 
 # ── Base page CSS (injected on every page) ────────────────────────────────────
@@ -158,20 +160,44 @@ _BASE_CSS = f"""
     filter: blur(2px);
 }}
 
-/* ── Hide Streamlit chrome and sidebar ── */
+/* ── Hide Streamlit chrome ── */
 #MainMenu, header, footer {{ visibility: hidden; }}
-[data-testid="stSidebar"],
-[data-testid="collapsedControl"],
-[data-testid="stSidebarNav"],
-section[data-testid="stSidebarNav"],
-button[kind="header"],
-[data-testid="stSidebarNavItems"],
+
+/* ── Sidebar — dark glass theme ── */
+[data-testid="stSidebar"] {{
+    background: rgba(6, 0, 18, 0.97) !important;
+    border-right: 1px solid rgba(180, 80, 220, 0.22) !important;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.4) !important;
+}}
+[data-testid="stSidebarContent"] {{
+    background: transparent !important;
+}}
+/* Sidebar nav links */
+[data-testid="stSidebarNavItems"] a {{
+    color: #CBD5E1 !important;
+    border-radius: 6px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    transition: background 0.15s !important;
+}}
+[data-testid="stSidebarNavItems"] a:hover {{
+    background: rgba(147, 51, 234, 0.18) !important;
+    color: #FFFFFF !important;
+}}
+[data-testid="stSidebarNavItems"] a[aria-current="page"] {{
+    background: rgba(147, 51, 234, 0.28) !important;
+    color: #FFFFFF !important;
+    border-left: 3px solid {ACCENT_PURPLE} !important;
+    font-weight: 600 !important;
+}}
+/* Sidebar section headers */
 [data-testid="stSidebarNavSeparator"] {{
-    display: none !important;
-    visibility: hidden !important;
-    width: 0 !important;
-    height: 0 !important;
-    overflow: hidden !important;
+    border-color: rgba(180, 80, 220, 0.2) !important;
+}}
+/* Sidebar collapse toggle */
+[data-testid="collapsedControl"] {{
+    background: rgba(6, 0, 18, 0.9) !important;
+    border-right: 1px solid rgba(180, 80, 220, 0.22) !important;
 }}
 
 /* ── Page content padding ── */
@@ -411,42 +437,21 @@ strong, b {{ color: #F1F5F9 !important; }}
 
 
 def inject_css() -> None:
-    """Inject PACE base CSS. Call at the top of every page."""
-    st.markdown(_BASE_CSS, unsafe_allow_html=True)
+    """No-op — custom CSS stripped for clean Streamlit baseline."""
+    pass
 
 
 def top_nav(username: str) -> None:
     """
-    Render the top navigation bar using st.page_link() so that navigation
-    stays within the existing WebSocket session (no page reload, no auth loss).
-    Call this at the top of every authenticated page, after inject_css().
+    Render Sign Out button and username in the sidebar.
+    Navigation is handled natively by Streamlit's sidebar.
     """
-    logo_col, *page_cols, user_col, out_col = st.columns(
-        [1.4] + [1.0] * 9 + [1.0, 0.7]
-    )
-
-    with logo_col:
-        st.markdown(
-            f"<div style='color:#FFFFFF; font-size:15px; font-weight:700; "
-            f"letter-spacing:1px; padding:4px 0;'>📦 PACE</div>",
-            unsafe_allow_html=True,
-        )
-
-    for col, (label, page) in zip(page_cols, _NAV_PAGES):
-        with col:
-            st.page_link(page, label=label)
-
-    with user_col:
-        st.markdown(
-            f"<div style='color:rgba(255,255,255,0.7); font-size:11px; "
-            f"text-align:right; padding:5px 4px 0;'>👤 {username}</div>",
-            unsafe_allow_html=True,
-        )
-
-    with out_col:
+    with st.sidebar:
+        st.markdown(f"👤 **{username}**")
         if st.button("Sign Out", key="nav_signout"):
             from auth_utils import logout
             logout()
+        st.divider()
 
 
 def risk_badge_html(tier: str) -> str:

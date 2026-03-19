@@ -1,4 +1,4 @@
-# File: pages/loading.py
+# File: pages/_loading.py
 """
 Loading screen — shown after login, pre-warms all data caches before
 redirecting to the destination page stored in session state.

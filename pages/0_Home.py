@@ -11,7 +11,7 @@ from utils.database import load_shipments_with_fallback
 from utils.styling import inject_css, top_nav, NAVY_500, NAVY_900, NAVY_100
 
 st.set_page_config(page_title="PACE — Home", page_icon="🏠",
-                   layout="wide", initial_sidebar_state="collapsed")
+                   layout="wide", initial_sidebar_state="expanded")
 inject_css()
 
 require_auth()
