@@ -255,6 +255,60 @@ def _popup_radar():
 if "active_carriers" not in st.session_state:
     st.session_state["active_carriers"] = ALL_CARRIERS
 
+# ── DOT number search ─────────────────────────────────────────────────────────
+_has_dot = "dot_number" in df_raw.columns
+
+dot_search_col, dot_btn_col, dot_clear_col = st.columns([3, 1, 1], gap="small")
+with dot_search_col:
+    dot_query = st.text_input(
+        "Search by DOT Number",
+        placeholder="e.g. 72011",
+        label_visibility="collapsed",
+        help="Enter a USDOT number to filter to the matching carrier",
+        key="cc_dot_search",
+    )
+with dot_btn_col:
+    dot_search_clicked = st.button(
+        "Search DOT",
+        type="primary",
+        use_container_width=True,
+        disabled=not dot_query.strip(),
+    )
+with dot_clear_col:
+    if st.button("Clear", use_container_width=True, key="cc_dot_clear"):
+        st.session_state["active_carriers"] = ALL_CARRIERS
+        st.rerun()
+
+if dot_search_clicked and dot_query.strip():
+    try:
+        dot_int = int(dot_query.strip())
+    except ValueError:
+        st.error("DOT number must be numeric.")
+        st.stop()
+
+    if _has_dot:
+        matched = (
+            df_raw[df_raw["dot_number"] == dot_int]["carrier"]
+            .dropna()
+            .unique()
+            .tolist()
+        )
+        if matched:
+            st.session_state["active_carriers"] = matched
+            st.success(
+                f"Showing carrier{'s' if len(matched) > 1 else ''}: "
+                + ", ".join(matched)
+            )
+            st.rerun()
+        else:
+            st.warning(f"No carrier found for DOT {dot_int} in current dataset.")
+    else:
+        st.info(
+            f"DOT lookup requires uploaded PACE data with a `dot_number` column. "
+            f"Use **Carrier Lookup** (page 9) for live FMCSA lookup of DOT {dot_int}.",
+            icon="ℹ️",
+        )
+
 # ── Inline carrier selector ───────────────────────────────────────────────────
 with st.expander("⚙️ Manage Carriers", expanded=False):
     f1, f2 = st.columns([5, 1])

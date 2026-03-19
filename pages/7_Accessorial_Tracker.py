@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from auth_utils import require_auth
 from utils.database import get_connection, get_shipments_with_charges
 from utils.mock_data import generate_mock_shipments
-from utils.styling import inject_css, top_nav, NAVY_500, TIER_COLORS, CHARGE_COLORS
+from utils.styling import inject_css, top_nav, NAVY_500, TIER_COLORS, CHARGE_COLORS, RISK_HIGH_FG
 from pipeline.config import CHARGE_TYPE_LABELS, is_pace_model_ready
 
 st.set_page_config(
