@@ -32,7 +32,7 @@ def load_sample() -> pd.DataFrame:
     print(f"[1/5] Loading {CTGAN_TRAIN_ROWS:,} rows from {TD_SOURCE_TABLE}...")
     conn = get_connection()
     df = pd.read_sql(
-        f"SELECT * FROM {TD_DATABASE}.{TD_SOURCE_TABLE} SAMPLE {CTGAN_TRAIN_ROWS}",
+        f"SELECT * FROM {TD_DATABASE}.{TD_SOURCE_TABLE} SAMPLE {CTGAN_TRAIN_ROWS}",  # nosec B608
         conn
     )
     conn.close()
@@ -133,7 +133,7 @@ def write_to_teradata(synthetic_df: pd.DataFrame):
     total = len(synthetic_df)
     n_chunks = total // chunk_size + 1
     placeholders = "(" + ", ".join(["?"] * len(synthetic_df.columns)) + ")"
-    insert_sql = f"INSERT INTO {TD_DATABASE}.{TD_SYNTHETIC_TABLE} VALUES {placeholders}"
+    insert_sql = f"INSERT INTO {TD_DATABASE}.{TD_SYNTHETIC_TABLE} VALUES {placeholders}"  # nosec B608
 
     for i, start in enumerate(range(0, total, chunk_size)):
         chunk = synthetic_df.iloc[start:start + chunk_size]

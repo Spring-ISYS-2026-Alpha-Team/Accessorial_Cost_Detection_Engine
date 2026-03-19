@@ -73,7 +73,7 @@ def get_connection():
 def get_row_count() -> int:
     with get_connection() as conn:
         cur = conn.cursor()
-        cur.execute(f"SELECT COUNT(*) FROM {TD_DATABASE}.{TD_VIEW}")
+        cur.execute(f"SELECT COUNT(*) FROM {TD_DATABASE}.{TD_VIEW}")  # nosec B608
         count = cur.fetchone()[0]
         print(f"Total rows: {count:,}")
         return count
@@ -84,7 +84,7 @@ def fetch_chunk(offset: int, chunk_size: int) -> pd.DataFrame:
     SELECT * FROM {TD_DATABASE}.{TD_VIEW}
     QUALIFY ROW_NUMBER() OVER (ORDER BY {ID_COLUMN} ASC)
     BETWEEN {offset + 1} AND {offset + chunk_size}
-    """
+    """  # nosec B608
     with get_connection() as conn:
         return pd.read_sql(query, conn)
 

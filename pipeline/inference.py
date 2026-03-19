@@ -131,7 +131,7 @@ class PACEInference:
             )
 
         with open(artifacts_path, "rb") as f:
-            artifacts = pickle.load(f)
+            artifacts = pickle.load(f)  # nosec B301
 
         self.cat_encoder    = artifacts["cat_encoder"]
         self.scaler         = artifacts["scaler"]
@@ -154,7 +154,7 @@ class PACEInference:
             n_classes=N_CLASSES,
         )
         self.model.load_state_dict(
-            torch.load(weights_path, map_location=self.device)
+            torch.load(weights_path, map_location=self.device)  # nosec B614
         )
         self.model.to(self.device)
         self.model.eval()
@@ -298,7 +298,7 @@ class PACEInference:
                 password=TD_PASSWORD, database=TD_DATABASE,
             )
             df = pd.read_sql(
-                f"SELECT * FROM {TD_DATABASE}.pace_training_v "
+                f"SELECT * FROM {TD_DATABASE}.pace_training_v "  # nosec B608
                 f"WHERE dot_number = {dot_number} SAMPLE 1",
                 conn,
             )

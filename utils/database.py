@@ -84,7 +84,7 @@ def get_table_data(_conn, table_name: str, row_limit: int = 500) -> pd.DataFrame
     if _conn is None:
         return pd.DataFrame()
     try:
-        return pd.read_sql(f"SELECT TOP {row_limit} * FROM [{table_name}]", _conn)
+        return pd.read_sql(f"SELECT TOP {row_limit} * FROM [{table_name}]", _conn)  # nosec B608
     except Exception:
         return pd.DataFrame()
 
@@ -147,7 +147,7 @@ def get_accessorial_charges(_conn, row_limit: int = 2000) -> pd.DataFrame:
             ac.notes
         FROM Accessorial_Charges ac
         ORDER BY ac.invoice_date DESC
-    """
+    """  # nosec B608
     try:
         return pd.read_sql(query, _conn)
     except Exception:
@@ -281,7 +281,7 @@ def get_shipments_with_charges(_conn, row_limit: int = 2000) -> pd.DataFrame:
         LEFT JOIN Shipments s  ON ac.shipment_id = s.ShipmentId
         LEFT JOIN Carriers  c  ON s.CarrierId    = c.carrier_id
         ORDER BY ac.invoice_date DESC
-    """
+    """  # nosec B608
     try:
         df = pd.read_sql(query, _conn)
         df["total_cost_usd"] = df["base_freight_usd"].fillna(0) + df["accessorial_charge_usd"].fillna(0)

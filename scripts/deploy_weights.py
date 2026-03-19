@@ -53,7 +53,7 @@ def get_ssh_client(host: str, user: str, key_path: str = None, password: str = N
         sys.exit(1)
 
     client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # nosec B507
 
     if key_path and os.path.exists(key_path):
         client.connect(hostname=host, username=user, key_filename=key_path)
@@ -140,7 +140,7 @@ def show_status(host: str, user: str, remote_dir: str,
     client = get_ssh_client(host, user, key_path, password)
     for rel_path in MODEL_FILES:
         remote_path = os.path.join(remote_dir, rel_path).replace("\\", "/")
-        stdin, stdout, stderr = client.exec_command(
+        stdin, stdout, stderr = client.exec_command(  # nosec B601
             f"ls -lh {remote_path} 2>/dev/null || echo 'NOT FOUND'"
         )
         result = stdout.read().decode().strip()

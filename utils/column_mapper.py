@@ -24,12 +24,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from pipeline.config import CONTINUOUS_COLUMNS, CATEGORICAL_COLUMNS, ID_COLUMN, DOT_COLUMN
 
-# ── PACE target column set ────────────────────────────────────────────────────
-_seen: set = set()
-PACE_TARGET_COLS: List[str] = [
-    c for c in (list(CONTINUOUS_COLUMNS) + list(CATEGORICAL_COLUMNS) + [ID_COLUMN, DOT_COLUMN])
-    if not (_seen.add(c) or c in _seen)  # type: ignore[func-returns-value]
-]
+# ── PACE target column set (ordered, deduplicated) ───────────────────────────
+PACE_TARGET_COLS: List[str] = list(dict.fromkeys(
+    list(CONTINUOUS_COLUMNS) + list(CATEGORICAL_COLUMNS) + [ID_COLUMN, DOT_COLUMN]
+))
 
 # ── Confidence thresholds ─────────────────────────────────────────────────────
 CONFIDENCE_HIGH   = 0.75   # green badge — auto-accept candidate
@@ -151,7 +149,7 @@ def _make_description(col_name: str) -> str:
     return f"{col_name} {readable}"
 
 
-def find_unrecognized_columns(df: "pd.DataFrame") -> List[str]:  # type: ignore[name-defined]
+def find_unrecognized_columns(df) -> List[str]:
     """
     Return column names that survive the static alias map but still don't
     match any PACE schema column. These are candidates for AI mapping.
