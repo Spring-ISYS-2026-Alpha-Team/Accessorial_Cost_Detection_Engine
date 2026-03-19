@@ -1,37 +1,51 @@
 """
+
 utils/cost_model.py
-Shared cost-estimation model loader.
-Pre-warmed on the login page so page 4 loads instantly.
+
+Load pre-trained cost model from disk instead of training in-app.
+
 """
+
+
+
 import streamlit as st
-import pandas as pd
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.pipeline import Pipeline
+
+import joblib
+
+import os
 
 
-_CAT_COLS = ["carrier", "facility"]
-_NUM_COLS = ["weight_lbs", "miles"]
+
+# Path to trained model
+
+MODEL_PATH = os.path.join(
+
+    os.path.dirname(os.path.dirname(__file__)),
+
+    "models",
+
+    "rf_accessorial_model.joblib"
+
+)
+
 
 
 @st.cache_resource(show_spinner=False)
-def get_cost_model(data_hash: int, _df: pd.DataFrame):
-    """
-    Train (or return cached) RandomForest cost estimator.
-    _df is passed with underscore prefix so Streamlit skips hashing it;
-    data_hash is used as the cache key instead.
-    """
-    X = _df[_CAT_COLS + _NUM_COLS]
-    y = _df["total_cost_usd"]
 
-    preprocessor = ColumnTransformer([
-        ("cat", OneHotEncoder(handle_unknown="ignore"), _CAT_COLS),
-        ("num", "passthrough", _NUM_COLS),
-    ])
-    model = Pipeline([
-        ("pre", preprocessor),
-        ("rf",  RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)),
-    ])
-    model.fit(X, y)
+def get_cost_model():
+
+    """
+
+    Load and cache the pre-trained cost model.
+
+    """
+
+    if not os.path.exists(MODEL_PATH):
+
+        raise FileNotFoundError(f"Cost model not found at {MODEL_PATH}")
+
+
+
+    model = joblib.load(MODEL_PATH)
+
     return model
