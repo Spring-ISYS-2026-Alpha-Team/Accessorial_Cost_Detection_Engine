@@ -24,12 +24,15 @@ top_nav(username)
 try:
     HF_TOKEN = st.secrets["HF_TOKEN"]
     HF_MODEL = st.secrets["HF_MODEL"]
-except:
+except Exception:
     HF_TOKEN = os.getenv("HF_TOKEN", "")
     HF_MODEL = os.getenv("HF_MODEL", "kirsten-capangpangan/pace-smollm2-freight")
 
-API_URL = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
-HEADERS = {"Authorization": f"Bearer {HF_TOKEN}"}
+API_URL = f"https://router.huggingface.co/hf-inference/models/{HF_MODEL}"
+HEADERS = {
+    "Authorization": f"Bearer {HF_TOKEN}",
+    "Content-Type": "application/json"
+}
 
 st.markdown("""
 <style>
@@ -97,24 +100,43 @@ def query_model(prompt, retries=3):
                 API_URL,
                 headers=HEADERS,
                 json=payload,
-                timeout=30
+                timeout=60
             )
+
+            if response.status_code == 401:
+                return "Authentication failed. Please check the HF token in secrets."
+
+            if response.status_code == 403:
+                return "Access denied. Token may not have inference permissions."
+
+            if response.status_code == 404:
+                return "Model not found. Please check the model name in secrets."
+
             if response.status_code == 503:
-                st.info("Model is warming up, retrying in 10 seconds...")
-                time.sleep(10)
+                est = response.json().get("estimated_time", 20)
+                st.info(f"Model is warming up, retrying in {int(est)} seconds...")
+                time.sleep(min(est, 30))
                 continue
+
             if response.status_code == 200:
                 result = response.json()
                 if isinstance(result, list) and result:
                     text = result[0].get("generated_text", "").strip()
                     if "### Response:" in text:
                         text = text.split("### Response:")[-1].strip()
-                    return text
+                    return text if text else "No response generated. Try rephrasing your question."
+
+            return f"Unexpected response ({response.status_code}): {response.text[:200]}"
+
+        except requests.exceptions.Timeout:
+            if attempt == retries - 1:
+                return "Request timed out. The model may be overloaded — try again in a moment."
         except Exception as e:
             if attempt == retries - 1:
                 return f"Error contacting model: {str(e)}"
-        time.sleep(2)
-    return "The model did not respond. Try again in a moment."
+        time.sleep(3)
+
+    return "The model did not respond after multiple attempts. Try again in a moment."
 
 st.markdown("**Quick questions:**")
 cols = st.columns(2)
@@ -130,11 +152,23 @@ st.divider()
 
 for msg in st.session_state.messages:
     if msg["role"] == "user":
-        st.markdown(f'<div class="chat-label" style="text-align:right">You</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="chat-bubble-user">{msg["content"]}</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="chat-label" style="text-align:right">You</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            f'<div class="chat-bubble-user">{msg["content"]}</div>',
+            unsafe_allow_html=True
+        )
     else:
-        st.markdown(f'<div class="chat-label">PACE Assistant</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="chat-bubble-bot">{msg["content"]}</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="chat-label">PACE Assistant</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            f'<div class="chat-bubble-bot">{msg["content"]}</div>',
+            unsafe_allow_html=True
+        )
 
 with st.form("chat_form", clear_on_submit=True):
     user_input = st.text_input(
