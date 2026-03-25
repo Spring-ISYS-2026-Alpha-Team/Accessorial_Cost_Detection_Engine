@@ -14,7 +14,7 @@ TD_PASSWORD = os.getenv("TD_PASSWORD", "")
 TD_DATABASE = os.getenv("TD_DATABASE", "CTGAN")
 TD_SOURCE_TABLE = "ctgan_input"
 TD_SYNTHETIC_TABLE = "ctgan_synthetic"
-TD_VIEW = "pace_training_v"
+TD_VIEW = "pace_synthetic_v"
 
 # CTGAN settings
 CTGAN_TRAIN_ROWS = 500000
@@ -147,3 +147,4 @@ RISK_WEIGHTS = {
     "crash_injuries_total": 3.0,
     "crash_towaway_total": 2.0,
 }
+MODEL_ARTIFACTS_PATH = "models/artifacts.pkl"

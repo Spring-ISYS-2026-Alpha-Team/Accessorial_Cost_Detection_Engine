@@ -1,3 +1,4 @@
+from pipeline.pace_transformer import CategoricalEncoder  # noqa
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -8,6 +9,7 @@ import pandas as pd
 import torch
 import torch.nn as nn
 from typing import Dict, List, Optional
+from pipeline.pace_transformer import CategoricalEncoder  # noqa
 from pipeline.config import (
     CONTINUOUS_COLUMNS, CATEGORICAL_COLUMNS, N_CLASSES,
     MODEL_WEIGHTS_PATH, MODEL_ARTIFACTS_PATH, CHARGE_TYPE_LABELS, DOT_COLUMN,
@@ -131,6 +133,8 @@ class PACEInference:
             )
 
         with open(artifacts_path, "rb") as f:
+            import __main__
+            __main__.CategoricalEncoder = CategoricalEncoder
             artifacts = pickle.load(f)  # nosec B301
 
         self.cat_encoder    = artifacts["cat_encoder"]
