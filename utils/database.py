@@ -43,11 +43,18 @@ def get_connection():
     username = _get_secret("DB_USERNAME")
     password = _get_secret("DB_PASSWORD")
 
-    if not all([server, database, username, password]):
-        return None  # Credentials not configured — caller falls back to mock data
+    missing = [k for k, v in {"DB_SERVER": server, "DB_DATABASE": database,
+                                "DB_USERNAME": username, "DB_PASSWORD": password}.items() if not v]
+    if missing:
+        st.warning(
+            f"Database credentials missing: {', '.join(missing)}. "
+            "Add them in Streamlit Cloud → App Settings → Secrets.",
+            icon="⚠️",
+        )
+        return None
 
     try:
-        return pymssql.connect(
+        conn = pymssql.connect(
             server=server,
             user=username,
             password=password,
@@ -56,6 +63,9 @@ def get_connection():
             login_timeout=10,
             tds_version="7.4",
         )
+        # Smoke-test: ensure the connection is usable
+        conn.cursor().execute("SELECT 1")
+        return conn
     except Exception as e:
         st.warning(f"Database connection failed: {e}", icon="⚠️")
         return None
