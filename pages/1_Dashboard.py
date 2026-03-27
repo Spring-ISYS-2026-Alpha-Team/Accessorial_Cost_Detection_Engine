@@ -59,7 +59,7 @@ def _build_risk_dist_fig(df: pd.DataFrame, height=260) -> go.Figure:
     hist_df = df.copy()
     hist_df["bucket"] = pd.cut(
         hist_df["risk_score"],
-        bins=[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+        bins=[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
         labels=["0–10%", "10–20%", "20–30%", "30–40%", "40–50%",
                 "50–60%", "60–70%", "70–80%", "80–90%", "90–100%"],
         include_lowest=True,
@@ -93,7 +93,7 @@ def _build_carrier_risk_fig(df: pd.DataFrame, height=260, sort_by="Value ↓") -
     if len(df) == 0:
         return go.Figure()
     carrier_risk = df.groupby("carrier")["risk_score"].mean().reset_index()
-    carrier_risk["risk_pct"] = (carrier_risk["risk_score"] * 100).round(1)
+    carrier_risk["risk_pct"] = carrier_risk["risk_score"].round(1)  # already 0-100
     if sort_by == "Value ↑":
         carrier_risk = carrier_risk.sort_values("risk_score", ascending=False)
     elif sort_by == "Value ↓":
@@ -175,24 +175,29 @@ st.divider()
 
 # ── KPI row ───────────────────────────────────────────────────────────────────
 total        = len(df)
-avg_risk     = df["risk_score"].mean() * 100 if total else 0
+avg_risk     = df["risk_score"].mean() if total else 0          # already 0-100 after DB normalization
 high_risk    = len(df[df["risk_tier"] == "High"])
 est_cost     = df["accessorial_charge_usd"].sum()
 
 total_delta     = total - len(df_all)
-avg_risk_delta  = (df["risk_score"].mean() - df_all["risk_score"].mean()) * 100 if total else 0
+avg_risk_delta  = (df["risk_score"].mean() - df_all["risk_score"].mean()) if total else 0
 high_risk_delta = high_risk - len(df_all[df_all["risk_tier"] == "High"])
 est_cost_delta  = est_cost - df_all["accessorial_charge_usd"].sum()
 
+def _fmt_usd(v: float) -> str:
+    if v >= 1_000_000: return f"${v/1_000_000:.2f}M"
+    if v >= 1_000:     return f"${v/1_000:.1f}K"
+    return f"${v:,.0f}"
+
 c1, c2, c3, c4 = st.columns(4)
 with c1:
-    st.metric("Total Shipments",     f"{total:,}",            delta=f"{total_delta:+,} vs all")
+    st.metric("Shipments",     f"{total:,}",            delta=f"{total_delta:+,} vs all")
 with c2:
-    st.metric("Avg Risk Score",      f"{avg_risk:.1f}%",      delta=f"{avg_risk_delta:+.1f}%")
+    st.metric("Avg Risk",      f"{avg_risk:.1f}%",      delta=f"{avg_risk_delta:+.1f}%")
 with c3:
-    st.metric("High-Risk Shipments", f"{high_risk:,}",        delta=f"{high_risk_delta:+,} vs all")
+    st.metric("High Risk",     f"{high_risk:,}",        delta=f"{high_risk_delta:+,} vs all")
 with c4:
-    st.metric("Est. Accessorial Cost", f"${est_cost:,.0f}",  delta=f"${est_cost_delta:+,.0f}")
+    st.metric("Accessorial $", _fmt_usd(est_cost),      delta=_fmt_usd(est_cost_delta))
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -287,7 +292,7 @@ with st.container(border=True):
         hide_index=True,
         column_config={
             "Risk Score": st.column_config.ProgressColumn(
-                "Risk Score", format="%.0f%%", min_value=0, max_value=1,
+                "Risk Score", format="%.1f", min_value=0, max_value=100,
             ),
             "Base Freight ($)":      st.column_config.NumberColumn(format="$%.2f"),
             "Est. Accessorial ($)":  st.column_config.NumberColumn(format="$%.2f"),

@@ -32,9 +32,12 @@ def _get_secret(key: str) -> str:
 @st.cache_resource
 def get_connection():
     """
-    Return a cached pyodbc connection to Azure SQL.
-    Returns None and shows an error if connection fails.
+    Return a cached pymssql connection to Azure SQL.
+    Retries up to 3 times with a 2-second delay before giving up.
+    Returns None if all attempts fail.
     """
+    import time
+
     if not PYMSSQL_AVAILABLE:
         return None
 
@@ -46,29 +49,30 @@ def get_connection():
     missing = [k for k, v in {"DB_SERVER": server, "DB_DATABASE": database,
                                 "DB_USERNAME": username, "DB_PASSWORD": password}.items() if not v]
     if missing:
-        st.warning(
-            f"Database credentials missing: {', '.join(missing)}. "
-            "Add them in Streamlit Cloud → App Settings → Secrets.",
-            icon="⚠️",
-        )
         return None
 
-    try:
-        conn = pymssql.connect(
-            server=server,
-            user=username,
-            password=password,
-            database=database,
-            port=1433,
-            login_timeout=10,
-            tds_version="7.4",
-        )
-        # Smoke-test: ensure the connection is usable
-        conn.cursor().execute("SELECT 1")
-        return conn
-    except Exception as e:
-        st.warning(f"Database connection failed: {e}", icon="⚠️")
-        return None
+    last_err = None
+    for attempt in range(1, 4):
+        try:
+            conn = pymssql.connect(
+                server=server,
+                user=username,
+                password=password,
+                database=database,
+                port=1433,
+                login_timeout=10,
+                tds_version="7.4",
+            )
+            # Smoke-test: ensure the connection is usable
+            conn.cursor().execute("SELECT 1")
+            return conn
+        except Exception as e:
+            last_err = e
+            if attempt < 3:
+                time.sleep(2)
+
+    # All retries exhausted — fail silently, fallback to demo data
+    return None
 
 
 @st.cache_data
@@ -134,6 +138,11 @@ def get_shipments(_conn) -> pd.DataFrame:
         df["lane"] = df["OriginRegion"].fillna("?") + " → " + df["DestRegion"].fillna("?")
         df["origin_city"]      = df["OriginRegion"]
         df["destination_city"] = df["DestRegion"]
+        # M-3: Normalize risk_score to 0-100 if stored as 0-1 in the DB
+        if "risk_score" in df.columns:
+            max_score = df["risk_score"].max()
+            if max_score <= 1.0:
+                df["risk_score"] = (df["risk_score"] * 100).round(2)
         return df
     except Exception:
         return pd.DataFrame()

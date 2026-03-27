@@ -34,6 +34,10 @@ if st.session_state.get("_data_preloaded"):
     st.switch_page(dest)
     st.stop()
 
+# F-2: Loading timeout — abort after 30 seconds and fall through to demo data
+_LOAD_TIMEOUT_SECS = 30
+_load_start = time.time()
+
 # ── Loading page CSS ───────────────────────────────────────────────────────────
 def _bg_css() -> str:
     img = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "background.png")
@@ -151,6 +155,8 @@ try:
  
 
     _step("Connecting to database", 5)
+    if time.time() - _load_start > _LOAD_TIMEOUT_SECS:
+        raise TimeoutError("Loading timed out — falling back to demo data.")
     conn = get_connection()
 
     # ── Verify non-fallback users against the DB ───────────────────────────────
@@ -170,11 +176,15 @@ try:
         st.session_state["post_load_dest"] = dest
 
     _step("Loading shipment records", 20)
+    if time.time() - _load_start > _LOAD_TIMEOUT_SECS:
+        raise TimeoutError("Loading timed out — falling back to demo data.")
     df = get_shipments(conn) if conn is not None else pd.DataFrame()
     if df.empty:
         df = generate_mock_shipments(1000)
 
     _step("Loading accessorial data", 42)
+    if time.time() - _load_start > _LOAD_TIMEOUT_SECS:
+        raise TimeoutError("Loading timed out — falling back to demo data.")
     get_accessorial_charges(conn)
     get_shipments_with_charges(conn)
 

@@ -214,17 +214,17 @@ def _fmt_dollars(v: float) -> str:
     return f"${v:,.0f}"
 
 k1, k2, k3, k4, k5, k6 = st.columns(6)
-with k1: st.metric("Total Shipments",   f"{total_shipments:,}",
+with k1: st.metric("Shipments",      f"{total_shipments:,}",
                    help="Total number of shipment records in the selected dataset.")
-with k2: st.metric("Total Revenue",     _fmt_dollars(total_revenue),
+with k2: st.metric("Revenue",        _fmt_dollars(total_revenue),
                    help="Sum of all revenue billed to customers across every shipment.")
-with k3: st.metric("Total Costs",       _fmt_dollars(total_costs),
+with k3: st.metric("Total Costs",    _fmt_dollars(total_costs),
                    help="Combined linehaul and accessorial costs paid to carriers.")
-with k4: st.metric("Accessorial Costs", _fmt_dollars(total_accessorial),
+with k4: st.metric("Accessorial $",  _fmt_dollars(total_accessorial),
                    help="Extra charges beyond base freight — detention, liftgate, fuel surcharges, etc.")
-with k5: st.metric("Avg Cost / Mile",   f"${avg_cpm:.2f}",
+with k5: st.metric("$/Mile",         f"${avg_cpm:.2f}",
                    help="Average carrier cost per mile across all shipments. Lower is more efficient.")
-with k6: st.metric("Accessorial Rate",  f"{accessorial_rate:.1f}%",
+with k6: st.metric("Access. Rate",   f"{accessorial_rate:.1f}%",
                    help="Percentage of shipments that incurred at least one accessorial charge.")
 
 st.markdown("<br>", unsafe_allow_html=True)
