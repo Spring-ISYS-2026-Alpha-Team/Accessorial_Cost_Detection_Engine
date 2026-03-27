@@ -46,7 +46,10 @@ if "charge_type" not in df_raw.columns:
     df_raw["charge_type"] = df_raw.get("accessorial_type", "Unknown")
 if "risk_score_pct" not in df_raw.columns:
     if "risk_score" in df_raw.columns:
-        df_raw["risk_score_pct"] = df_raw["risk_score"]  # already 0-100 after DB normalization
+        max_rs = df_raw["risk_score"].max()
+        df_raw["risk_score_pct"] = (
+            df_raw["risk_score"] * 100 if max_rs <= 1.0 else df_raw["risk_score"]
+        )
     else:
         df_raw["risk_score_pct"] = 0.0
 if "risk_label" not in df_raw.columns:
