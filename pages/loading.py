@@ -34,8 +34,8 @@ if st.session_state.get("_data_preloaded"):
     st.switch_page(dest)
     st.stop()
 
-# F-2: Loading timeout — abort after 30 seconds and fall through to demo data
-_LOAD_TIMEOUT_SECS = 30
+# F-2: Loading timeout — abort after 60 seconds and fall through to demo data
+_LOAD_TIMEOUT_SECS = 60
 _load_start = time.time()
 
 # ── Loading page CSS ───────────────────────────────────────────────────────────
