@@ -60,7 +60,7 @@ def get_connection():
                 password=password,
                 database=database,
                 port=1433,
-                login_timeout=10,
+                login_timeout=20,
                 tds_version="7.4",
             )
             # Smoke-test: ensure the connection is usable
