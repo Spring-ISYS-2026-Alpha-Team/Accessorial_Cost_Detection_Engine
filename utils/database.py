@@ -124,7 +124,8 @@ def get_shipments(_conn) -> pd.DataFrame:
             s.AccessorialFlag,
             s.risk_score,
             s.risk_tier,
-            s.AppointmentType
+            s.AppointmentType,
+        c.dot_number
         FROM Shipments s
         LEFT JOIN Carriers c ON s.CarrierId = c.carrier_id
         ORDER BY s.ShipDate DESC
