@@ -130,6 +130,19 @@ _NAV_PAGES = [
     ("Admin",       "pages/8_Admin.py"),
 ]
 
+# Slug map for absolute URL navigation
+_NAV_SLUGS = {
+    "pages/0_Home.py":              "/Home",
+    "pages/1_Dashboard.py":         "/Dashboard",
+    "pages/2_Upload.py":            "/Upload",
+    "pages/3_Shipments.py":         "/Shipments",
+    "pages/4_Cost_Estimate.py":     "/Cost_Estimate",
+    "pages/5_Route_Analysis.py":    "/Route_Analysis",
+    "pages/6_Carrier_Comparison.py":"/Carrier_Comparison",
+    "pages/7_Accessorial_Tracker.py":"/Accessorial_Tracker",
+    "pages/8_Admin.py":             "/Admin",
+}
+
 # ── Base page CSS (injected on every page) ────────────────────────────────────
 _BASE_CSS = f"""
 <style>
@@ -423,8 +436,8 @@ def inject_css() -> None:
 
 def top_nav(username: str) -> None:
     """
-    Render the top navigation bar using st.page_link() so that navigation
-    stays within the existing WebSocket session (no page reload, no auth loss).
+    Render the top navigation bar using absolute URL anchors to avoid
+    relative-path issues when the session base is /login/.
     Call this at the top of every authenticated page, after inject_css().
     """
     logo_col, *page_cols, user_col, out_col = st.columns(
@@ -433,14 +446,24 @@ def top_nav(username: str) -> None:
 
     with logo_col:
         st.markdown(
-            f"<div style='color:#FFFFFF; font-size:15px; font-weight:700; "
-            f"letter-spacing:1px; padding:4px 0;'>📦 PACE</div>",
+            "<div style='color:#FFFFFF; font-size:15px; font-weight:700; "
+            "letter-spacing:1px; padding:4px 0;'>📦 PACE</div>",
             unsafe_allow_html=True,
         )
 
     for col, (label, page) in zip(page_cols, _NAV_PAGES):
+        slug = _NAV_SLUGS.get(page, "/")
         with col:
-            st.page_link(page, label=label)
+            st.markdown(
+                f"<a href='{slug}' target='_self' style='"
+                f"color:#FFFFFF;font-size:13px;font-weight:700;"
+                f"text-decoration:none;padding:4px 7px;border-radius:4px;"
+                f"display:inline-block;transition:background 0.15s;'"
+                f" onmouseover=\"this.style.background='rgba(255,255,255,0.12)'\""
+                f" onmouseout=\"this.style.background='transparent'\">"
+                f"{label}</a>",
+                unsafe_allow_html=True,
+            )
 
     with user_col:
         st.markdown(
