@@ -205,14 +205,22 @@ total_costs       = df["total_cost_usd"].sum()
 avg_cpm           = df["cost_per_mile"].mean()
 accessorial_rate  = (len(df[df["accessorial_charge_usd"] > 0]) / total_shipments * 100) if total_shipments else 0
 
+def _fmt_dollars(v: float) -> str:
+    """Format large dollar values as $1.2M, $345K, or $1,234."""
+    if v >= 1_000_000:
+        return f"${v/1_000_000:.2f}M"
+    if v >= 1_000:
+        return f"${v/1_000:.1f}K"
+    return f"${v:,.0f}"
+
 k1, k2, k3, k4, k5, k6 = st.columns(6)
 with k1: st.metric("Total Shipments",   f"{total_shipments:,}",
                    help="Total number of shipment records in the selected dataset.")
-with k2: st.metric("Total Revenue",     f"${total_revenue:,.0f}",
+with k2: st.metric("Total Revenue",     _fmt_dollars(total_revenue),
                    help="Sum of all revenue billed to customers across every shipment.")
-with k3: st.metric("Total Costs",       f"${total_costs:,.0f}",
+with k3: st.metric("Total Costs",       _fmt_dollars(total_costs),
                    help="Combined linehaul and accessorial costs paid to carriers.")
-with k4: st.metric("Accessorial Costs", f"${total_accessorial:,.0f}",
+with k4: st.metric("Accessorial Costs", _fmt_dollars(total_accessorial),
                    help="Extra charges beyond base freight — detention, liftgate, fuel surcharges, etc.")
 with k5: st.metric("Avg Cost / Mile",   f"${avg_cpm:.2f}",
                    help="Average carrier cost per mile across all shipments. Lower is more efficient.")
