@@ -54,23 +54,23 @@ def _sort_buttons(chart_key: str):
 
 # ── Carrier metrics builder ───────────────────────────────────────────────────
 def _build_metrics(df: pd.DataFrame) -> pd.DataFrame:
-    m = (
-        df.groupby("carrier")
-        .agg(
-            shipments        =("shipment_id",            "count"),
-            avg_cost         =("total_cost_usd",          "mean"),
-            total_spend      =("total_cost_usd",          "sum"),
-            avg_cpm          =("cost_per_mile",           "mean"),
-            avg_risk         =("risk_score",              "mean"),
-            high_risk_count  =("risk_tier",
-                               lambda x: (x == "High").sum()),
-            total_accessorial=("accessorial_charge_usd",  "sum"),
-            avg_accessorial  =("accessorial_charge_usd",  "mean"),
-            avg_miles        =("miles",                   "mean"),
-            avg_weight       =("weight_lbs",              "mean"),
-        )
-        .reset_index()
+    agg_dict = dict(
+        shipments        =("shipment_id",            "count"),
+        avg_cost         =("total_cost_usd",          "mean"),
+        total_spend      =("total_cost_usd",          "sum"),
+        avg_cpm          =("cost_per_mile",           "mean"),
+        avg_risk         =("risk_score",              "mean"),
+        high_risk_count  =("risk_tier",
+                           lambda x: (x == "High").sum()),
+        total_accessorial=("accessorial_charge_usd",  "sum"),
+        avg_accessorial  =("accessorial_charge_usd",  "mean"),
+        avg_miles        =("miles",                   "mean"),
+        avg_weight       =("weight_lbs",              "mean"),
     )
+    # Include DOT number if available
+    if "dot_number" in df.columns:
+        agg_dict["dot_number"] = ("dot_number", "first")
+    m = df.groupby("carrier").agg(**agg_dict).reset_index()
     m["high_risk_pct"]    = (m["high_risk_count"]   / m["shipments"] * 100).round(1)
     m["accessorial_rate"] = (m["total_accessorial"] / m["total_spend"] * 100).round(1)
     return m
@@ -357,31 +357,41 @@ with st.container(border=True):
     display["avg_miles"]  = display["avg_miles"].round(0).astype(int)
     display["avg_weight"] = display["avg_weight"].round(0).astype(int)
 
+    # Build display columns — include DOT if present
+    _dot_cols = ["dot_number"] if "dot_number" in display.columns else []
+    _base_cols = ["carrier"] + _dot_cols + [
+        "shipments", "avg_cost", "avg_cpm", "avg_risk",
+        "high_risk_pct", "avg_accessorial", "accessorial_rate", "total_spend",
+    ]
+    _rename = {
+        "carrier":         "Carrier",
+        "dot_number":      "DOT #",
+        "shipments":       "Shipments",
+        "avg_cost":        "Avg Total Cost",
+        "avg_cpm":         "Avg $/Mile",
+        "avg_risk":        "Avg Risk",
+        "high_risk_pct":   "High Risk %",
+        "avg_accessorial": "Avg Accessorial",
+        "accessorial_rate":"Accessorial %",
+        "total_spend":     "Total Spend",
+    }
+    _col_config = {
+        "Avg Risk":       st.column_config.ProgressColumn(
+            "Avg Risk", format="%.1f", min_value=0, max_value=100),
+        "Avg Total Cost": st.column_config.NumberColumn(format="$%.2f"),
+        "Avg $/Mile":     st.column_config.NumberColumn(format="$%.3f"),
+        "Avg Accessorial":st.column_config.NumberColumn(format="$%.2f"),
+        "Total Spend":    st.column_config.NumberColumn(format="$%.0f"),
+    }
+    if _dot_cols:
+        _col_config["DOT #"] = st.column_config.NumberColumn(
+            "DOT #", format="%d", help="USDOT number for this carrier")
+
     st.dataframe(
-        display[[
-            "carrier", "shipments", "avg_cost", "avg_cpm", "avg_risk",
-            "high_risk_pct", "avg_accessorial", "accessorial_rate", "total_spend",
-        ]].rename(columns={
-            "carrier":         "Carrier",
-            "shipments":       "Shipments",
-            "avg_cost":        "Avg Total Cost",
-            "avg_cpm":         "Avg $/Mile",
-            "avg_risk":        "Avg Risk",
-            "high_risk_pct":   "High Risk %",
-            "avg_accessorial": "Avg Accessorial",
-            "accessorial_rate":"Accessorial %",
-            "total_spend":     "Total Spend",
-        }).sort_values("Avg $/Mile"),
+        display[_base_cols].rename(columns=_rename).sort_values("Avg $/Mile"),
         width="stretch",
         hide_index=True,
-        column_config={
-            "Avg Risk":       st.column_config.ProgressColumn(
-                "Avg Risk", format="%.1f", min_value=0, max_value=100),
-            "Avg Total Cost": st.column_config.NumberColumn(format="$%.2f"),
-            "Avg $/Mile":     st.column_config.NumberColumn(format="$%.3f"),
-            "Avg Accessorial":st.column_config.NumberColumn(format="$%.2f"),
-            "Total Spend":    st.column_config.NumberColumn(format="$%.0f"),
-        },
+        column_config=_col_config,
     )
 
 st.markdown("<br>", unsafe_allow_html=True)
