@@ -8,11 +8,8 @@ font = "sans serif"
 
 [server]
 headless = true
-port = 8501
-address = "127.0.0.1"
 enableCORS = false
 enableXsrfProtection = false
-enableWebsocketCompression = false
 
 [browser]
 gatherUsageStats = false
