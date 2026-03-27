@@ -376,7 +376,7 @@ with st.container(border=True):
         hide_index=True,
         column_config={
             "Avg Risk":       st.column_config.ProgressColumn(
-                "Avg Risk", format="%.0f%%", min_value=0, max_value=1),
+                "Avg Risk", format="%.1f", min_value=0, max_value=100),
             "Avg Total Cost": st.column_config.NumberColumn(format="$%.2f"),
             "Avg $/Mile":     st.column_config.NumberColumn(format="$%.3f"),
             "Avg Accessorial":st.column_config.NumberColumn(format="$%.2f"),

@@ -35,10 +35,10 @@ MODEL_READY = is_pace_model_ready()
 df_all = load_shipments_with_fallback()
 
 # ── Normalize schema ──────────────────────────────────────────────
-# Support both old schema and PACE schema side by side
+# risk_score is already 0-100 after database.py normalization
 if "risk_score_pct" not in df_all.columns:
     if "risk_score" in df_all.columns:
-        df_all["risk_score_pct"] = df_all["risk_score"] * 100
+        df_all["risk_score_pct"] = df_all["risk_score"]  # already 0-100
     else:
         df_all["risk_score_pct"] = 0.0
 
