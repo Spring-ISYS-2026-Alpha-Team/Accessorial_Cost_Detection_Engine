@@ -139,14 +139,13 @@ p, .stMarkdown p { color: #94A3B8 !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# Already logged in → route by role (skip loading if already pre-loaded)
+# Already logged in → only redirect if user deliberately navigated to /login.
+# Do NOT redirect if Streamlit is just running app.py as part of multipage routing.
+# We detect "deliberate login visit" by checking if there's no referrer page in session.
 if check_auth():
-    if st.session_state.get("_data_preloaded"):
-        if st.session_state.get("role") == "admin":
-            st.switch_page("pages/8_Admin.py")
-        else:
-            st.switch_page("pages/0_Home.py")
-    else:
+    # Only auto-redirect on first load after login (loading screen sets _data_preloaded)
+    # Don't redirect on subsequent app.py runs caused by multipage navigation
+    if not st.session_state.get("_data_preloaded"):
         st.session_state["post_load_dest"] = (
             "pages/8_Admin.py" if st.session_state.get("role") == "admin"
             else "pages/0_Home.py"

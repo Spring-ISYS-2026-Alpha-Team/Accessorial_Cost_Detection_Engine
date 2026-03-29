@@ -35,6 +35,10 @@ def get_connection():
     Return a cached pymssql connection to Azure SQL.
     Retries up to 3 times with a 2-second delay before giving up.
     Returns None if all attempts fail.
+    
+    NOTE: Uses @st.cache_resource so the connection is shared across
+    all sessions and reruns — avoids reconnecting on every page load.
+    The connection is tested with SELECT 1 before being returned.
     """
     import time
 
@@ -73,6 +77,25 @@ def get_connection():
 
     # All retries exhausted — fail silently, fallback to demo data
     return None
+
+
+def get_connection_safe():
+    """
+    Wrapper around get_connection() that returns None if the cached
+    connection has gone stale (e.g. Azure SQL idle timeout) rather than
+    raising an error. Clears the cache and retries once if the connection
+    fails the liveness check.
+    """
+    conn = get_connection()
+    if conn is None:
+        return None
+    try:
+        conn.cursor().execute("SELECT 1")
+        return conn
+    except Exception:
+        # Connection went stale — clear cache and get a fresh one
+        get_connection.clear()
+        return get_connection()
 
 
 @st.cache_data
@@ -220,7 +243,7 @@ def verify_pace_user(_conn, username: str, password: str):
 
 def load_shipments_with_fallback(n_mock: int = 300) -> pd.DataFrame:
     """Load shipments from the DB, falling back to mock data with an info banner."""
-    conn = get_connection()
+    conn = get_connection_safe()
     df = get_shipments(conn) if conn is not None else pd.DataFrame()
     if df.empty:
         from utils.mock_data import generate_mock_shipments
