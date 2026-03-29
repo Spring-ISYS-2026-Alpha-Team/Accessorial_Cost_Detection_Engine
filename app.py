@@ -240,9 +240,16 @@ with st.container(border=True):
                 st.session_state["post_load_dest"] = (
                     "pages/8_Admin.py" if role == "admin" else "pages/0_Home.py"
                 )
-                st.switch_page("pages/loading.py")
+                # st.switch_page inside st.form doesn't work reliably —
+                # set a flag and navigate outside the form block
+                st.session_state["_do_login_redirect"] = True
+                st.rerun()
             else:
                 st.error("Please enter both username and password.")
+
+# ── Post-form redirect (must be outside form block) ───────────────────────────
+if st.session_state.pop("_do_login_redirect", False):
+    st.switch_page("pages/loading.py")
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown("""
