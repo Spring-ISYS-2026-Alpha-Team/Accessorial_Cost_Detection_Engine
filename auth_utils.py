@@ -24,14 +24,9 @@ def check_auth():
 def require_auth() -> None:
     """
     Auth guard for protected pages.
-    If not authenticated, shows a message and stops execution.
-    Does NOT call st.switch_page — that would break the WebSocket session
-    and cause the login form to render at the wrong URL.
+    Uses st.switch_page to redirect unauthenticated users to login.
+    Only called when a page is accessed directly without a session.
     """
     if not check_auth():
-        st.error("🔐 Please sign in to access PACE.")
-        st.markdown(
-            "[Go to Sign In](/)" ,
-            unsafe_allow_html=False,
-        )
+        st.switch_page("app.py")
         st.stop()

@@ -436,8 +436,8 @@ def inject_css() -> None:
 
 def top_nav(username: str) -> None:
     """
-    Render the top navigation bar using absolute URL anchors to avoid
-    relative-path issues when the session base is /login/.
+    Render the top navigation bar using st.page_link() for client-side
+    navigation that preserves the WebSocket session.
     Call this at the top of every authenticated page, after inject_css().
     """
     logo_col, *page_cols, user_col, out_col = st.columns(
@@ -452,18 +452,8 @@ def top_nav(username: str) -> None:
         )
 
     for col, (label, page) in zip(page_cols, _NAV_PAGES):
-        slug = _NAV_SLUGS.get(page, "/")
         with col:
-            st.markdown(
-                f"<a href='{slug}' target='_self' style='"
-                f"color:#FFFFFF;font-size:13px;font-weight:700;"
-                f"text-decoration:none;padding:4px 7px;border-radius:4px;"
-                f"display:inline-block;transition:background 0.15s;'"
-                f" onmouseover=\"this.style.background='rgba(255,255,255,0.12)'\""
-                f" onmouseout=\"this.style.background='transparent'\">"
-                f"{label}</a>",
-                unsafe_allow_html=True,
-            )
+            st.page_link(page, label=label)
 
     with user_col:
         st.markdown(
