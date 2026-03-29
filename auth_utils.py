@@ -24,9 +24,9 @@ def check_auth():
 def require_auth() -> None:
     """
     Auth guard for protected pages.
-    Halts execution with a sign-in prompt if the user is not authenticated.
+    Redirects immediately to login if not authenticated — no prompt shown,
+    so navigating directly to any page URL just bounces to login cleanly.
     """
     if not check_auth():
-        st.warning("Please sign in to access this page.")
-        st.page_link("app.py", label="Go to Sign In", icon="🔑")
+        st.switch_page("app.py")
         st.stop()

@@ -149,7 +149,7 @@ def get_shipments(_conn) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-@st.cache_data
+@st.cache_data(ttl=300)
 def get_accessorial_charges(_conn, row_limit: int = 2000) -> pd.DataFrame:
     """Fetch accessorial charge records."""
     if _conn is None:
@@ -174,7 +174,7 @@ def get_accessorial_charges(_conn, row_limit: int = 2000) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-@st.cache_data
+@st.cache_data(ttl=300)
 def get_carriers(_conn) -> pd.DataFrame:
     """Fetch all carrier records."""
     if _conn is None:
@@ -185,7 +185,7 @@ def get_carriers(_conn) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-@st.cache_data
+@st.cache_data(ttl=300)
 def get_facilities(_conn) -> pd.DataFrame:
     """Fetch all facility records."""
     if _conn is None:
@@ -275,7 +275,7 @@ def delete_pace_user(_conn, username: str) -> tuple[bool, str]:
         return False, str(e)
 
 
-@st.cache_data
+@st.cache_data(ttl=300)
 def get_shipments_with_charges(_conn, row_limit: int = 2000) -> pd.DataFrame:
     """
     Accessorial Charges joined to Shipment + Carrier for the Accessorial Tracker page.

@@ -21,9 +21,17 @@ def _bg_css() -> str:
 _bg_props = _bg_css()
 
 # ── Fallback users if DB unavailable ──────────────────────────────────────────
+# Passwords loaded from environment variables — never hardcoded.
+# Defaults are intentionally weak placeholders; override via .env on the server.
 _FALLBACK = {
-    "admin": {"password": "admin", "role": "admin"},
-    "user":  {"password": "user",  "role": "user"},
+    os.environ.get("PACE_ADMIN_USER", "admin"): {
+        "password": os.environ.get("PACE_ADMIN_PASS", "admin"),
+        "role": "admin",
+    },
+    os.environ.get("PACE_USER_USER", "user"): {
+        "password": os.environ.get("PACE_USER_PASS", "user"),
+        "role": "user",
+    },
 }
 
 st.set_page_config(
