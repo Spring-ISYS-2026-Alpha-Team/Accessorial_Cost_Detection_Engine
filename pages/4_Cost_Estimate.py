@@ -9,7 +9,10 @@ import streamlit as st
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from auth_utils import require_auth
-from utils.styling import inject_css, top_nav, TIER_COLORS, CHARGE_COLORS
+from utils.styling import (
+    inject_css, top_nav, TIER_COLORS, CHARGE_COLORS,
+    CHART_PLOT_BG, CHART_PAPER_BG,
+)
 from pipeline.data_pipeline import get_data_pipeline
 from pipeline.config import CHARGE_TYPE_LABELS, CATEGORICAL_COLUMNS, CONTINUOUS_COLUMNS, is_pace_model_ready
 
@@ -270,7 +273,7 @@ with result_col:
                             "tickfont": {"color": "#94A3B8", "size": 11},
                         },
                         "bar":      {"color": color, "thickness": 0.28},
-                        "bgcolor":  "#0f0a1e",
+                        "bgcolor":  CHART_PAPER_BG,
                         "borderwidth": 0,
                         "steps": [
                             {"range": [0,  25], "color": "rgba(5,150,105,0.15)"},
@@ -288,7 +291,7 @@ with result_col:
                 gauge_fig.update_layout(
                     height=240,
                     margin=dict(l=20, r=20, t=50, b=10),
-                    paper_bgcolor="#0f0a1e",
+                    paper_bgcolor=CHART_PAPER_BG,
                     font={"color": "#A78BFA"},
                 )
                 st.plotly_chart(gauge_fig, use_container_width=True)
@@ -346,7 +349,7 @@ with result_col:
             ))
             prob_fig.update_layout(
                 margin=dict(l=0, r=60, t=8, b=0), height=260,
-                plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+                plot_bgcolor=CHART_PLOT_BG, paper_bgcolor=CHART_PAPER_BG,
                 font=dict(color="#A78BFA"),
                 xaxis=dict(
                     ticksuffix="%", range=[0, 110],

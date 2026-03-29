@@ -35,6 +35,8 @@ DARK_MID     = "#09021a"
 GLASS_BG     = "rgba(12, 6, 30, 0.82)"
 GLASS_BORDER = "rgba(180, 80, 220, 0.28)"
 GLASS_GLOW   = "rgba(150, 50, 200, 0.18)"
+# Bordered panels / metrics — darker than page wash + glass so text sits in clear boxes
+PANEL_BG_DARK = "rgba(2, 1, 10, 0.94)"
 
 # Accent colors
 ACCENT_PURPLE = "#9333EA"
@@ -87,10 +89,12 @@ CHARGE_COLORS = {
     "High Risk / Multiple": "#EF4444",
 }
 
-# Chart theme defaults
-CHART_BG      = "#0f0a1e"
-CHART_GRID    = "rgba(150,50,200,0.18)"
-CHART_AXIS    = "#A78BFA"
+# Chart theme — lifted violet slate, clearly distinct from page wash & panel fill
+CHART_PLOT_BG  = "#17112a"   # inner plot area
+CHART_PAPER_BG = "#1f183c"   # figure paper / margins (slightly lighter “card” frame)
+CHART_BG       = CHART_PLOT_BG  # legacy alias
+CHART_GRID     = "rgba(150,50,200,0.22)"
+CHART_AXIS     = "#A78BFA"
 
 # Chart palette
 CHART_PURPLE   = "#9333EA"
@@ -103,15 +107,15 @@ CHART_LAVENDER = "#C4B5FD"
 def chart_theme(**overrides) -> dict:
     """Dark-themed Plotly layout defaults. Merge with page-specific layout kwargs."""
     base = {
-        "plot_bgcolor":  CHART_BG,
-        "paper_bgcolor": "#0f0a1e",
+        "plot_bgcolor":  CHART_PLOT_BG,
+        "paper_bgcolor": CHART_PAPER_BG,
         "font":   {"color": CHART_AXIS, "family": "Inter, Segoe UI, sans-serif"},
         "xaxis":  {"gridcolor": CHART_GRID, "color": CHART_AXIS,
                    "linecolor": "rgba(150,50,200,0.25)", "zerolinecolor": "rgba(150,50,200,0.2)"},
         "yaxis":  {"gridcolor": CHART_GRID, "color": CHART_AXIS,
                    "linecolor": "rgba(150,50,200,0.25)", "zerolinecolor": "rgba(150,50,200,0.2)"},
-        "legend": {"bgcolor": "rgba(15,10,30,0.7)", "font": {"color": "#FFFFFF"},
-                   "bordercolor": "rgba(150,50,200,0.3)", "borderwidth": 1},
+        "legend": {"bgcolor": "rgba(31, 24, 60, 0.88)", "font": {"color": "#FFFFFF"},
+                   "bordercolor": "rgba(150,50,200,0.4)", "borderwidth": 1},
     }
     base.update(overrides)
     return base
@@ -160,8 +164,8 @@ _BASE_CSS = f"""
     filter: blur(2px);
 }}
 
-/* ── Hide Streamlit chrome ── */
-#MainMenu, header, footer {{ visibility: hidden; }}
+/* ── Hide Streamlit chrome (do NOT hide header — it carries sidebar toggle + top nav in some versions) ── */
+#MainMenu, footer {{ visibility: hidden; }}
 
 /* ── Sidebar — dark glass theme ── */
 [data-testid="stSidebar"] {{
@@ -283,7 +287,7 @@ _BASE_CSS = f"""
 
 /* ── Metric Cards ── */
 [data-testid="stMetric"] {{
-    background: rgba(12, 6, 30, 0.82) !important;
+    background: {PANEL_BG_DARK} !important;
     border: 1px solid rgba(180, 80, 220, 0.28) !important;
     border-radius: 12px !important;
     padding: 20px 24px !important;
@@ -306,6 +310,24 @@ _BASE_CSS = f"""
 [data-testid="stMetricDelta"] > div {{
     font-size: 12px !important;
     color: {TEXT_SECONDARY} !important;
+}}
+
+/* ── Bordered panels (st.container(border=True)) — darker than surrounding page ── */
+[data-testid="stVerticalBlockBorderWrapper"] > div {{
+    background: {PANEL_BG_DARK} !important;
+    backdrop-filter: blur(14px) !important;
+    -webkit-backdrop-filter: blur(14px) !important;
+    border: 1px solid rgba(150, 65, 195, 0.42) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.04),
+        0 8px 36px rgba(0,0,0,0.55) !important;
+}}
+
+/* ── Expanders (written content blocks) — match panel depth ── */
+[data-testid="stExpander"] details {{
+    background: {PANEL_BG_DARK} !important;
+    border: 1px solid rgba(150, 65, 195, 0.38) !important;
+    border-radius: 10px !important;
 }}
 
 /* ── Buttons ── */
@@ -341,11 +363,13 @@ strong, b {{ color: #F1F5F9 !important; }}
 .stCaption, [data-testid="stCaptionContainer"] p {{ color: #94A3B8 !important; font-size: 13px !important; }}
 .stDivider hr {{ border-color: rgba(180,80,220,0.25) !important; }}
 
-/* ── Plotly chart containers ── */
+/* ── Plotly chart containers — surface differs from panel + page ── */
 [data-testid="stPlotlyChart"] {{
-    background: transparent !important;
-    border-radius: 8px !important;
+    background: {CHART_PAPER_BG} !important;
+    border-radius: 10px !important;
     overflow: hidden !important;
+    border: 1px solid rgba(150, 65, 195, 0.35) !important;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04) !important;
 }}
 [data-testid="stPlotlyChart"] > div {{
     background: transparent !important;
@@ -423,7 +447,7 @@ strong, b {{ color: #F1F5F9 !important; }}
     height: 6px !important;
 }}
 [data-testid="stDataFrame"] ::-webkit-scrollbar-track {{
-    background: #0f0a1e !important;
+    background: {CHART_PLOT_BG} !important;
 }}
 [data-testid="stDataFrame"] ::-webkit-scrollbar-thumb {{
     background: rgba(147,51,234,0.5) !important;
@@ -437,8 +461,8 @@ strong, b {{ color: #F1F5F9 !important; }}
 
 
 def inject_css() -> None:
-    """No-op — custom CSS stripped for clean Streamlit baseline."""
-    pass
+    """Inject global dark-glass theme (nav, metrics, bordered panels, inputs)."""
+    st.markdown(_BASE_CSS, unsafe_allow_html=True)
 
 
 def top_nav(username: str) -> None:

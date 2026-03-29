@@ -8,7 +8,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from auth_utils import require_auth
 from utils.database import load_shipments_with_fallback
-from utils.styling import inject_css, top_nav, NAVY_500, NAVY_900, NAVY_100
+from utils.styling import (
+    inject_css, top_nav, NAVY_500, NAVY_900, NAVY_100,
+    CHART_PLOT_BG, CHART_PAPER_BG,
+)
 
 st.set_page_config(page_title="PACE — Home", page_icon="🏠",
                    layout="wide", initial_sidebar_state="expanded")
@@ -89,7 +92,7 @@ df_all = load_shipments_with_fallback()
 df_all["ship_date_dt"] = pd.to_datetime(df_all["ship_date"])
 
 # ── Shared chart layout helper ─────────────────────────────────────────────────
-_DARK = dict(plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+_DARK = dict(plot_bgcolor=CHART_PLOT_BG, paper_bgcolor=CHART_PAPER_BG,
              font=dict(color="#A78BFA"))
 _GRID = dict(gridcolor="rgba(150,50,200,0.18)", color="#A78BFA")
 _LEGEND = dict(orientation="h", y=1.05, font=dict(color="#FFFFFF"))

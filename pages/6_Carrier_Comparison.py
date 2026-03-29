@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from auth_utils import require_auth
 from utils.database import load_shipments_with_fallback
-from utils.styling import inject_css, top_nav, NAVY_500, NAVY_900
+from utils.styling import inject_css, top_nav, NAVY_500, NAVY_900, CHART_PLOT_BG, CHART_PAPER_BG
 
 st.set_page_config(
     page_title="PACE — Carrier Comparison",
@@ -93,7 +93,7 @@ def _build_cpm_fig(metrics: pd.DataFrame, height=280, sort_by="Value ↓") -> go
     ))
     fig.update_layout(
         margin=dict(l=0, r=0, t=36, b=0), height=height,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+        plot_bgcolor=CHART_PLOT_BG, paper_bgcolor=CHART_PAPER_BG,
         font=dict(color="#A78BFA"),
         yaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)",
                    color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
@@ -122,7 +122,7 @@ def _build_high_risk_fig(metrics: pd.DataFrame, height=280, sort_by="Value ↓")
     ))
     fig.update_layout(
         margin=dict(l=0, r=0, t=36, b=0), height=height,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+        plot_bgcolor=CHART_PLOT_BG, paper_bgcolor=CHART_PAPER_BG,
         font=dict(color="#A78BFA"),
         yaxis=dict(ticksuffix="%", gridcolor="rgba(150,50,200,0.15)",
                    color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
@@ -149,7 +149,7 @@ def _build_acc_rate_fig(metrics: pd.DataFrame, height=260, sort_by="Value ↓") 
     ))
     fig.update_layout(
         margin=dict(l=0, r=0, t=36, b=0), height=height,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+        plot_bgcolor=CHART_PLOT_BG, paper_bgcolor=CHART_PAPER_BG,
         font=dict(color="#A78BFA"),
         yaxis=dict(ticksuffix="%", gridcolor="rgba(150,50,200,0.15)",
                    color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
@@ -192,7 +192,7 @@ def _build_radar_fig(metrics: pd.DataFrame, height=260) -> go.Figure:
         polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
         margin=dict(l=20, r=20, t=20, b=20),
         height=height,
-        paper_bgcolor="#0f0a1e",
+        paper_bgcolor=CHART_PAPER_BG,
         font=dict(color="#A78BFA"),
         legend=dict(bgcolor="rgba(15,10,30,0.7)", font=dict(size=10, color="#FFFFFF")),
     )

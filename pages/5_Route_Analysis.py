@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from auth_utils import require_auth
 from utils.database import load_shipments_with_fallback
-from utils.styling import inject_css, top_nav, NAVY_500, NAVY_900
+from utils.styling import inject_css, top_nav, NAVY_500, NAVY_900, CHART_PLOT_BG, CHART_PAPER_BG
 
 st.set_page_config(
     page_title="PACE — Route Analysis",
@@ -95,7 +95,7 @@ def _build_expensive_fig(lane_metrics: pd.DataFrame, label: str,
     ))
     fig.update_layout(
         margin=dict(l=0, r=160, t=8, b=0), height=height,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+        plot_bgcolor=CHART_PLOT_BG, paper_bgcolor=CHART_PAPER_BG,
         font=dict(color="#A78BFA"),
         xaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)",
                    color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
@@ -118,7 +118,7 @@ def _build_efficient_fig(lane_metrics: pd.DataFrame, label: str,
     ))
     fig.update_layout(
         margin=dict(l=0, r=160, t=8, b=0), height=height,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+        plot_bgcolor=CHART_PLOT_BG, paper_bgcolor=CHART_PAPER_BG,
         font=dict(color="#A78BFA"),
         xaxis=dict(tickprefix="$", gridcolor="rgba(150,50,200,0.15)",
                    color="#94A3B8", linecolor="rgba(150,50,200,0.2)"),
@@ -148,7 +148,7 @@ def _build_scatter_fig(lane_metrics: pd.DataFrame, label: str,
     )
     scatter_fig.update_layout(
         margin=dict(l=0, r=0, t=8, b=0), height=height,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+        plot_bgcolor=CHART_PLOT_BG, paper_bgcolor=CHART_PAPER_BG,
         font=dict(color="#A78BFA"),
         xaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8",
                    linecolor="rgba(150,50,200,0.2)"),

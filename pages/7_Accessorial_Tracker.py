@@ -11,7 +11,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from auth_utils import require_auth
 from utils.database import get_connection, get_shipments_with_charges
 from utils.mock_data import generate_mock_shipments
-from utils.styling import inject_css, top_nav, NAVY_500, TIER_COLORS, CHARGE_COLORS
+from utils.styling import (
+    inject_css, top_nav, NAVY_500, TIER_COLORS, CHARGE_COLORS,
+    CHART_PLOT_BG, CHART_PAPER_BG,
+)
 from pipeline.config import CHARGE_TYPE_LABELS, is_pace_model_ready
 
 st.set_page_config(
@@ -119,7 +122,7 @@ def _build_donut_fig(df_in: pd.DataFrame, total_acc: float,
     )
     fig.update_layout(
         margin=dict(l=0, r=0, t=8, b=0), height=height,
-        paper_bgcolor="#0f0a1e", showlegend=True,
+        paper_bgcolor=CHART_PAPER_BG, showlegend=True,
         font=dict(color="#A78BFA"),
         legend=dict(
             orientation="v", x=1.0, y=0.5,
@@ -148,7 +151,7 @@ def _build_risk_distribution_fig(df_in: pd.DataFrame,
             ))
     fig.update_layout(
         margin=dict(l=0, r=0, t=8, b=0), height=height,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+        plot_bgcolor=CHART_PLOT_BG, paper_bgcolor=CHART_PAPER_BG,
         font=dict(color="#A78BFA"),
         xaxis=dict(color="#94A3B8",
                    gridcolor="rgba(150,50,200,0.15)"),
@@ -187,7 +190,7 @@ def _build_carrier_fig(df_in: pd.DataFrame,
     ))
     fig.update_layout(
         margin=dict(l=0, r=80, t=8, b=0), height=height,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+        plot_bgcolor=CHART_PLOT_BG, paper_bgcolor=CHART_PAPER_BG,
         font=dict(color="#A78BFA"),
         xaxis=dict(tickprefix="$",
                    gridcolor="rgba(150,50,200,0.15)", color="#94A3B8"),
@@ -214,7 +217,7 @@ def _build_trend_fig(df_in: pd.DataFrame, height: int = 260) -> go.Figure:
     ))
     fig.update_layout(
         margin=dict(l=0, r=0, t=8, b=0), height=height,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+        plot_bgcolor=CHART_PLOT_BG, paper_bgcolor=CHART_PAPER_BG,
         font=dict(color="#A78BFA"),
         xaxis=dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8"),
         yaxis=dict(tickprefix="$",
@@ -250,7 +253,7 @@ def _build_risk_tier_fig(df_in: pd.DataFrame,
     ))
     fig.update_layout(
         margin=dict(l=0, r=0, t=8, b=0), height=height,
-        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+        plot_bgcolor=CHART_PLOT_BG, paper_bgcolor=CHART_PAPER_BG,
         font=dict(color="#A78BFA"),
         xaxis=dict(color="#94A3B8",
                    gridcolor="rgba(150,50,200,0.15)"),
@@ -367,7 +370,7 @@ def _show_risk_detail(row: dict):
         ))
         prob_fig.update_layout(
             margin=dict(l=0, r=60, t=8, b=0), height=200,
-            plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+            plot_bgcolor=CHART_PLOT_BG, paper_bgcolor=CHART_PAPER_BG,
             font=dict(color="#A78BFA"),
             xaxis=dict(ticksuffix="%", range=[0, 110],
                        color="#94A3B8",

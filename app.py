@@ -11,7 +11,8 @@ st.set_page_config(
     page_title="PACE",
     page_icon="📦",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    # Sidebar hosts st.navigation(); collapsed hides all page links until user finds the toggle
+    initial_sidebar_state="expanded",
 )
 
 # ── Fallback credentials (no DB needed) ───────────────────────────────────────
@@ -71,19 +72,21 @@ if check_auth():
 
     pages = [
         st.Page("pages/0_Home.py",               title="Home",           icon="🏠"),
-        st.Page("pages/1_Dashboard.py",           title="Dashboard",      icon="📊"),
-        st.Page("pages/2_Upload.py",              title="Upload",         icon="📤"),
-        st.Page("pages/4_Cost_Estimate.py",       title="Cost Estimate",  icon="💰"),
-        st.Page("pages/6_Carrier_Comparison.py",  title="Carriers",       icon="🚚"),
-        st.Page("pages/7_Accessorial_Tracker.py", title="Accessorial",    icon="📋"),
-        st.Page("pages/9_Carrier_Lookup.py",      title="Carrier Lookup", icon="🔍"),
-        st.Page("pages/chatbot.py",               title="Chatbot",        icon="💬"),
+        st.Page("pages/1_Dashboard.py",          title="Dashboard",      icon="📊"),
+        st.Page("pages/2_Upload.py",             title="Upload",         icon="📤"),
+        st.Page("pages/3_Shipments.py",          title="Shipments",      icon="🚚"),
+        st.Page("pages/4_Cost_Estimate.py",      title="Cost Estimate",  icon="💰"),
+        st.Page("pages/5_Route_Analysis.py",     title="Routes",         icon="🗺️"),
+        st.Page("pages/6_Carrier_Comparison.py", title="Carriers",       icon="🚛"),
+        st.Page("pages/7_Accessorial_Tracker.py", title="Accessorial",   icon="📋"),
+        st.Page("pages/9_Carrier_Lookup.py",     title="Carrier Lookup", icon="🔍"),
+        st.Page("pages/chatbot.py",              title="Chatbot",        icon="💬"),
     ]
 
     if role == "admin":
         pages.append(st.Page("pages/8_Admin.py", title="Admin", icon="🛠️"))
 
-    pg = st.navigation(pages)
+    pg = st.navigation(pages, expanded=True)
     pg.run()
 
 else:

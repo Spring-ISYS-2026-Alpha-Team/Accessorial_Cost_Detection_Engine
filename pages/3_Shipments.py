@@ -13,6 +13,7 @@ from utils.styling import (
     inject_css, top_nav,
     NAVY_500,
     TIER_BG_FG, CHARGE_COLORS,
+    CHART_PLOT_BG, CHART_PAPER_BG,
 )
 from pipeline.config import CHARGE_TYPE_LABELS, is_pace_model_ready
 
@@ -218,7 +219,7 @@ def render_detail(row: pd.Series):
                     "axis": {"range": [0, 100],
                              "tickfont": {"color": "#94A3B8", "size": 10}},
                     "bar":  {"color": fg, "thickness": 0.25},
-                    "bgcolor": "#0f0a1e",
+                    "bgcolor": CHART_PAPER_BG,
                     "borderwidth": 0,
                     "steps": [
                         {"range": [0,  25], "color": "rgba(5,150,105,0.15)"},
@@ -231,7 +232,7 @@ def render_detail(row: pd.Series):
             gauge_fig.update_layout(
                 height=200,
                 margin=dict(l=10, r=10, t=40, b=10),
-                paper_bgcolor="#0f0a1e",
+                paper_bgcolor=CHART_PAPER_BG,
                 font={"color": "#A78BFA"},
             )
             st.plotly_chart(gauge_fig, use_container_width=True)

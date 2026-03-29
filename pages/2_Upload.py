@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from auth_utils import require_auth
 from utils.doc_parser import parse_uploaded_document
-from utils.styling import inject_css, top_nav, TIER_COLORS
+from utils.styling import inject_css, top_nav, TIER_COLORS, CHART_PLOT_BG, CHART_PAPER_BG
 from pipeline.data_pipeline import get_data_pipeline
 from pipeline.config import CHARGE_TYPE_LABELS, is_pace_model_ready
 
@@ -345,7 +345,7 @@ if st.session_state.get("upload_raw_df") is not None:
                     fig_ct.update_layout(
                         title="Charge Type Distribution",
                         margin=dict(l=0, r=0, t=40, b=0), height=280,
-                        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+                        plot_bgcolor=CHART_PLOT_BG, paper_bgcolor=CHART_PAPER_BG,
                         font=dict(color="#A78BFA"),
                         xaxis=dict(color="#94A3B8",
                                    gridcolor="rgba(150,50,200,0.15)"),
@@ -372,7 +372,7 @@ if st.session_state.get("upload_raw_df") is not None:
                     fig_hist.update_layout(
                         title="Risk Score Distribution",
                         margin=dict(l=0, r=0, t=40, b=0), height=280,
-                        plot_bgcolor="#0f0a1e", paper_bgcolor="#0f0a1e",
+                        plot_bgcolor=CHART_PLOT_BG, paper_bgcolor=CHART_PAPER_BG,
                         font=dict(color="#A78BFA"),
                         xaxis=dict(title="Risk Score (%)", color="#94A3B8",
                                    gridcolor="rgba(150,50,200,0.15)"),
