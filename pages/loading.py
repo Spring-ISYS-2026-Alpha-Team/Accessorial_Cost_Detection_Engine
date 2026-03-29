@@ -34,9 +34,14 @@ if st.session_state.get("_data_preloaded"):
     st.switch_page(dest)
     st.stop()
 
-# F-2: Loading timeout — abort after 60 seconds and fall through to demo data
-_LOAD_TIMEOUT_SECS = 60
+# Loading timeout — abort after 45 seconds and fall through
+_LOAD_TIMEOUT_SECS = 45
 _load_start = time.time()
+
+# CRITICAL: Mark as preloaded IMMEDIATELY so that if the WebSocket drops
+# during loading, the session is not invalidated on reconnect.
+# Each page loads its own data lazily via load_shipments_with_fallback().
+st.session_state["_data_preloaded"] = True
 
 # ── Loading page CSS ───────────────────────────────────────────────────────────
 def _bg_css() -> str:
@@ -238,5 +243,4 @@ except Exception as e:
     )
     time.sleep(0.3)
 
-st.session_state["_data_preloaded"] = True
 st.switch_page(dest)
