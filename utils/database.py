@@ -298,6 +298,101 @@ def delete_pace_user(_conn, username: str) -> tuple[bool, str]:
         return False, str(e)
 
 
+def ensure_model_results_table(_conn) -> None:
+    """
+    Create the ModelResults table if it does not already exist.
+
+    Schema:
+        result_id         INT IDENTITY PRIMARY KEY
+        dot_number        VARCHAR(20)   — USDOT number (nullable for manual/batch inputs)
+        run_timestamp     DATETIME      — UTC time of inference
+        risk_score        FLOAT         — predicted risk score (0–100)
+        risk_label        VARCHAR(20)   — Low / Medium / High / Critical / None
+        charge_type       VARCHAR(50)   — predicted charge type label
+        probabilities_json NVARCHAR(MAX) — JSON object of per-class probabilities
+        input_source      VARCHAR(50)   — live_fmcsa / manual_input / csv_batch / etc.
+    """
+    if _conn is None:
+        return
+    ddl = """
+        IF NOT EXISTS (
+            SELECT 1 FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_NAME = 'ModelResults'
+        )
+        BEGIN
+            CREATE TABLE ModelResults (
+                result_id          INT IDENTITY(1,1) PRIMARY KEY,
+                dot_number         VARCHAR(20)    NULL,
+                run_timestamp      DATETIME       NOT NULL,
+                risk_score         FLOAT          NOT NULL,
+                risk_label         VARCHAR(20)    NOT NULL,
+                charge_type        VARCHAR(50)    NOT NULL,
+                probabilities_json NVARCHAR(MAX)  NULL,
+                input_source       VARCHAR(50)    NOT NULL
+            )
+        END
+    """
+    try:
+        cursor = _conn.cursor()
+        cursor.execute(ddl)
+        _conn.commit()
+    except Exception:
+        pass
+
+
+def write_model_result(
+    _conn,
+    dot_number: str,
+    run_timestamp,
+    risk_score: float,
+    risk_label: str,
+    charge_type: str,
+    probabilities_json: str,
+    input_source: str,
+) -> bool:
+    """
+    Insert one inference result into ModelResults.
+    Silently returns False on failure so scoring is never blocked by a DB error.
+    """
+    if _conn is None:
+        return False
+    ensure_model_results_table(_conn)
+    try:
+        cursor = _conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO ModelResults
+                (dot_number, run_timestamp, risk_score, risk_label,
+                 charge_type, probabilities_json, input_source)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """,
+            (dot_number, run_timestamp, risk_score, risk_label,
+             charge_type, probabilities_json, input_source),
+        )
+        _conn.commit()
+        return True
+    except Exception:
+        return False
+
+
+@st.cache_data(ttl=300)
+def get_model_results(_conn, row_limit: int = 2000) -> pd.DataFrame:
+    """Return recent ModelResults rows ordered by run_timestamp descending."""
+    if _conn is None:
+        return pd.DataFrame()
+    query = f"""
+        SELECT TOP {row_limit}
+            result_id, dot_number, run_timestamp, risk_score,
+            risk_label, charge_type, probabilities_json, input_source
+        FROM ModelResults
+        ORDER BY run_timestamp DESC
+    """  # nosec B608
+    try:
+        return pd.read_sql(query, _conn)
+    except Exception:
+        return pd.DataFrame()
+
+
 @st.cache_data(ttl=300)
 def get_shipments_with_charges(_conn, row_limit: int = 2000) -> pd.DataFrame:
     """
