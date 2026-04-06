@@ -26,7 +26,7 @@ from utils.styling import inject_css, top_nav
 
 from utils.database import get_connection, get_shipments
 
-from utils.cost_model import get_cost_model
+from utils.legacy.cost_model import get_cost_model
 
 
 
