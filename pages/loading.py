@@ -221,6 +221,9 @@ try:
     _step("Loading PACE model", 95)
     try:
         from pipeline.inference import get_inference_engine
+        if not is_pace_model_ready():
+            from scripts.download_weights import ensure_weights_ready
+            ensure_weights_ready()
         if is_pace_model_ready():
             get_inference_engine()
     except Exception:
