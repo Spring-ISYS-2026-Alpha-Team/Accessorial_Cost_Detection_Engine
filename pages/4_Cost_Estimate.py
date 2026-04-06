@@ -24,7 +24,7 @@ from auth_utils import require_auth
 
 from utils.styling import inject_css, top_nav
 
-from utils.database import get_connection, get_shipments
+from utils.database import load_shipments_with_fallback
 
 from utils.legacy.cost_model import get_cost_model
 
@@ -236,9 +236,7 @@ def _get_history_subset(df: pd.DataFrame, carrier: str, facility: str) -> pd.Dat
 
 # -------------------------------------------------------------------
 
-conn = get_connection()
-
-shipments_df = get_shipments(conn)
+shipments_df = load_shipments_with_fallback()
 
 
 
