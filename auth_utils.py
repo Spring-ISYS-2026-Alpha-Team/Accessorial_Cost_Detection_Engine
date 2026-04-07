@@ -11,7 +11,7 @@ def logout():
     st.cache_data.clear()
     # Intentionally NOT clearing cache_resource so the ML model
     # stays loaded in memory between sessions for faster reloads.
-    st.switch_page("pages/1_Login.py")
+    st.switch_page("app.py")
 
 def check_auth():
     """
