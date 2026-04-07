@@ -10,8 +10,15 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from auth_utils import require_auth
 from utils.styling import inject_css, top_nav
+<<<<<<< HEAD
 from utils.database import load_shipments_with_fallback
 from utils.cost_model import get_cost_model
+=======
+
+from utils.database import load_shipments_with_fallback
+
+from utils.legacy.cost_model import get_cost_model
+>>>>>>> b51f6592bcbb08a3117bb2b3968a0854f97bcf46
 
 st.set_page_config(
     page_title="PACE — Cost Estimate",
@@ -345,7 +352,14 @@ def _fmt_filter_value(value: str) -> str:
 # -------------------------------------------------------------------
 # Load data
 # -------------------------------------------------------------------
+<<<<<<< HEAD
 shipments_df = load_shipments_with_fallback()
+=======
+
+shipments_df = load_shipments_with_fallback()
+
+
+>>>>>>> b51f6592bcbb08a3117bb2b3968a0854f97bcf46
 
 st.markdown("## Cost Estimator")
 st.caption(

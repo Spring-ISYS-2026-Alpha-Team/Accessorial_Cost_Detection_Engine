@@ -70,7 +70,16 @@
       "WebFetch(domain:api.github.com)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(gh run:*)",
+      "Bash(flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics)",
+      "Bash(bandit -r . --exclude ./.git,./venv -ll --quiet)",
+      "Bash(python -m pytest --ignore=venv -q --tb=short)",
+      "Bash(python -m pytest tests/ -q --tb=short)",
+      "Bash(grep -rn \"stFileUploader\\\\|file.uploader\\\\|drag.and.drop\\\\|Browse files\" c:/Users/clayt/source/repos/PACE/ --include=*.py --include=*.css)",
+      "Bash(ping -n 4 131.186.6.189)",
+      "Bash(powershell -Command \"Test-NetConnection -ComputerName 131.186.6.189 -Port 22 -WarningAction SilentlyContinue | Select-Object ComputerName, RemotePort, TcpTestSucceeded, PingSucceeded\")",
+      "Bash(ssh -v -i /mnt/c/Users/clayt/.ssh/oci_key -o ConnectTimeout=10 ubuntu@131.186.6.189)"
     ]
   }
 }

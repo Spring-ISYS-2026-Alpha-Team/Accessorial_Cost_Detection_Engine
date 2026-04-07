@@ -1,104 +1,59 @@
 # PACE — Predictive Accessorial Cost Engine
 
 ![CI](https://github.com/Spring-ISYS-2026-Alpha-Team/Accessorial_Cost_Detection_Engine/actions/workflows/ci.yml/badge.svg)
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)
+![Streamlit](https://img.shields.io/badge/Streamlit-1.31%2B-FF4B4B?logo=streamlit&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-FT--Transformer-EE4C2C?logo=pytorch&logoColor=white)
+![Azure SQL](https://img.shields.io/badge/Azure%20SQL-Connected-0078D4?logo=microsoftazure&logoColor=white)
 
-**PACE** PACE is a decision-support tool for freight logistics teams. It ingests historical shipment data, validates it, assigns ML-based risk scores, and surfaces actionable recommendations to help prevent unexpected accessorial charges — detention fees, lumper fees, layovers — before they occur.
-Accessorial charges are not random. They are the downstream result of identifiable, repeatable operational patterns — carriers that consistently run late, facilities that routinely cause delays, or lane combinations that carry elevated risk. The problem is that without a system to surface these patterns at the right time, logistics teams are forced to operate reactively, absorbing costs that were, in hindsight, entirely predictable. PACE shifts that point of insight from invoice reconciliation to pre-dispatch decision-making.
-The system ingests and validates historical shipment records, engineers the features necessary for machine learning, and trains a classification model that outputs calibrated probability scores — not binary flags, but a quantified likelihood that a given shipment will incur a specific charge. Those scores are surfaced through an operational dashboard alongside actionable recommendations: swap carriers, adjust appointment windows, apply pricing buffers, or flag loads for additional attention before they're executed.
-The goal of PACE is not to eliminate accessorial charges entirely — some are unavoidable. The goal is to give logistics teams the right information at the moment they can still act on it, so that avoidable costs are avoided and unavoidable ones are anticipated and priced correctly.
+> An end-to-end ML system that predicts accessorial charge risk for freight shipments — before they're executed. Built with a custom FT-Transformer, live FMCSA/EIA/FRED data enrichment, and a full-stack Streamlit operations dashboard.
 
----
-
-## Changelog — TConn Branch (March 2026)
-
-### Bug Fixes
-- **Resolved all merge conflicts** across `app.py`, `utils/database.py`, `utils/styling.py`, `pages/1_Dashboard.py`, `pages/4_Cost_Estimate.py`, `pages/5_Route_Analysis.py`, `pages/6_Carrier_Comparison.py`, `pages/7_Accessorial_Tracker.py` — conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`) baked into committed files caused `SyntaxError` on startup
-- **Fixed `ImportError`** — `verify_pace_user` was referenced in `app.py` but missing from `utils/database.py`; function added with SHA-256 password hashing against the `PaceUsers` Azure SQL table
-- **Fixed admin routing crash** — `pages/8_Admin.py` was missing after the merge conflict cleanup; page recreated and admin routing restored in `app.py`
-- **Fixed login Enter key** — moved `if submitted:` inside the `st.form()` block so pressing Enter in the password field correctly submits
-- **Fixed ship date display** — detail view was showing `2026-02-17 00:00:00`; now trimmed to `2026-02-17`
-
-### UI / Theme Fixes
-- **Metric cards** — were using light-theme CSS (`background: #FFFFFF`, text `#111827`); updated to dark glass style matching the rest of the app (`rgba(12,6,30,0.82)` background, purple border, lavender labels, white values)
-- **Shipment detail view** — multiple hardcoded near-black text colors (`#374151`, `#1F2937`, `#111827`) were invisible on the dark background; fixed throughout: breadcrumb, factor names, factor percentages, recommended action text, accessorial exposure label
-- **`utils/styling.py` full rewrite** — 8 merge conflict zones removed; dark glass theme consolidated with color tokens (`ACCENT_PURPLE`, `ACCENT_SOFT`, `TEXT_PRIMARY`, `TEXT_SECONDARY`, `CHART_BG`), `chart_theme()` helper function, and correct dark CSS for all components
-
-### Performance
-- **Loading screen speed** — removed unnecessary `time.sleep(0.3)` before progress completion; reduced post-load pause from `0.7s → 0.15s` and error-path pause from `1.0s → 0.3s`; eliminates the 6–7 second wait on "Everything ready"
-- **Loading screen errors** — exception handler now surfaces the actual error message (`⚠ Loaded with warnings — {e}`) instead of silently swallowing it
-
-### New Features
-- **Admin panel (`pages/8_Admin.py`)** — recreated with full dark glass theme; connected to live `PaceUsers` Azure SQL table; supports creating users (SHA-256 hashed passwords), viewing all current users, and deleting users (cannot delete yourself)
-- **DB admin helpers** — added `get_pace_users()`, `create_pace_user()`, `delete_pace_user()` to `utils/database.py`
-- **Sort buttons on Accessorial Tracker charts** — `_popup_carrier_acc` and `_popup_facility` expand dialogs now have Value ↑ / Value ↓ / A-Z sort controls; `_popup_trend` retains time-range buttons (1M/3M/6M/1Y/All)
+**[Live Demo →](https://accessorialcostdetectionengine.streamlit.app)**
 
 ---
 
-## Features
+## What It Does
 
-### Home
-- KPI summary cards: total shipments, average risk score, high-risk count, estimated accessorial exposure
-- 4 interactive charts with expand-to-full-screen dialogs: weekly shipment trend, cost per mile by carrier, risk distribution, accessorial exposure over time
-- Filterable by date range and carrier
+Accessorial charges — detention fees, safety surcharges, compliance penalties — are not random. They are the downstream result of identifiable, repeatable patterns: carriers with poor SMS violation histories, facilities that routinely cause delays, lanes with elevated economic risk. The problem is that without a system to surface these patterns at the right time, logistics teams absorb costs that were entirely predictable.
 
-### Risk Dashboard
-- KPI row with delta comparisons against the full unfiltered dataset
-- Risk score distribution histogram and average risk score by carrier (sortable)
-- Risk tier breakdown with per-tier accessorial exposure totals
-- Searchable shipment table
+PACE shifts that point of insight from invoice reconciliation to pre-dispatch decision-making. Given a USDOT number or a batch of shipment records, PACE outputs:
 
-### Multi-Format Upload & Validation
-- Accepts `.csv`, `.xlsx`, `.xls`, `.pdf`, `.png`, `.jpg`, `.jpeg` — max 10 MB
-- Flexible column normalization: 20+ common column name aliases auto-mapped to PACE schema
-- AI-assisted extraction for PDFs and images via Ollama (local LLM, no cloud required)
-- Row-level validation: required fields, date formats, numeric ranges, non-negative constraints
-- Detailed error and warning reports before committing data
-- One-click risk scoring on clean uploads
-- Built-in sample dataset for demo/testing
+- A **risk score (0–100%)** quantifying the likelihood of an accessorial charge
+- A **predicted charge type** (Detention, Safety Surcharge, Compliance Fee, Hazmat Fee, High Risk / Multiple, or No Charge)
+- **Per-class probabilities** for every charge category
+- A **risk label** (Low / Medium / High / Critical) for fast triage
 
-### Shipments Explorer
-- Paginated, filterable list of all shipments (carrier, facility, risk tier)
-- Click any row for a per-shipment detail view with:
-  - Risk score gauge and tier badge
-  - Factor breakdown (carrier history, facility profile, distance, weight, freight rate)
-  - Recommended actions tailored to risk tier
-  - Historical comparison table for the same carrier
+---
 
-### Cost Estimator
-- Random Forest ML model trained on historical shipment data
-- Predicts total shipment cost from carrier, facility, weight, and miles
-- 95% confidence interval using tree ensemble spread
-- Comparison against average cost/mile estimate and fleet average
-- Feature importance chart and historical cost distribution
+## ML Architecture
 
-### Route Analysis
-- Lane-level cost and risk metrics
-- Charts: cost per mile by lane, risk by route, mileage distribution, scatter of miles vs cost
+The core model is a **Feature Tokenizer Transformer (FT-Transformer)** — the same architecture introduced in [Revisiting Deep Learning Models for Tabular Data (Gorishniy et al., 2021)](https://arxiv.org/abs/2106.11959) — trained on ~500K synthetic carrier inspection records generated via **CTGAN** from a university Teradata cluster.
 
-### Carrier Comparison
-- Side-by-side carrier performance: cost per mile, high-risk shipment count, accessorial rate, radar chart
-- Expand dialogs with sort controls
+```
+Input (152 features)
+  ├── Categorical: carrier_phy_state, carrier_safety_rating,
+  │               sms_hm_flag, unit_type_desc, ... (34 features)
+  └── Continuous:  oos_total, crash_count, eia_diesel_national,
+                  fred_TSIFRGHT, wx_avg_high_f, ... (118 features)
+         ↓
+FeatureTokenizer  →  Embedding + Linear projection per feature → token sequence
+         ↓
+TransformerEncoder  →  3 layers, 8 heads, GELU, d_model=192
+         ↓
+CLS token
+  ├── Regression head  →  risk_score (0–100)
+  └── Classification head  →  charge_type (6 classes)
+```
 
-### Accessorial Tracker
-- Accessorial charge trends over time (time-range filterable)
-- Donut chart by charge type, carrier breakdown, facility breakdown
-- All expand dialogs include sort or range controls
+**Training data pipeline:**
+- Raw FMCSA carrier inspection + SMS violation data pulled from Teradata (`pace_training_v`)
+- Synthetic expansion via CTGAN (300M-epoch, 3M synthetic rows)
+- Live enrichment with FMCSA API, FRED economic indicators, EIA diesel prices, NWS/OWM weather
 
-### Admin Panel
-- Role-gated (admin only)
-- **User management:** view, create (SHA-256 hashed passwords), and delete users from Azure SQL
-- **Model management:** live AUC/F1/Accuracy cards, mode toggle (demo vs. production)
-- **Risk tier thresholds:** adjustable sliders with data-suggested recommendations (Youden's J)
-- **Manual training:** incremental update (continues from current model) or full retrain from scratch
-- **Version history:** last 3 model versions with metrics, one-click rollback
-- **Auto-update:** configurable threshold — model updates automatically as new shipment records accumulate
-
-### Authentication
-- Session-based login with auth guard on every page
-- SHA-256 password hashing against Azure SQL `PaceUsers` table
-- Fallback hardcoded accounts if DB is unreachable
-- Secure logout clears all session state
-- Loading screen pre-warms all DB caches and ML model after login
+**Inference:**
+- Single DOT lookup: enriched with live FMCSA + FRED + EIA + weather in production
+- Batch CSV: full dataframe inference via `predict_dataframe()`
+- Results persisted to Azure SQL `ModelResults` table on every production inference
 
 ---
 
@@ -106,14 +61,63 @@ The goal of PACE is not to eliminate accessorial charges entirely — some are u
 
 | Layer | Technology |
 |---|---|
-| UI | [Streamlit](https://streamlit.io) 1.5+ |
-| Data Processing | pandas, NumPy |
-| Visualization | Plotly |
-| ML | LightGBM (risk classifier), scikit-learn (cost estimator) |
-| Document Parsing | pdfplumber, pytesseract, Pillow, Ollama (optional AI enrichment) |
-| Database | Azure SQL (via pyodbc) |
-| Auth | SHA-256 hashing, Streamlit session state |
-| Config | python-dotenv / Streamlit secrets |
+| **ML Model** | PyTorch FT-Transformer (custom), CTGAN synthetic data generation |
+| **Data Enrichment** | FMCSA API, FRED (Federal Reserve), EIA (Energy Information Administration), OpenWeatherMap, NWS |
+| **UI** | Streamlit 1.31+, Plotly, custom dark glass CSS |
+| **Data Processing** | pandas, NumPy, scikit-learn |
+| **Legacy Models** | LightGBM (risk classifier), RandomForest (cost estimator) |
+| **Database** | Azure SQL via pymssql; Teradata via teradatasql (training/fallback) |
+| **Auth** | SHA-256 password hashing, Streamlit session state, role-based routing |
+| **Column Mapping** | sentence-transformers (semantic similarity) + Ollama (local LLM) |
+| **Document Parsing** | pdfplumber, pytesseract, Pillow |
+| **Geospatial** | geopy, openrouteservice |
+| **CI/CD** | GitHub Actions (lint, security scan, test) |
+| **Config** | python-dotenv / Streamlit secrets |
+
+---
+
+## Application Pages
+
+| Page | Description |
+|---|---|
+| **Landing** | Pre-login hero with feature overview and Sign In CTA |
+| **Home** | KPI cards, weekly shipment trend, cost/mile by carrier, risk distribution |
+| **Risk Dashboard** | Risk tier breakdown, score histogram, carrier benchmarks, searchable shipment table |
+| **Upload & Score** | CSV/Excel batch upload → validation → FT-Transformer scoring → downloadable results |
+| **Shipments** | Paginated explorer with per-shipment detail: risk gauge, factor breakdown, recommended actions |
+| **Cost Estimator** | RandomForest cost prediction with 95% CI, feature importance, historical comparison |
+| **Route Analysis** | Lane-level cost and risk metrics, miles vs cost scatter |
+| **Carrier Comparison** | Side-by-side benchmarking with radar chart |
+| **Accessorial Tracker** | Charge trends over time, donut by type, carrier/facility breakdowns |
+| **Carrier Lookup** | DOT number → live FMCSA enrichment → instant risk score |
+| **Admin** | User management (CRUD), model training (incremental/full retrain), version rollback, risk threshold tuning |
+
+---
+
+## Data Architecture
+
+```
+Teradata (University HPC Cluster)
+  └── pace_training_v  →  CTGAN training  →  3M synthetic rows
+                                                    ↓
+                                          FT-Transformer training
+                                                    ↓
+                                    models/pace_transformer_weights.pt
+                                    models/artifacts.pkl
+
+Production (PACE_ENV=production)
+  └── FMCSA API ──┐
+      FRED API ───┤  →  enrich_dot() / enrich_dataframe()  →  predict_single()
+      EIA API ────┤                                                  ↓
+      OWM API ────┘                                       Azure SQL: ModelResults
+
+Dashboard Data
+  └── Azure SQL: Shipments, Carriers, Facilities, Accessorial_Charges, PaceUsers
+        ↑ fallback ↓
+      Teradata: pace_synthetic_v  (7K+ records)
+        ↑ fallback ↓
+      Mock data generator
+```
 
 ---
 
@@ -121,98 +125,96 @@ The goal of PACE is not to eliminate accessorial charges entirely — some are u
 
 ```
 Accessorial_Cost_Detection_Engine/
-├── app.py                      # Entry point — login page
-├── auth_utils.py               # Session auth helpers
+├── app.py                        # Landing page (pre-login hero)
+├── auth_utils.py                 # Session auth, logout, require_auth guard
 ├── requirements.txt
-├── assets/
-│   ├── background.png          # Network globe background image
-│   └── logo.png                # PACE truck-on-globe logo
+│
 ├── pages/
-│   ├── loading.py              # Post-login cache pre-warm screen
-│   ├── 0_Home.py               # Home KPIs + 4 charts
-│   ├── 1_Dashboard.py          # Risk dashboard
-│   ├── 2_Upload.py             # Multi-format upload & scoring
-│   ├── 3_Shipments.py          # Shipment list + detail view
-│   ├── 4_Cost_Estimate.py      # ML cost predictor
-│   ├── 5_Route_Analysis.py     # Lane/route metrics
-│   ├── 6_Carrier_Comparison.py # Carrier benchmarking
-│   ├── 7_Accessorial_Tracker.py# Accessorial charge analysis
-│   └── 8_Admin.py              # Admin panel (role-gated)
-└── utils/
-    ├── database.py             # Azure SQL connection + all query functions
-    ├── mock_data.py            # Synthetic data generator (fallback)
-    ├── cost_model.py           # Random Forest cost estimator
-    ├── risk_model.py           # LightGBM risk classifier + versioning
-    ├── model_config.py         # Model metadata, thresholds, auto-update settings
-    ├── doc_parser.py           # Multi-format document parser (CSV/Excel/PDF/image)
-    ├── geo.py                  # Geospatial routing (driving distance)
-    └── styling.py              # Dark glass theme CSS, color tokens, nav
+│   ├── 1_Login.py                # Login form, fallback auth, DB verification
+│   ├── loading.py                # Post-login cache pre-warm + weight download
+│   ├── 0_Home.py                 # Home KPIs + charts
+│   ├── 1_Dashboard.py            # Risk dashboard
+│   ├── 2_Upload.py               # Batch upload & FT-Transformer scoring
+│   ├── 3_Shipments.py            # Shipment explorer + detail view
+│   ├── 4_Cost_Estimate.py        # RandomForest cost predictor
+│   ├── 5_Route_Analysis.py       # Lane/route metrics
+│   ├── 6_Carrier_Comparison.py   # Carrier benchmarking
+│   ├── 7_Accessorial_Tracker.py  # Accessorial charge analytics
+│   ├── 8_Admin.py                # Admin panel (role-gated)
+│   └── 9_Carrier_Lookup.py       # DOT number lookup
+│
+├── pipeline/
+│   ├── config.py                 # Column definitions, model paths, env config
+│   ├── inference.py              # PACEInference engine (singleton, GPU/CPU)
+│   ├── pace_transformer.py       # FT-Transformer architecture + training loop
+│   ├── data_pipeline.py          # Schema detection, validation, cleaning
+│   ├── api_integration.py        # Live FMCSA / FRED / EIA / OWM enrichment
+│   └── ctgan_train.py            # CTGAN synthetic data generation
+│
+├── utils/
+│   ├── database.py               # Azure SQL + Teradata fallback + ModelResults
+│   ├── column_mapper.py          # AI column alias mapping (semantic + Ollama)
+│   ├── doc_parser.py             # CSV/Excel/PDF/image parser
+│   ├── validation.py             # Row-level validation rules
+│   ├── mock_data.py              # Synthetic shipment generator (demo fallback)
+│   ├── styling.py                # Dark glass theme CSS, color tokens, top nav
+│   ├── geo.py                    # Geospatial routing
+│   └── legacy/                   # Deprecated LightGBM + RandomForest models
+│
+├── models/                       # Gitignored — downloaded at startup
+│   ├── pace_transformer_weights.pt
+│   └── artifacts.pkl
+│
+├── scripts/
+│   ├── download_weights.py       # Bootstrap: pulls weights from GitHub Release
+│   └── deploy_weights.py         # SCP weights to/from HPC cluster
+│
+└── .github/workflows/ci.yml      # Lint, security scan, test pipeline
 ```
 
 ---
 
-## Setup
+## Quickstart
 
-### 1. Prerequisites
+### Prerequisites
+- Python 3.10+
+- Git
 
-- **Python 3.10+**
-- **Git**
-- An **Azure SQL** (or compatible SQL Server) database with ODBC Driver 17+
-  - *The app runs in demo mode with mock data if no DB is configured — no Azure account required to explore the app*
-
-### 2. Clone the repo
+### 1. Clone & install
 
 ```bash
 git clone https://github.com/Spring-ISYS-2026-Alpha-Team/Accessorial_Cost_Detection_Engine.git
 cd Accessorial_Cost_Detection_Engine
-```
-
-### 3. Create a virtual environment
-
-```bash
 python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# macOS / Linux
-source venv/bin/activate
-```
-
-### 4. Install dependencies
-
-```bash
+source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 5. Configure environment
+### 2. Configure environment (optional)
 
-Create a `.env` file in the project root (copy the example below):
-
-```env
-DB_SERVER=your-server.database.windows.net
-DB_NAME=your-database
-DB_USER=your-username
-DB_PASSWORD=your-password
+```bash
+cp .env.example .env  # then fill in Azure SQL credentials
 ```
 
-> **No database?** Leave the `.env` file empty or skip this step entirely. PACE will run in demo mode using generated mock data — all pages are fully functional.
+> **No database?** Skip this entirely. PACE runs in demo mode with Teradata fallback data or generated mock data — every page is fully functional without any credentials.
 
-### 6. Run the app
+### 3. Download model weights
+
+```bash
+python scripts/download_weights.py
+```
+
+This pulls `pace_transformer_weights.pt` and `artifacts.pkl` from the GitHub Release automatically. The loading screen also does this on first startup.
+
+### 4. Run
 
 ```bash
 streamlit run app.py
 ```
 
-If `streamlit` is not on your PATH (common on Windows), use:
+Opens at **http://localhost:8501**
 
-```bash
-python -m streamlit run app.py
-```
-
-The app opens at **http://localhost:8501**.
-
-**Default login credentials:**
+**Default credentials:**
 | Username | Password | Role |
 |---|---|---|
 | `admin` | `admin` | Admin |
@@ -220,100 +222,45 @@ The app opens at **http://localhost:8501**.
 
 ---
 
-## Optional: PDF & Image Upload Support
+## Model Weights
 
-PDF and image uploads require two additional installs:
+Weights are gitignored (3.5 MB + 27 KB) and distributed via GitHub Releases.
 
-### pdfplumber (PDF text extraction)
+| File | Size | Description |
+|---|---|---|
+| `pace_transformer_weights.pt` | 3.5 MB | Trained FT-Transformer state dict |
+| `artifacts.pkl` | 27 KB | Categorical encoder, StandardScaler, feature column lists |
 
-```bash
-pip install pdfplumber
-```
+**[Download from Releases →](https://github.com/Spring-ISYS-2026-Alpha-Team/Accessorial_Cost_Detection_Engine/releases/tag/v1.0-weights)**
 
-### Tesseract OCR (image text extraction)
-
-1. Download and install Tesseract:
-   - **Windows:** [UB-Mannheim installer](https://github.com/UB-Mannheim/tesseract/wiki) — install to `C:\Program Files\Tesseract-OCR`
-   - **macOS:** `brew install tesseract`
-   - **Linux:** `sudo apt install tesseract-ocr`
-
-2. Add Tesseract to your PATH (Windows only):
-   ```
-   setx PATH "%PATH%;C:\Program Files\Tesseract-OCR"
-   ```
-   Then restart your terminal.
-
-### Ollama (AI field extraction for unstructured PDFs/images)
-
-Ollama enables PACE to extract shipment fields from freeform documents using a local LLM — no cloud API key required.
-
-1. Download and install Ollama: https://ollama.com/download
-2. Start the Ollama server:
-   ```bash
-   ollama serve
-   ```
-3. Pull the model (one-time, ~2 GB):
-   ```bash
-   ollama pull llama3.2
-   ```
-
-> **Without Ollama:** CSV and standard Excel uploads work fully. PDFs and images with non-standard layouts will show a clear error message explaining what's needed.
+To retrain: run `pipeline/pace_transformer.py` on the HPC cluster, then upload new weights as a new release and update `RELEASE_TAG` in `scripts/download_weights.py`.
 
 ---
 
-## Upload Format
+## CI/CD
 
-PACE accepts **`.csv`, `.xlsx`, `.xls`, `.pdf`, `.png`, `.jpg`, `.jpeg`** — max **10 MB**.
+GitHub Actions runs on every push to `main` and on all pull requests:
 
-Column names are **automatically normalized** — you don't need to match the exact schema. Common variations are recognized:
-
-| PACE Column | Also recognized as |
-|---|---|
-| `shipment_id` | `load_id`, `order_id`, `shipment_number`, `id` |
-| `ship_date` | `date`, `pickup_date`, `shipment_date` |
-| `carrier` | `carrier_name`, `trucking_company`, `provider` |
-| `facility` | `warehouse`, `location`, `dc`, `distribution_center` |
-| `weight_lbs` | `weight`, `lbs`, `shipment_weight` |
-| `miles` | `distance`, `distance_miles`, `route_miles` |
-| `base_freight_usd` | `freight_cost`, `base_rate`, `freight`, `base_cost` |
-| `accessorial_charge_usd` | `accessorial_cost`, `extra_charges`, `accessorials`, `detention_fee`, `detention`, `surcharge`, `penalty_fee`, `late_delivery_penalty`, `demurrage_fee`, `demurrage`, `additional_cost`, `additional_charges` |
-
-**Required columns** (must be present, non-empty): `shipment_id`, `carrier`, `facility`
-
-**Constraints:**
-- `weight_lbs`: 0 – 200,000
-- `miles`: 0 – 5,000
-- `base_freight_usd`, `accessorial_charge_usd`: ≥ 0
-- `ship_date`: any recognizable date format (normalized to `YYYY-MM-DD`)
-
----
-
-## Edge Cases & Known Limitations
-
-See [EDGE_CASES.md](EDGE_CASES.md) for a full catalog of handled edge cases, validation rules, and known system limitations.
-
----
-
-## Contributing
-
-1. Branch from `main`: `git checkout -b feature/your-description`
-2. Make changes and test locally with `streamlit run app.py`
-3. Open a pull request — use the PR template and link any relevant issues
+- **Lint** — flake8 (PEP8 compliance)
+- **Security scan** — bandit (OWASP top 10, SQL injection, pickle safety)
+- **Tests** — pytest covering upload validation and data pipeline
 
 ---
 
 ## Team
 
-**Team Alpha — University of Arkansas, ISYS 43603**
+**Team Alpha — University of Arkansas, ISYS 43603, Spring 2026**
 
 | Name | Role |
 |---|---|
-| Clayton Josef | Scrum Master |
-| Tyler Connolly | Product Owner |
-| Bui Vu | Developer |
+| [Clayton Josef](https://github.com/clayton-josef) | Scrum Master — ML pipeline, inference engine, database layer, deployment |
+| Tyler Connolly | Product Owner — UI/UX, dashboard pages, theme system |
+| Bui Vu | Bui Vu — ML Engineer — Cost estimator, data integration, context-aware filtering |
 | Anna Diggs | Developer |
 | Kirsten Capangpangan | Developer |
 
 ---
 
-*Academic project — Spring 2026*
+## Academic Context
+
+Built as a capstone project for ISYS 43603 at the University of Arkansas (Spring 2026). The system addresses a real operational problem in freight logistics: the inability to anticipate accessorial charges before dispatch. The ML approach — FT-Transformer on heterogeneous tabular data with live economic and regulatory enrichment — reflects current industry-grade techniques for structured prediction tasks.

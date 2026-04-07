@@ -460,11 +460,6 @@ if st.session_state.get("upload_raw_df") is not None:
                 engine = get_inference_engine()
 
                 with st.spinner(f"Scoring {pass_count:,} rows with PACE model..."):
-                    scored_df = engine.predict_csv(
-                        filepath=None,
-                        output_path=None,
-                    )
-                    # predict_dataframe used here since df_clean is already processed
                     results_df = engine.predict_dataframe(df_clean)
 
                     # Combine with original identifiers

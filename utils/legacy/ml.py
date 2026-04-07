@@ -1,3 +1,6 @@
+# DEPRECATED — moved to utils/legacy/ on 2026-04-02.
+# No active pages import this file. Superseded by pipeline/inference.py
+# (PACE FT-Transformer). Retained for reference only — do not use.
 """
 utils/ml.py
 LightGBM cost prediction pipeline for PACE.

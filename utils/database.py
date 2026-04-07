@@ -241,14 +241,143 @@ def verify_pace_user(_conn, username: str, password: str):
     return None
 
 
+def load_shipments_from_teradata(row_limit: int = 10000) -> pd.DataFrame:
+    """
+    Pull records from the Teradata training view and reshape them into the
+    dashboard schema (same column names as get_shipments()).
+
+    Column mapping:
+        dot_number              → shipment_id
+        insp_year / insp_month  → ship_date  (YYYY-MM-01)
+        dot_number (str)        → carrier
+        carrier_phy_state       → facility, OriginRegion, DestRegion
+        accessorial_risk_score  → risk_score  (0–100 scaled)
+        accessorial_type        → risk_tier   (label)
+        sms_nbr_power_unit      → weight_lbs  (proxy)
+        carrier_mcs150_mileage  → miles       (proxy)
+    Columns with no natural proxy are set to 0 / "Unknown".
+    """
+    try:
+        import os
+        td_host = os.getenv("TD_HOST", "")
+        td_user = os.getenv("TD_USERNAME", "")
+        td_pass = os.getenv("TD_PASSWORD", "")
+        td_db   = os.getenv("TD_DATABASE", "CTGAN")
+        td_view = os.getenv("TD_VIEW", "pace_synthetic_v")
+
+        if not td_host:
+            return pd.DataFrame()
+
+        import teradatasql
+        conn = teradatasql.connect(
+            host=td_host, user=td_user,
+            password=td_pass, database=td_db,
+        )
+
+        query = f"""
+            SELECT TOP {row_limit}
+                dot_number,
+                insp_year,
+                insp_month,
+                carrier_phy_state,
+                sms_nbr_power_unit,
+                carrier_mcs150_mileage,
+                accessorial_risk_score,
+                accessorial_type
+            FROM {td_db}.{td_view}
+            WHERE accessorial_risk_score IS NOT NULL
+            ORDER BY insp_year DESC, insp_month DESC
+        """  # nosec B608
+        raw = pd.read_sql(query, conn)
+        conn.close()
+
+        if raw.empty:
+            return pd.DataFrame()
+
+        # ── Map to dashboard schema ──────────────────────────────────────
+        df = pd.DataFrame()
+        df["shipment_id"]          = raw["dot_number"].astype(str)
+        df["carrier"]              = "DOT-" + raw["dot_number"].astype(str)
+
+        # Build a ship_date from inspection year + month
+        year  = pd.to_numeric(raw["insp_year"],  errors="coerce").fillna(2024).astype(int)
+        month = pd.to_numeric(raw["insp_month"], errors="coerce").fillna(1).astype(int).clip(1, 12)
+        df["ship_date"] = pd.to_datetime(
+            year.astype(str) + "-" + month.astype(str).str.zfill(2) + "-01",
+            errors="coerce",
+        )
+
+        state = raw["carrier_phy_state"].fillna("Unknown")
+        df["facility"]             = state
+        df["OriginRegion"]         = state
+        df["DestRegion"]           = "Unknown"
+        df["origin_city"]          = state
+        df["destination_city"]     = "Unknown"
+        df["lane"]                 = state + " → Unknown"
+
+        # Proxy numeric fields
+        df["weight_lbs"]           = pd.to_numeric(
+            raw["sms_nbr_power_unit"], errors="coerce"
+        ).fillna(0) * 15  # rough proxy: power units × avg weight/unit
+
+        df["miles"]                = pd.to_numeric(
+            raw["carrier_mcs150_mileage"], errors="coerce"
+        ).fillna(0).clip(0, 500000)
+
+        # Risk fields — scale 0–100
+        raw_score = pd.to_numeric(raw["accessorial_risk_score"], errors="coerce").fillna(0)
+        score_max = raw_score.max() if raw_score.max() > 0 else 1
+        df["risk_score"] = (raw_score / score_max * 100).clip(0, 100).round(1)
+
+        def _tier(s):
+            if s >= 75: return "High"
+            if s >= 40: return "Medium"
+            return "Low"
+        df["risk_tier"] = df["risk_score"].apply(_tier)
+
+        df["accessorial_charge_usd"] = df["risk_score"] * 12   # illustrative
+        df["base_freight_usd"]       = df["miles"].clip(100, 5000) * 2.1
+        df["total_cost_usd"]         = df["base_freight_usd"] + df["accessorial_charge_usd"]
+        df["cost_per_mile"]          = (
+            df["base_freight_usd"] / df["miles"].replace(0, float("nan"))
+        ).fillna(0)
+
+        df["AppointmentType"] = "Unknown"
+        df["Revenue"]         = df["base_freight_usd"]
+        df["AccessorialFlag"] = (df["risk_score"] >= 40).astype(int)
+
+        return df
+
+    except Exception:
+        return pd.DataFrame()
+
+
 def load_shipments_with_fallback(n_mock: int = 300) -> pd.DataFrame:
-    """Load shipments from the DB, falling back to mock data with an info banner."""
+    """
+    Load shipments with a three-tier fallback:
+      1. Azure SQL  (live data)
+      2. Teradata   (pace_synthetic_v training view)
+      3. Mock data  (generated, n_mock rows)
+    """
+    # ── Tier 1: Azure SQL ─────────────────────────────────────────────
     conn = get_connection_safe()
     df = get_shipments(conn) if conn is not None else pd.DataFrame()
-    if df.empty:
-        from utils.mock_data import generate_mock_shipments
-        df = generate_mock_shipments(n_mock)
-        st.info("Live database unavailable — showing demo data.", icon="ℹ️")
+    if not df.empty:
+        return df
+
+    # ── Tier 2: Teradata ──────────────────────────────────────────────
+    df = load_shipments_from_teradata()
+    if not df.empty:
+        st.info(
+            f"Azure SQL unavailable — showing {len(df):,} records from Teradata.",
+            icon="🗄️",
+        )
+        return df
+
+    # ── Tier 3: Mock data ─────────────────────────────────────────────
+    from utils.mock_data import generate_mock_shipments
+    df = generate_mock_shipments(n_mock)
+    st.info("Live database unavailable — showing demo data.", icon="ℹ️")
     return df
 
 
@@ -296,6 +425,101 @@ def delete_pace_user(_conn, username: str) -> tuple[bool, str]:
         return True, f"User '{username}' deleted."
     except Exception as e:
         return False, str(e)
+
+
+def ensure_model_results_table(_conn) -> None:
+    """
+    Create the ModelResults table if it does not already exist.
+
+    Schema:
+        result_id         INT IDENTITY PRIMARY KEY
+        dot_number        VARCHAR(20)   — USDOT number (nullable for manual/batch inputs)
+        run_timestamp     DATETIME      — UTC time of inference
+        risk_score        FLOAT         — predicted risk score (0–100)
+        risk_label        VARCHAR(20)   — Low / Medium / High / Critical / None
+        charge_type       VARCHAR(50)   — predicted charge type label
+        probabilities_json NVARCHAR(MAX) — JSON object of per-class probabilities
+        input_source      VARCHAR(50)   — live_fmcsa / manual_input / csv_batch / etc.
+    """
+    if _conn is None:
+        return
+    ddl = """
+        IF NOT EXISTS (
+            SELECT 1 FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_NAME = 'ModelResults'
+        )
+        BEGIN
+            CREATE TABLE ModelResults (
+                result_id          INT IDENTITY(1,1) PRIMARY KEY,
+                dot_number         VARCHAR(20)    NULL,
+                run_timestamp      DATETIME       NOT NULL,
+                risk_score         FLOAT          NOT NULL,
+                risk_label         VARCHAR(20)    NOT NULL,
+                charge_type        VARCHAR(50)    NOT NULL,
+                probabilities_json NVARCHAR(MAX)  NULL,
+                input_source       VARCHAR(50)    NOT NULL
+            )
+        END
+    """
+    try:
+        cursor = _conn.cursor()
+        cursor.execute(ddl)
+        _conn.commit()
+    except Exception:
+        pass
+
+
+def write_model_result(
+    _conn,
+    dot_number: str,
+    run_timestamp,
+    risk_score: float,
+    risk_label: str,
+    charge_type: str,
+    probabilities_json: str,
+    input_source: str,
+) -> bool:
+    """
+    Insert one inference result into ModelResults.
+    Silently returns False on failure so scoring is never blocked by a DB error.
+    """
+    if _conn is None:
+        return False
+    ensure_model_results_table(_conn)
+    try:
+        cursor = _conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO ModelResults
+                (dot_number, run_timestamp, risk_score, risk_label,
+                 charge_type, probabilities_json, input_source)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """,
+            (dot_number, run_timestamp, risk_score, risk_label,
+             charge_type, probabilities_json, input_source),
+        )
+        _conn.commit()
+        return True
+    except Exception:
+        return False
+
+
+@st.cache_data(ttl=300)
+def get_model_results(_conn, row_limit: int = 2000) -> pd.DataFrame:
+    """Return recent ModelResults rows ordered by run_timestamp descending."""
+    if _conn is None:
+        return pd.DataFrame()
+    query = f"""
+        SELECT TOP {row_limit}
+            result_id, dot_number, run_timestamp, risk_score,
+            risk_label, charge_type, probabilities_json, input_source
+        FROM ModelResults
+        ORDER BY run_timestamp DESC
+    """  # nosec B608
+    try:
+        return pd.read_sql(query, _conn)
+    except Exception:
+        return pd.DataFrame()
 
 
 @st.cache_data(ttl=300)

@@ -24,7 +24,7 @@ st.set_page_config(
 
 # Redirect if not authenticated
 if not check_auth():
-    st.switch_page("app.py")
+    st.switch_page("pages/1_Login.py")
     st.stop()
 
 dest = st.session_state.get("post_load_dest", "pages/0_Home.py")
@@ -174,7 +174,7 @@ try:
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.session_state["_login_error"] = _err
-            st.switch_page("app.py")
+            st.switch_page("pages/1_Login.py")
             st.stop()
         st.session_state["role"] = verified_role
         dest = "pages/8_Admin.py" if verified_role == "admin" else "pages/0_Home.py"
@@ -221,6 +221,9 @@ try:
     _step("Loading PACE model", 95)
     try:
         from pipeline.inference import get_inference_engine
+        if not is_pace_model_ready():
+            from scripts.download_weights import ensure_weights_ready
+            ensure_weights_ready()
         if is_pace_model_ready():
             get_inference_engine()
     except Exception:

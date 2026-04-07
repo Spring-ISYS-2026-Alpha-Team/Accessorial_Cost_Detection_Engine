@@ -242,7 +242,7 @@ class PACEInference:
         results = self.predict(df)
         r       = results.iloc[0]
         safe    = lambda l: l.lower().replace(" ", "_").replace("/", "_")
-        return {
+        result = {
             "risk_score":    float(r["risk_score_pct"]),
             "risk_label":    r["risk_label"],
             "charge_type":   r["charge_type"],
@@ -252,6 +252,28 @@ class PACEInference:
                 for label in CHARGE_TYPE_LABELS
             },
         }
+
+        # In production mode, persist every inference result to ModelResults
+        if API_ENRICHMENT_ENABLED:
+            try:
+                import json
+                from datetime import datetime, timezone
+                from utils.database import get_connection, write_model_result
+                conn = get_connection()
+                write_model_result(
+                    _conn=conn,
+                    dot_number=str(row.get("dot_number", "")) or None,
+                    run_timestamp=datetime.now(timezone.utc),
+                    risk_score=result["risk_score"],
+                    risk_label=result["risk_label"],
+                    charge_type=result["charge_type"],
+                    probabilities_json=json.dumps(result["probabilities"]),
+                    input_source=str(row.get("_input_source", "predict_single")),
+                )
+            except Exception:
+                pass  # Never block scoring due to a DB write failure
+
+        return result
 
     # ── Input method 1: DOT Number Lookup ─────────────────────────
 
@@ -295,6 +317,19 @@ class PACEInference:
 
     def _predict_dot_teradata(self, dot_number: int) -> Dict:
         """Fallback: pull DOT record from Teradata and predict."""
+        if not TD_HOST:
+            import logging
+            logging.warning(
+                "PACE: TD_HOST is not configured — Teradata fallback disabled. "
+                "Set TD_HOST in .env or environment to enable cluster lookup."
+            )
+            return {
+                "error": (
+                    "Teradata host not configured. "
+                    "Set TD_HOST to enable cluster lookup, or use PACE_ENV=production "
+                    "for live FMCSA enrichment instead."
+                )
+            }
         try:
             import teradatasql
             conn = teradatasql.connect(

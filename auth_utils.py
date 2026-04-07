@@ -28,5 +28,5 @@ def require_auth() -> None:
     Only called when a page is accessed directly without a session.
     """
     if not check_auth():
-        st.switch_page("app.py")
+        st.switch_page("pages/1_Login.py")
         st.stop()
