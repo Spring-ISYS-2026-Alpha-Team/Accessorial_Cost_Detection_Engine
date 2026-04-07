@@ -255,7 +255,7 @@ GitHub Actions runs on every push to `main` and on all pull requests:
 |---|---|
 | [Clayton Josef](https://github.com/clayton-josef) | Scrum Master — ML pipeline, inference engine, database layer, deployment |
 | Tyler Connolly | Product Owner — UI/UX, dashboard pages, theme system |
-| Bui Vu | Developer |
+| Bui Vu | Bui Vu — ML Engineer — Cost estimator, data integration, context-aware filtering |
 | Anna Diggs | Developer |
 | Kirsten Capangpangan | Developer |
 
