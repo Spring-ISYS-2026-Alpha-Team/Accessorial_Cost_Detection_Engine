@@ -8,7 +8,7 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from auth_utils import check_auth
-from utils.database import get_connection, get_shipments
+from utils.database import get_connection, get_shipments, load_shipments_with_fallback
 from utils.mock_data import generate_mock_shipments
 from utils.styling import inject_css, top_nav, NAVY_500, NAVY_900, chart_theme
 
@@ -29,7 +29,7 @@ username = st.session_state.get("username", "User")
 top_nav(username)
 
 conn = get_connection()
-df = get_shipments(conn) if conn is not None else pd.DataFrame()
+df = load_shipments_with_fallback(conn)
 if df.empty:
     df = generate_mock_shipments(300)
     st.info("Live database unavailable — showing demo data.", icon="ℹ️")

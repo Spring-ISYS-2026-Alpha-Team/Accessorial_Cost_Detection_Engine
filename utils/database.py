@@ -104,6 +104,7 @@ def get_shipments(_conn, row_limit: int = 1000) -> pd.DataFrame:
             s.ShipmentId       AS shipment_id,
             s.ShipDate         AS ship_date,
             c.carrier_name     AS carrier,
+            c.dot_number,
             s.FacilityType     AS facility,
             s.weight_lbs,
             s.DistanceMiles    AS miles,
@@ -132,6 +133,50 @@ def get_shipments(_conn, row_limit: int = 1000) -> pd.DataFrame:
         return df
     except Exception:
         return pd.DataFrame()
+
+
+def load_shipments_with_fallback(_conn, row_limit: int = 1000) -> pd.DataFrame:
+    """
+    Return shipment data from Azure SQL merged with any uploaded+scored CSV
+    stored in st.session_state['upload_scored'].
+
+    - If Azure SQL is available: starts from the DB records.
+    - If upload_scored exists: appended as additional rows (missing cols filled with NaN).
+    - If neither is available: returns empty DataFrame.
+    """
+    db_df     = get_shipments(_conn, row_limit) if _conn is not None else pd.DataFrame()
+    upload_df = st.session_state.get("upload_scored")
+
+    if upload_df is None or upload_df.empty:
+        return db_df if not db_df.empty else pd.DataFrame()
+
+    # Align uploaded data to match the DB column set
+    upload_aligned = upload_df.copy()
+    upload_aligned["data_source"] = "uploaded"
+    if not db_df.empty:
+        db_df["data_source"] = "database"
+        combined = pd.concat([db_df, upload_aligned], ignore_index=True, sort=False)
+    else:
+        combined = upload_aligned
+
+    # Ensure derived columns exist
+    if "total_cost_usd" not in combined.columns:
+        b = pd.to_numeric(combined.get("base_freight_usd"), errors="coerce").fillna(0)
+        a = pd.to_numeric(combined.get("accessorial_charge_usd"), errors="coerce").fillna(0)
+        combined["total_cost_usd"] = b + a
+    if "cost_per_mile" not in combined.columns:
+        miles = pd.to_numeric(combined.get("miles"), errors="coerce").replace(0, float("nan"))
+        combined["cost_per_mile"] = (
+            pd.to_numeric(combined.get("base_freight_usd"), errors="coerce").fillna(0) / miles
+        ).fillna(0)
+    if "lane" not in combined.columns:
+        combined["lane"] = (
+            combined.get("OriginRegion", combined.get("origin_city", pd.Series(["?"] * len(combined)))).fillna("?")
+            + " → "
+            + combined.get("DestRegion", combined.get("destination_city", pd.Series(["?"] * len(combined)))).fillna("?")
+        )
+
+    return combined
 
 
 @st.cache_data(ttl=300)

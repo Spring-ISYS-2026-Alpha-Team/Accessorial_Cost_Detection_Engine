@@ -8,6 +8,19 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from auth_utils import check_auth
 from utils.styling import inject_css, top_nav, NAVY_900
+from pipeline.config import MODEL_WEIGHTS_PATH, ARTIFACTS_PATH, CHARGE_TYPE_LABELS
+
+# ── Inference engine (real model if weights exist, mock otherwise) ─────────────
+_WEIGHTS_READY = os.path.exists(MODEL_WEIGHTS_PATH) and os.path.exists(ARTIFACTS_PATH)
+
+if _WEIGHTS_READY:
+    try:
+        from pipeline.inference import get_inference_engine
+        _ENGINE_AVAILABLE = True
+    except Exception:
+        _ENGINE_AVAILABLE = False
+else:
+    _ENGINE_AVAILABLE = False
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -91,6 +104,7 @@ def validate_dataframe(df: pd.DataFrame):
 
 
 def mock_score(df: pd.DataFrame) -> pd.DataFrame:
+    """Heuristic fallback used when PACE model weights are not yet available."""
     rng = np.random.default_rng(99)
     scored = df.copy()
 
@@ -102,11 +116,44 @@ def mock_score(df: pd.DataFrame) -> pd.DataFrame:
     m_norm = scored["miles"]      /  5_000
     noise  = rng.uniform(0, 0.2, len(scored))
 
-    scored["risk_score"] = np.clip((w_norm * 0.3 + m_norm * 0.4 + noise), 0.05, 0.98).round(3)
+    scored["risk_score"] = np.clip((w_norm * 0.3 + m_norm * 0.4 + noise) * 100, 5, 98).round(1)
     scored["risk_tier"]  = scored["risk_score"].apply(
-        lambda x: "High" if x >= 0.67 else "Medium" if x >= 0.34 else "Low"
+        lambda x: "High" if x >= 67 else "Medium" if x >= 34 else "Low"
     )
+    scored["charge_type"]  = "No Charge"
+    scored["score_source"] = "mock"
     return scored
+
+
+def pace_score(df: pd.DataFrame) -> pd.DataFrame:
+    """Run the trained PACE FT-Transformer on an uploaded DataFrame."""
+    engine  = get_inference_engine()
+    results = engine.predict_dataframe(df)
+
+    scored = df.copy()
+    scored["risk_score"]   = results["risk_score_pct"].round(1)
+    scored["risk_tier"]    = results["risk_label"]
+    scored["charge_type"]  = results["charge_type"]
+    scored["score_source"] = "pace_model"
+
+    # Attach per-class probabilities
+    for label in CHARGE_TYPE_LABELS:
+        safe = label.lower().replace(" ", "_").replace("/", "_")
+        col  = f"prob_{safe}"
+        if col in results.columns:
+            scored[col] = results[col].round(4)
+
+    return scored
+
+
+def score_dataframe(df: pd.DataFrame) -> tuple[pd.DataFrame, str]:
+    """Score a DataFrame, returning (scored_df, method_used)."""
+    if _ENGINE_AVAILABLE:
+        try:
+            return pace_score(df), "pace_model"
+        except Exception as e:
+            st.warning(f"PACE model scoring failed ({e}). Falling back to heuristic scorer.")
+    return mock_score(df), "mock"
 
 
 # ── Page header ───────────────────────────────────────────────────────────────
@@ -129,6 +176,16 @@ with st.expander("📋 CSV Requirements", expanded=False):
     """)
 
 st.divider()
+
+# ── Model status banner ───────────────────────────────────────────────────────
+if _ENGINE_AVAILABLE:
+    st.success("PACE model loaded — uploaded shipments will be scored by the FT-Transformer.")
+else:
+    st.info(
+        "PACE model weights not yet available. "
+        "Uploads will be scored with a heuristic model until `pace_transformer.py` "
+        "finishes training on the cluster."
+    )
 
 # ── Upload zone ───────────────────────────────────────────────────────────────
 uploaded_file = st.file_uploader(
@@ -247,25 +304,40 @@ if "upload_df" in st.session_state and st.session_state["upload_df"] is not None
         if st.session_state.get("upload_scored") is not None:
             preview = st.session_state["upload_scored"].head(25)
 
-        scored_cols = ["risk_score", "risk_tier"] if "risk_score" in preview.columns else []
+        has_scores = "risk_score" in preview.columns
+
+        col_cfg = {}
+        if has_scores:
+            col_cfg["risk_score"] = st.column_config.ProgressColumn(
+                "Risk Score", format="%.1f", min_value=0, max_value=100
+            )
+        if "charge_type" in preview.columns:
+            col_cfg["charge_type"] = st.column_config.TextColumn("Charge Type")
+        if "score_source" in preview.columns:
+            col_cfg["score_source"] = st.column_config.TextColumn("Score Source")
 
         st.dataframe(
             preview,
             use_container_width=True,
             hide_index=True,
-            column_config={
-                "risk_score": st.column_config.ProgressColumn(
-                    "Risk Score", format="%.0f%%", min_value=0, max_value=1
-                )
-            } if scored_cols else {},
+            column_config=col_cfg,
         )
 
         if score_clicked and not errs:
-            with st.spinner("Running risk scoring model…"):
-                scored_df = mock_score(raw_df)
+            label = "Running PACE model…" if _ENGINE_AVAILABLE else "Running heuristic scorer…"
+            with st.spinner(label):
+                scored_df, method = score_dataframe(raw_df)
                 st.session_state["upload_scored"] = scored_df
-            st.success(
-                f"Scoring complete! {len(scored_df):,} shipments scored. "
-                "Results shown in preview above."
-            )
+                st.session_state["upload_score_method"] = method
+            if method == "pace_model":
+                st.success(
+                    f"PACE model scored {len(scored_df):,} shipments. "
+                    "Results shown in preview above and available across all pages."
+                )
+            else:
+                st.info(
+                    f"Heuristic scorer applied to {len(scored_df):,} shipments "
+                    "(PACE model weights not yet available — run pace_transformer.py on the cluster). "
+                    "Results shown in preview above."
+                )
             st.rerun()
