@@ -49,9 +49,11 @@ def download_weights(force: bool = False) -> bool:
 
         print(f"  ↓ Downloading {rel_path} from GitHub release {RELEASE_TAG} ...")
         try:
+            if not url.startswith("https://"):
+                raise ValueError(f"Refusing to download from non-HTTPS URL: {url}")
             # Use a simple request without a progress hook — stdout.write/flush
             # raises in Streamlit Cloud's managed environment and aborts the download.
-            urllib.request.urlretrieve(url, local_path)
+            urllib.request.urlretrieve(url, local_path)  # nosec B310
             size_mb = os.path.getsize(local_path) / 1024 / 1024
             print(f"    ✓ Saved to {local_path} ({size_mb:.1f} MB)")
         except Exception as e:
