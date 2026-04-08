@@ -108,7 +108,7 @@ CTGAN_DISCRETE_COLUMNS = CATEGORICAL_COLUMNS + [
 ]
 
 # FT-Transformer settings
-MODEL_WEIGHTS_PATH = "models/pace_transformer_weights.pt"
+MODEL_WEIGHTS_PATH = "models/pace_transformer.pt"
 MODEL_ARTIFACTS_PATH = "models/artifacts.pkl"
 RESULTS_DIR = "outputs"
 
@@ -147,4 +147,3 @@ RISK_WEIGHTS = {
     "crash_injuries_total": 3.0,
     "crash_towaway_total": 2.0,
 }
-MODEL_ARTIFACTS_PATH = "models/artifacts.pkl"
