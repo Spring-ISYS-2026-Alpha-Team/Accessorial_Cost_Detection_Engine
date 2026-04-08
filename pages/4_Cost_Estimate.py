@@ -347,14 +347,7 @@ def _fmt_filter_value(value: str) -> str:
 # -------------------------------------------------------------------
 # Load data
 # -------------------------------------------------------------------
-<<<<<<< HEAD
 shipments_df = load_shipments_with_fallback()
-=======
-
-shipments_df = load_shipments_with_fallback()
-
-
->>>>>>> b51f6592bcbb08a3117bb2b3968a0854f97bcf46
 
 st.markdown("## Cost Estimator")
 st.caption(
