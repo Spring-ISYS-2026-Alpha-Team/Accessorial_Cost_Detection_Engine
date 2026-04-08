@@ -22,6 +22,7 @@ warnings.filterwarnings("ignore")
 
 
 def get_connection():
+    """Return connection."""
     return teradatasql.connect(
         host=TD_HOST, user=TD_USERNAME,
         password=TD_PASSWORD, database=TD_DATABASE
@@ -29,6 +30,7 @@ def get_connection():
 
 
 def load_sample() -> pd.DataFrame:
+    """Handle load sample."""
     print(f"[1/5] Loading {CTGAN_TRAIN_ROWS:,} rows from {TD_SOURCE_TABLE}...")
     conn = get_connection()
     df = pd.read_sql(
@@ -41,6 +43,7 @@ def load_sample() -> pd.DataFrame:
 
 
 def preprocess(df: pd.DataFrame) -> pd.DataFrame:
+    """Handle preprocess."""
     print("[2/5] Preprocessing...")
 
     # Fix boolean-as-string columns
@@ -73,6 +76,7 @@ def preprocess(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def train_ctgan(df: pd.DataFrame) -> CTGAN:
+    """Handle train ctgan."""
     print("[3/5] Training CTGAN...")
     print(f"  Device: {'GPU' if torch.cuda.is_available() else 'CPU'}")
     print(f"  Epochs: {CTGAN_EPOCHS} | Batch size: {CTGAN_BATCH_SIZE}")
@@ -92,6 +96,7 @@ def train_ctgan(df: pd.DataFrame) -> CTGAN:
 
 
 def generate_synthetic(model: CTGAN) -> pd.DataFrame:
+    """Handle generate synthetic."""
     print(f"[4/5] Generating {CTGAN_SYNTHETIC_ROWS:,} synthetic rows...")
     synthetic_df = model.sample(CTGAN_SYNTHETIC_ROWS)
     os.makedirs(os.path.dirname(SYNTHETIC_CSV_PATH), exist_ok=True)
@@ -101,6 +106,7 @@ def generate_synthetic(model: CTGAN) -> pd.DataFrame:
 
 
 def write_to_teradata(synthetic_df: pd.DataFrame):
+    """Handle write to teradata."""
     print(f"[5/5] Writing to Teradata table {TD_SYNTHETIC_TABLE}...")
     conn = get_connection()
     cursor = conn.cursor()

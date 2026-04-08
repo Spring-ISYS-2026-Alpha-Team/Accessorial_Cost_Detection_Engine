@@ -135,6 +135,7 @@ if "selected_shipment" not in st.session_state:
 
 # ── Detail view ───────────────────────────────────────────────────
 def render_detail(row: pd.Series):
+    """Handle render detail."""
     label   = str(row.get("risk_label", row.get("risk_tier", "Unknown")))
     score   = float(row.get("risk_score_pct", row.get("risk_score", 0) * 100))
     charge  = str(row.get("charge_type", row.get("accessorial_type", "Unknown")))

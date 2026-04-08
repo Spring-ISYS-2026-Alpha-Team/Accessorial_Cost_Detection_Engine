@@ -35,7 +35,9 @@ if API_ENRICHMENT_ENABLED:
 # ══════════════════════════════════════════════════════════════════
 
 class FeatureTokenizer(nn.Module):
+    """Represent the FeatureTokenizer component."""
     def __init__(self, cat_cardinalities, cat_embed_dims, n_continuous, token_dim):
+        """Handle init."""
         super().__init__()
         self.cat_embeddings = nn.ModuleList()
         self.cat_projections = nn.ModuleList()
@@ -48,6 +50,7 @@ class FeatureTokenizer(nn.Module):
         self.cls_token = nn.Parameter(torch.randn(1, 1, token_dim))
 
     def forward(self, x_cat, x_cont):
+        """Handle forward."""
         batch_size = x_cat.size(0)
         tokens = []
         for i, (emb, proj) in enumerate(zip(self.cat_embeddings, self.cat_projections)):
@@ -60,9 +63,11 @@ class FeatureTokenizer(nn.Module):
 
 
 class PACETransformer(nn.Module):
+    """Represent the PACETransformer component."""
     def __init__(self, cat_cardinalities, cat_embed_dims, n_continuous,
                  token_dim, n_layers, n_heads, ffn_multiplier,
                  attn_dropout, ffn_dropout, n_classes):
+        """Handle init."""
         super().__init__()
         self.tokenizer = FeatureTokenizer(
             cat_cardinalities, cat_embed_dims, n_continuous, token_dim
@@ -82,6 +87,7 @@ class PACETransformer(nn.Module):
         )
 
     def forward(self, x_cat, x_cont):
+        """Handle forward."""
         tokens = self.tokenizer(x_cat, x_cont)
         tokens = self.attn_dropout(tokens)
         encoded = self.transformer(tokens)
@@ -109,6 +115,7 @@ class PACEInference:
 
     def __init__(self, weights_path: str = MODEL_WEIGHTS_PATH,
                  artifacts_path: str = MODEL_ARTIFACTS_PATH):
+        """Handle init."""
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model       = None
         self.cat_encoder = None
@@ -121,6 +128,7 @@ class PACEInference:
     # ── Model loading ─────────────────────────────────────────────
 
     def _load(self, weights_path: str, artifacts_path: str):
+        """Handle load."""
         if not os.path.exists(weights_path):
             raise FileNotFoundError(
                 f"Model weights not found at {weights_path}. "
@@ -165,6 +173,7 @@ class PACEInference:
         print(f"PACE model loaded on {self.device}")
 
     def _compute_embed_dim(self, cardinality: int) -> int:
+        """Handle compute embed dim."""
         dim = int(round(1.6 * (cardinality ** 0.56)))
         return max(8, min(64, dim))
 

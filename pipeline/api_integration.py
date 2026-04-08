@@ -80,6 +80,7 @@ class FMCSAClient:
     """Fetches real-time FMCSA carrier safety data by DOT number."""
 
     def get_carrier_profile(self, dot_number: int) -> Dict:
+        """Return carrier profile."""
         try:
             r = requests.get(
                 FMCSA_ENDPOINTS["company_census"],
@@ -92,6 +93,7 @@ class FMCSAClient:
             return {}
 
     def get_carrier_name(self, dot_number: int) -> Optional[str]:
+        """Return carrier name."""
         try:
             r = requests.get(
                 FMCSA_ENDPOINTS["carrier_census"],
@@ -106,6 +108,7 @@ class FMCSAClient:
             return None
 
     def get_sms_scores(self, dot_number: int) -> Dict:
+        """Return sms scores."""
         try:
             r = requests.get(
                 FMCSA_ENDPOINTS["sms_ab"],
@@ -118,6 +121,7 @@ class FMCSAClient:
             return {}
 
     def get_recent_inspections(self, dot_number: int, limit: int = 10) -> List[Dict]:
+        """Return recent inspections."""
         try:
             r = requests.get(
                 FMCSA_ENDPOINTS["inspection_sms"],
@@ -133,6 +137,7 @@ class FMCSAClient:
             return []
 
     def get_recent_violations(self, dot_number: int, limit: int = 20) -> List[Dict]:
+        """Return recent violations."""
         try:
             r = requests.get(
                 FMCSA_ENDPOINTS["violation"],
@@ -148,6 +153,7 @@ class FMCSAClient:
             return []
 
     def get_crash_history(self, dot_number: int) -> List[Dict]:
+        """Return crash history."""
         try:
             r = requests.get(
                 FMCSA_ENDPOINTS["crash_census"],
@@ -221,6 +227,7 @@ class FREDClient:
     """Fetches latest FRED economic series."""
 
     def get_latest(self, series_id: str) -> Optional[float]:
+        """Return latest."""
         try:
             r = requests.get(
                 FRED_BASE_URL,
@@ -241,6 +248,7 @@ class FREDClient:
             return None
 
     def get_all_latest(self) -> Dict[str, float]:
+        """Return all latest."""
         results = {}
         for series_id in FRED_SERIES:
             val = self.get_latest(series_id)
@@ -259,6 +267,7 @@ class EIAClient:
     """
 
     def get_diesel_price(self, product_code: str) -> Optional[float]:
+        """Return diesel price."""
         try:
             r = requests.get(
                 f"{EIA_BASE_URL}/petroleum/pri/gnd/data/",
@@ -279,6 +288,7 @@ class EIAClient:
             return None
 
     def get_crude_wti(self) -> Optional[float]:
+        """Return crude wti."""
         try:
             r = requests.get(
                 f"{EIA_BASE_URL}/petroleum/pri/spt/data/",
@@ -299,6 +309,7 @@ class EIAClient:
             return None
 
     def get_all_latest(self) -> Dict[str, float]:
+        """Return all latest."""
         results = {}
         for col_name, product_code in EIA_DIESEL_PRODUCTS.items():
             val = self.get_diesel_price(product_code)
@@ -315,6 +326,7 @@ class NWSClient:
     """National Weather Service — free, no key required."""
 
     def get_forecast_by_coords(self, lat: float, lon: float) -> Dict:
+        """Return forecast by coords."""
         try:
             point_r = requests.get(
                 f"{NWS_BASE_URL}/points/{lat},{lon}",
@@ -338,6 +350,7 @@ class NWSClient:
             return {"error": str(e)}
 
     def get_alerts(self, state: str) -> List[Dict]:
+        """Return alerts."""
         try:
             r = requests.get(
                 f"{NWS_BASE_URL}/alerts/active",
@@ -357,12 +370,14 @@ class NWSClient:
             return []
 
     def _parse_wind(self, wind_str: str) -> float:
+        """Handle parse wind."""
         try:
             return float(wind_str.split()[0])
         except Exception:
             return 0.0
 
     def build_weather_features(self, lat: float, lon: float) -> Dict:
+        """Handle build weather features."""
         forecast = self.get_forecast_by_coords(lat, lon)
         return {
             "wx_avg_high_f":      float(forecast.get("wx_temp_f") or 0),
@@ -386,6 +401,7 @@ class OWMClient:
     """
 
     def get_current_weather(self, lat: float, lon: float) -> Dict:
+        """Return current weather."""
         try:
             r = requests.get(
                 f"{OWM_BASE_URL}/weather",
@@ -410,6 +426,7 @@ class OWMClient:
             return {"error": str(e)}
 
     def get_weather_by_city(self, city: str, state: str = "US") -> Dict:
+        """Return weather by city."""
         try:
             r = requests.get(
                 f"{OWM_BASE_URL}/weather",
@@ -442,6 +459,7 @@ class BTSClient:
     """Bureau of Transportation Statistics freight indicators."""
 
     def get_freight_indicators(self) -> Dict:
+        """Return freight indicators."""
         try:
             r = requests.get(
                 f"{BTS_BASE_URL}/y5ut-ibwt.json",
@@ -472,6 +490,7 @@ class CensusClient:
     }
 
     def get_establishments_by_state(self, state_fips: str) -> Dict:
+        """Return establishments by state."""
         results = {}
         for naics, col_name in self.NAICS_MAP.items():
             try:
@@ -514,6 +533,7 @@ class RealTimeEnrichment:
     """
 
     def __init__(self):
+        """Handle init."""
         self.fmcsa  = FMCSAClient()
         self.fred   = FREDClient()
         self.eia    = EIAClient()
@@ -528,6 +548,7 @@ class RealTimeEnrichment:
         self._eia_cache_time  = None
 
     def _get_fred_features(self) -> Dict:
+        """Return fred features."""
         now = datetime.now()
         if self._fred_cache is None or (now - self._fred_cache_time).seconds > 3600:
             print("  Refreshing FRED indicators...")
@@ -536,6 +557,7 @@ class RealTimeEnrichment:
         return self._fred_cache
 
     def _get_eia_features(self) -> Dict:
+        """Return eia features."""
         now = datetime.now()
         if self._eia_cache is None or (now - self._eia_cache_time).seconds > 3600:
             print("  Refreshing EIA diesel prices...")
@@ -610,6 +632,7 @@ class RealTimeEnrichment:
 _enricher: Optional[RealTimeEnrichment] = None
 
 def get_enricher() -> RealTimeEnrichment:
+    """Return enricher."""
     global _enricher
     if _enricher is None:
         _enricher = RealTimeEnrichment()

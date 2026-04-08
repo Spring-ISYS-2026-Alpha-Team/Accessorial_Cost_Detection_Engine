@@ -96,6 +96,7 @@ df_all = df_raw.copy()
 def _build_donut_fig(df_in: pd.DataFrame, total_acc: float,
                      height: int = 280) -> go.Figure:
     # Use PACE charge_type if available, fall back to accessorial_type
+    """Handle build donut fig."""
     type_col = "charge_type" if "charge_type" in df_in.columns else "accessorial_type"
     type_data = (
         df_in.groupby(type_col)["accessorial_charge_usd"]
@@ -164,6 +165,7 @@ def _build_risk_distribution_fig(df_in: pd.DataFrame,
 
 def _build_carrier_fig(df_in: pd.DataFrame,
                         height: int = 280) -> go.Figure:
+    """Handle build carrier fig."""
     carrier_col = "carrier" if "carrier" in df_in.columns else "carrier_phy_state"
     if carrier_col not in df_in.columns:
         return go.Figure()
@@ -200,6 +202,7 @@ def _build_carrier_fig(df_in: pd.DataFrame,
 
 
 def _build_trend_fig(df_in: pd.DataFrame, height: int = 260) -> go.Figure:
+    """Handle build trend fig."""
     tmp = df_in.copy()
     tmp["week"] = tmp["ship_date_dt"].dt.to_period("W").dt.start_time
     weekly = (
@@ -267,6 +270,7 @@ def _build_risk_tier_fig(df_in: pd.DataFrame,
 
 @st.dialog("Accessorial Costs by Charge Type", width="large")
 def _popup_donut():
+    """Handle popup donut."""
     df_acc = df_all[df_all["accessorial_charge_usd"] > 0].copy()
     total  = df_acc["accessorial_charge_usd"].sum()
     st.caption(f"{len(df_acc):,} shipments with accessorial charges")
@@ -281,6 +285,7 @@ def _popup_donut():
 
 @st.dialog("Risk Score by Charge Type", width="large")
 def _popup_risk_dist():
+    """Handle popup risk dist."""
     df_acc = df_all[df_all["accessorial_charge_usd"] > 0].copy()
     st.caption("Distribution of PACE risk scores across charge types")
     if df_acc.empty:
@@ -294,6 +299,7 @@ def _popup_risk_dist():
 
 @st.dialog("Accessorial Costs by Carrier", width="large")
 def _popup_carrier():
+    """Handle popup carrier."""
     df_acc = df_all[df_all["accessorial_charge_usd"] > 0].copy()
     st.caption(f"{len(df_acc):,} shipments with accessorial charges")
     if df_acc.empty:
@@ -307,6 +313,7 @@ def _popup_carrier():
 
 @st.dialog("Accessorial Cost Trend", width="large")
 def _popup_trend():
+    """Handle popup trend."""
     df_acc = df_all[df_all["accessorial_charge_usd"] > 0].copy()
     if df_acc.empty:
         st.info("No trend data available.")
@@ -319,6 +326,7 @@ def _popup_trend():
 
 @st.dialog("PACE Risk Score Detail", width="large")
 def _show_risk_detail(row: dict):
+    """Handle show risk detail."""
     score  = float(row.get("risk_score_pct", 0))
     label  = row.get("risk_label", "Unknown")
     charge = row.get("charge_type",

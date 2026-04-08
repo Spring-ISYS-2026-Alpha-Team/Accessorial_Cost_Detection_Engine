@@ -33,6 +33,7 @@ top_nav(username)
 # Helpers
 # -------------------------------------------------------------------
 def _safe_float(value, default=0.0):
+    """Handle safe float."""
     try:
         if value is None or (isinstance(value, float) and np.isnan(value)):
             return default
@@ -42,6 +43,7 @@ def _safe_float(value, default=0.0):
 
 
 def _safe_str(value, default=""):
+    """Handle safe str."""
     if value is None:
         return default
     try:
@@ -227,6 +229,7 @@ def _subset_with_min_rows(
     filters: list[tuple[str, str]],
     min_rows: int,
 ) -> pd.DataFrame:
+    """Handle subset with min rows."""
     subset = df.copy()
     for col, value in filters:
         if value and col in subset.columns:
@@ -341,6 +344,7 @@ def _get_history_subset(
 
 
 def _fmt_filter_value(value: str) -> str:
+    """Handle fmt filter value."""
     return value if value else "Any"
 
 

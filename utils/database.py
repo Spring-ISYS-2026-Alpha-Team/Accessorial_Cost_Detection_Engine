@@ -330,6 +330,7 @@ def load_shipments_from_teradata(row_limit: int = 10000) -> pd.DataFrame:
         df["risk_score"] = (raw_score / score_max * 100).clip(0, 100).round(1)
 
         def _tier(s):
+            """Handle tier."""
             if s >= 75: return "High"
             if s >= 40: return "Medium"
             return "Low"

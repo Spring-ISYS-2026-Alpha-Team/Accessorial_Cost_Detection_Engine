@@ -45,6 +45,7 @@ st.session_state["_data_preloaded"] = True
 
 # ── Loading page CSS ───────────────────────────────────────────────────────────
 def _bg_css() -> str:
+    """Handle bg css."""
     img = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "background.png")
     if os.path.exists(img):
         with open(img, "rb") as f:
@@ -142,6 +143,7 @@ status_slot  = st.empty()
 
 
 def _step(msg: str, pct: int):
+    """Handle step."""
     progress_bar.progress(pct)
     status_slot.markdown(
         f"<p style='text-align:center;color:#E2E8F0;font-size:13px;margin:6px 0;'>{msg}…</p>",

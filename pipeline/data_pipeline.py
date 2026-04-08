@@ -671,6 +671,7 @@ class PACEDataPipeline:
 _pipeline: Optional[PACEDataPipeline] = None
  
 def get_data_pipeline() -> PACEDataPipeline:
+    """Return data pipeline."""
     global _pipeline
     if _pipeline is None:
         _pipeline = PACEDataPipeline()

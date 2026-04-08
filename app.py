@@ -5,6 +5,7 @@ from auth_utils import check_auth
 
 
 def _bg_css() -> str:
+    """Handle bg css."""
     img_path = os.path.join(os.path.dirname(__file__), "assets", "background.png")
     if os.path.exists(img_path):
         with open(img_path, "rb") as f:

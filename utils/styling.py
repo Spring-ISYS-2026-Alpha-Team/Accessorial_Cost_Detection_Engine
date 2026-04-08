@@ -484,4 +484,5 @@ def risk_badge_html(tier: str) -> str:
 
 # Keep for backwards compatibility — now a no-op
 def sidebar_header(username: str) -> None:
+    """Handle sidebar header."""
     pass

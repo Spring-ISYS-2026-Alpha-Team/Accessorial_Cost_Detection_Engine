@@ -33,6 +33,7 @@ _DEFAULTS = {
 
 
 def load() -> dict:
+    """Handle load."""
     if not os.path.exists(_CONFIG_PATH):
         return dict(_DEFAULTS)
     try:
@@ -51,6 +52,7 @@ def load() -> dict:
 
 
 def save(config: dict):
+    """Handle save."""
     with open(_CONFIG_PATH, "w") as f:
         json.dump(config, f, indent=2, default=str)
 
@@ -94,6 +96,7 @@ def add_pending_records(n: int) -> dict:
 
 
 def should_auto_update() -> bool:
+    """Handle should auto update."""
     cfg = load()
     if not cfg.get("auto_update_enabled", True):
         return False
@@ -110,12 +113,14 @@ def set_mode(mode: str):
 
 
 def set_thresholds(high: float, medium: float):
+    """Set thresholds."""
     cfg = load()
     cfg["tier_thresholds"] = {"high": high, "medium": medium}
     save(cfg)
 
 
 def set_auto_update(enabled: bool, threshold: int):
+    """Set auto update."""
     cfg = load()
     cfg["auto_update_enabled"]    = enabled
     cfg["auto_update_threshold"]  = threshold

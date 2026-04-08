@@ -38,6 +38,7 @@ _GRID = dict(gridcolor="rgba(150,50,200,0.15)", color="#94A3B8",
 
 
 def _sort_buttons(chart_key: str):
+    """Handle sort buttons."""
     opts = ["Value ↑", "Value ↓", "A-Z"]
     skey = f"sort_{chart_key}"
     if skey not in st.session_state:
@@ -54,6 +55,7 @@ def _sort_buttons(chart_key: str):
 
 # ── Chart-builder functions ───────────────────────────────────────────────────
 def _build_risk_dist_fig(df: pd.DataFrame, height=260) -> go.Figure:
+    """Handle build risk dist fig."""
     if len(df) == 0:
         return go.Figure()
     hist_df = df.copy()
@@ -68,6 +70,7 @@ def _build_risk_dist_fig(df: pd.DataFrame, height=260) -> go.Figure:
     bucket_counts.columns = ["Bracket", "Count"]
 
     def bucket_color(label):
+        """Handle bucket color."""
         pct = int(label.split("–")[0])
         if pct >= 67: return "#EF4444"    # high risk — red
         if pct >= 34: return "#A855F7"    # medium risk — purple
@@ -90,6 +93,7 @@ def _build_risk_dist_fig(df: pd.DataFrame, height=260) -> go.Figure:
 
 
 def _build_carrier_risk_fig(df: pd.DataFrame, height=260, sort_by="Value ↓") -> go.Figure:
+    """Handle build carrier risk fig."""
     if len(df) == 0:
         return go.Figure()
     carrier_risk = df.groupby("carrier")["risk_score"].mean().reset_index()
@@ -122,6 +126,7 @@ def _build_carrier_risk_fig(df: pd.DataFrame, height=260, sort_by="Value ↓") -
 # ── Expand dialogs (module-level) ─────────────────────────────────────────────
 @st.dialog("Risk Score Distribution", width="large")
 def _popup_risk_dist():
+    """Handle popup risk dist."""
     st.caption(f"{len(df_all):,} shipments · all time")
     st.plotly_chart(_build_risk_dist_fig(df_all, height=480),
                     width="stretch")
@@ -129,6 +134,7 @@ def _popup_risk_dist():
 
 @st.dialog("Avg Risk Score by Carrier", width="large")
 def _popup_carrier_risk():
+    """Handle popup carrier risk."""
     sort_by = _sort_buttons("carrier_risk")
     st.caption(f"{len(df_all):,} shipments · all carriers")
     if len(df_all) == 0:
@@ -185,6 +191,7 @@ high_risk_delta = high_risk - len(df_all[df_all["risk_tier"] == "High"])
 est_cost_delta  = est_cost - df_all["accessorial_charge_usd"].sum()
 
 def _fmt_usd(v: float) -> str:
+    """Handle fmt usd."""
     if v >= 1_000_000: return f"${v/1_000_000:.2f}M"
     if v >= 1_000:     return f"${v/1_000:.1f}K"
     return f"${v:,.0f}"

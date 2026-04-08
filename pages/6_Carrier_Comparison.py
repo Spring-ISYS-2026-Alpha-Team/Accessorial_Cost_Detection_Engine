@@ -38,6 +38,7 @@ color_map = {c: CARRIER_COLORS[i % len(CARRIER_COLORS)]
 
 
 def _sort_buttons(chart_key: str):
+    """Handle sort buttons."""
     opts = ["Value ↑", "Value ↓", "A-Z"]
     skey = f"sort_{chart_key}"
     if skey not in st.session_state:
@@ -54,6 +55,7 @@ def _sort_buttons(chart_key: str):
 
 # ── Carrier metrics builder ───────────────────────────────────────────────────
 def _build_metrics(df: pd.DataFrame) -> pd.DataFrame:
+    """Handle build metrics."""
     agg_dict = dict(
         shipments        =("shipment_id",            "count"),
         avg_cost         =("total_cost_usd",          "mean"),
@@ -78,6 +80,7 @@ def _build_metrics(df: pd.DataFrame) -> pd.DataFrame:
 
 # ── Chart-builder functions ───────────────────────────────────────────────────
 def _build_cpm_fig(metrics: pd.DataFrame, height=280, sort_by="Value ↓") -> go.Figure:
+    """Handle build cpm fig."""
     if sort_by == "Value ↑":
         sorted_m = metrics.sort_values("avg_cpm", ascending=True)
     elif sort_by == "Value ↓":
@@ -105,6 +108,7 @@ def _build_cpm_fig(metrics: pd.DataFrame, height=280, sort_by="Value ↓") -> go
 
 
 def _build_high_risk_fig(metrics: pd.DataFrame, height=280, sort_by="Value ↓") -> go.Figure:
+    """Handle build high risk fig."""
     if sort_by == "Value ↑":
         sorted_m2 = metrics.sort_values("high_risk_pct", ascending=True)
     elif sort_by == "Value ↓":
@@ -134,6 +138,7 @@ def _build_high_risk_fig(metrics: pd.DataFrame, height=280, sort_by="Value ↓")
 
 
 def _build_acc_rate_fig(metrics: pd.DataFrame, height=260, sort_by="Value ↓") -> go.Figure:
+    """Handle build acc rate fig."""
     if sort_by == "Value ↑":
         sorted_m3 = metrics.sort_values("accessorial_rate", ascending=True)
     elif sort_by == "Value ↓":
@@ -161,7 +166,9 @@ def _build_acc_rate_fig(metrics: pd.DataFrame, height=260, sort_by="Value ↓") 
 
 
 def _build_radar_fig(metrics: pd.DataFrame, height=260) -> go.Figure:
+    """Handle build radar fig."""
     def norm(series, invert=True):
+        """Handle norm."""
         mn, mx = series.min(), series.max()
         if mx == mn:
             return pd.Series([0.5] * len(series), index=series.index)
@@ -201,6 +208,7 @@ def _build_radar_fig(metrics: pd.DataFrame, height=260) -> go.Figure:
 
 # ── Helper: get active carriers for dialogs ───────────────────────────────────
 def _active_carriers_df(base_df: pd.DataFrame) -> pd.DataFrame:
+    """Handle active carriers df."""
     active = st.session_state.get("active_carriers", ALL_CARRIERS)
     if not active:
         return base_df
@@ -210,6 +218,7 @@ def _active_carriers_df(base_df: pd.DataFrame) -> pd.DataFrame:
 # ── Expand dialogs (module-level) ─────────────────────────────────────────────
 @st.dialog("Avg Cost per Mile", width="large")
 def _popup_cpm():
+    """Handle popup cpm."""
     sort_by = _sort_buttons("cpm")
     m = _build_metrics(_active_carriers_df(df_all))
     st.caption(f"{len(_active_carriers_df(df_all)):,} shipments · all carriers")
@@ -221,6 +230,7 @@ def _popup_cpm():
 
 @st.dialog("High Risk Shipment Rate", width="large")
 def _popup_high_risk():
+    """Handle popup high risk."""
     sort_by = _sort_buttons("high_risk")
     m = _build_metrics(_active_carriers_df(df_all))
     st.caption(f"{len(_active_carriers_df(df_all)):,} shipments · all carriers")
@@ -232,6 +242,7 @@ def _popup_high_risk():
 
 @st.dialog("Accessorial Cost Rate", width="large")
 def _popup_acc_rate():
+    """Handle popup acc rate."""
     sort_by = _sort_buttons("acc_rate")
     m = _build_metrics(_active_carriers_df(df_all))
     st.caption(f"{len(_active_carriers_df(df_all)):,} shipments · all carriers")
@@ -243,6 +254,7 @@ def _popup_acc_rate():
 
 @st.dialog("Carrier Performance Radar", width="large")
 def _popup_radar():
+    """Handle popup radar."""
     m = _build_metrics(_active_carriers_df(df_all))
     st.caption(f"{len(_active_carriers_df(df_all)):,} shipments · all carriers")
     if m.empty:

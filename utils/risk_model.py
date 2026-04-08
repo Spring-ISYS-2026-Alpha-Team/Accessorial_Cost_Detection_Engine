@@ -40,6 +40,7 @@ _DERIVABLE = {"day_of_week", "month", "had_accessorial"}
 
 # ── Tier thresholds ───────────────────────────────────────────────────────────
 def score_to_tier(score: float) -> str:
+    """Handle score to tier."""
     if score >= 0.67:
         return "High"
     if score >= 0.34:
@@ -88,10 +89,12 @@ def _prepare_features(df: pd.DataFrame) -> pd.DataFrame:
 
 # ── Model persistence ─────────────────────────────────────────────────────────
 def _versioned_path(version: int) -> str:
+    """Handle versioned path."""
     return os.path.join(_MODEL_DIR, f"pace_risk_model_v{version}.joblib")
 
 
 def save_model(model, metrics: dict):
+    """Handle save model."""
     from utils.model_config import load as cfg_load, record_training
     cfg = cfg_load()
     next_version = cfg.get("version", 0) + 1

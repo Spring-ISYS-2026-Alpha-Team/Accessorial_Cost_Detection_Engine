@@ -1,6 +1,7 @@
 import pandas as pd
 
 def validate_data(df):
+    """Handle validate data."""
     errors = []
 
     # required columns

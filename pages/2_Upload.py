@@ -38,6 +38,7 @@ MODEL_READY = is_pace_model_ready()
 
 # ── Helper: tier color ────────────────────────────────────────────
 def tier_badge(label: str) -> str:
+    """Handle tier badge."""
     color = TIER_COLORS.get(label, "#94A3B8")
     return (
         f"<span style='background:rgba(0,0,0,0.3);border:1px solid {color};"
@@ -217,6 +218,7 @@ if st.session_state.get("upload_raw_df") is not None:
             else:
                 # ── Confidence badge helper ───────────────────────────────────
                 def _conf_badge(conf: float) -> str:
+                    """Handle conf badge."""
                     if conf >= CONFIDENCE_HIGH:
                         return (
                             "<span style='color:#34D399;font-size:11px;font-weight:700;"
