@@ -125,7 +125,7 @@ Dashboard Data
 
 ```
 Accessorial_Cost_Detection_Engine/
-├── PACE.py                       # Entry / landing (pre-login hero); run: streamlit run PACE.py
+├── app.py                        # Entry / landing (pre-login hero); run: streamlit run app.py
 ├── auth_utils.py                 # Session auth, logout, require_auth guard
 ├── requirements.txt
 │
@@ -209,7 +209,7 @@ This pulls `pace_transformer_weights.pt` and `artifacts.pkl` from the GitHub Rel
 ### 4. Run
 
 ```bash
-streamlit run PACE.py
+streamlit run app.py
 ```
 
 Opens at **http://localhost:8501**

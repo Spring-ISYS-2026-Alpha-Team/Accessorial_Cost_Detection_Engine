@@ -11,7 +11,11 @@ def logout():
     st.cache_data.clear()
     # Intentionally NOT clearing cache_resource so the ML model
     # stays loaded in memory between sessions for faster reloads.
-    st.switch_page("PACE.py")
+    try:
+        st.switch_page("pages/_Login.py")
+    except Exception:
+        # If multipage routing is unavailable in this runtime, refresh app state.
+        st.rerun()
 
 def check_auth():
     """

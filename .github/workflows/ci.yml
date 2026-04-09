@@ -25,7 +25,7 @@ jobs:
       - name: Lint — errors (blocking)
         run: |
           python -m flake8 \
-            auth_utils.py PACE.py pages pipeline tests utils scripts \
+            auth_utils.py app.py pages pipeline tests utils scripts \
             --count \
             --select=E9,F63,F7,F82 \
             --show-source \
@@ -34,7 +34,7 @@ jobs:
       - name: Lint — style (non-blocking)
         run: |
           python -m flake8 \
-            auth_utils.py PACE.py pages pipeline tests utils scripts \
+            auth_utils.py app.py pages pipeline tests utils scripts \
             --count \
             --max-line-length=120 \
             --extend-ignore=E203,W503 \
@@ -59,7 +59,7 @@ jobs:
       - name: Run bandit
         run: |
           python -m bandit \
-            -r auth_utils.py PACE.py pages pipeline tests utils scripts \
+            -r auth_utils.py app.py pages pipeline tests utils scripts \
             -ll \
             --quiet
 

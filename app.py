@@ -1,4 +1,4 @@
-"""PACE entrypoint — first sidebar item shows as PACE. Run: streamlit run PACE.py."""
+"""PACE entrypoint — first sidebar item shows as PACE. Run: streamlit run app.py."""
 import os
 import base64
 import streamlit as st

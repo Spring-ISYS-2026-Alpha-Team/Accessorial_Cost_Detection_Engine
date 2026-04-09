@@ -1,5 +1,5 @@
 # File: pages/_Login.py (leading underscore = hidden from Streamlit sidebar; still routable)
-# Login form — pre-login page; main landing is PACE.py.
+# Login form — pre-login page; main landing is app.py.
 import os
 import sys
 import base64

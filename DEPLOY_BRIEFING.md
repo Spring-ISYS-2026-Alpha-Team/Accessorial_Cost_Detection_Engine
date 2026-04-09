@@ -64,7 +64,7 @@ Note: These keys are currently hardcoded in `pipeline/config.py`. The app will w
 ```bash
 cd /home/ubuntu/PACE
 source venv/bin/activate
-streamlit run PACE.py --server.port 8501 --server.address 0.0.0.0
+streamlit run app.py --server.port 8501 --server.address 0.0.0.0
 ```
 Verify it starts without errors before proceeding.
 
@@ -81,7 +81,7 @@ User=ubuntu
 WorkingDirectory=/home/ubuntu/PACE
 Environment="PATH=/home/ubuntu/PACE/venv/bin"
 EnvironmentFile=/home/ubuntu/PACE/.env
-ExecStart=/home/ubuntu/PACE/venv/bin/streamlit run PACE.py --server.port 8501 --server.address 127.0.0.1 --server.headless true
+ExecStart=/home/ubuntu/PACE/venv/bin/streamlit run app.py --server.port 8501 --server.address 127.0.0.1 --server.headless true
 Restart=always
 
 [Install]
@@ -156,7 +156,7 @@ Follow the prompts. Certbot will auto-configure Nginx for HTTPS and set up auto-
 
 ## App Architecture Summary
 
-- **Entry point:** `PACE.py` → Streamlit multi-page app
+- **Entry point:** `app.py` → Streamlit multi-page app
 - **Inference engine:** `pipeline/inference.py` → `PACEInference` class (singleton)
 - **Model:** FT-Transformer with dual heads (regression + classification)
   - 152 input features (97 continuous, 55 categorical)
