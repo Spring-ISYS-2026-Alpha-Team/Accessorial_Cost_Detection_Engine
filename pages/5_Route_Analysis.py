@@ -9,19 +9,19 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from auth_utils import require_auth
 from utils.database import load_shipments_with_fallback
-from utils.styling import inject_css, top_nav, NAVY_500, NAVY_900
+from utils.styling import inject_css, sidebar_account, NAVY_500, NAVY_900
 
 st.set_page_config(
     page_title="PACE — Route Analysis",
     page_icon="🗺️",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 inject_css()
 
 require_auth()
 username = st.session_state.get("username", "User")
-top_nav(username)
+sidebar_account(username)
 
 df_raw = load_shipments_with_fallback()
 df_raw["ship_date_dt"] = pd.to_datetime(df_raw["ship_date"])
@@ -223,7 +223,7 @@ def _popup_scatter():
 
 
 # ── Inline filters ────────────────────────────────────────────────────────────
-with st.expander("⚙️ Filters", expanded=False):
+with st.expander("Filters", expanded=False):
     f1, f2 = st.columns(2)
     with f1:
         min_vol = st.slider("Minimum shipments per lane", 1, 10, 2,

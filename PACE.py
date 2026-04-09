@@ -1,7 +1,9 @@
+"""PACE entrypoint — first sidebar item shows as PACE. Run: streamlit run PACE.py."""
 import os
 import base64
 import streamlit as st
-from auth_utils import check_auth
+from auth_utils import check_auth, pace_role_is_admin
+from utils.styling import remove_nav_toggle_fallback, inject_persistent_nav_hides
 
 
 def _bg_css() -> str:
@@ -23,8 +25,11 @@ st.set_page_config(
     page_title="PACE — Predictive Accessorial Cost Engine",
     page_icon="📦",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    # "expanded" pins session default so post-login pages show the nav (Streamlit uses first call per session).
+    initial_sidebar_state="expanded",
 )
+remove_nav_toggle_fallback()
+inject_persistent_nav_hides()
 
 # — Inject Google Fonts via <link> — works on localhost where @import is blocked —
 st.markdown("""
@@ -91,8 +96,10 @@ st.markdown(f"""
     pointer-events: none; z-index: 0;
 }}
 
-#MainMenu, header, footer {{ visibility: hidden; }}
+#MainMenu, footer {{ visibility: hidden !important; }}
+[data-testid="stHeader"] {{ background: transparent !important; }}
 [data-testid="stSidebar"], [data-testid="collapsedControl"] {{ display: none !important; }}
+#pace-nav-toggle-btn {{ display: none !important; }}
 .block-container {{ position: relative; z-index: 1; padding: 0 !important; max-width: 100% !important; }}
 
 /* Ambient glows */
@@ -503,12 +510,11 @@ st.markdown("""
 if check_auth():
     if not st.session_state.get("_data_preloaded"):
         st.session_state["post_load_dest"] = (
-            "pages/8_Admin.py" if st.session_state.get("role") == "admin"
-            else "pages/0_Home.py"
+            "pages/8_Admin.py" if pace_role_is_admin() else "pages/0_Home.py"
         )
-        st.switch_page("pages/loading.py")
+        st.switch_page("pages/_loading.py")
 
 _, btn_col, _ = st.columns([1, 2, 1])
 with btn_col:
     if st.button("GET STARTED →", type="primary", use_container_width=True, key="signin"):
-        st.switch_page("pages/1_Login.py")
+        st.switch_page("pages/_Login.py")

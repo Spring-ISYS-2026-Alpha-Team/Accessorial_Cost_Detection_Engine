@@ -11,20 +11,20 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from auth_utils import require_auth
 from utils.database import get_connection, get_shipments_with_charges
 from utils.mock_data import generate_mock_shipments
-from utils.styling import inject_css, top_nav, NAVY_500, TIER_COLORS, CHARGE_COLORS, RISK_HIGH_FG
+from utils.styling import inject_css, sidebar_account, NAVY_500, TIER_COLORS, CHARGE_COLORS, RISK_HIGH_FG
 from pipeline.config import CHARGE_TYPE_LABELS, is_pace_model_ready
 
 st.set_page_config(
     page_title="PACE — Accessorial Tracker",
     page_icon="📋",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 inject_css()
 
 require_auth()
 username = st.session_state.get("username", "User")
-top_nav(username)
+sidebar_account(username)
 
 # ── Model availability ────────────────────────────────────────────
 MODEL_READY = is_pace_model_ready()
@@ -406,7 +406,7 @@ max_date = df_all["ship_date_dt"].max()
 if pd.isna(min_date): min_date = pd.Timestamp("2020-01-01")
 if pd.isna(max_date): max_date = pd.Timestamp.now()
 
-with st.expander("⚙️ Filters", expanded=False):
+with st.expander("Filters", expanded=False):
     f1, f2, f3 = st.columns(3)
     with f1:
         sel_types = st.multiselect(

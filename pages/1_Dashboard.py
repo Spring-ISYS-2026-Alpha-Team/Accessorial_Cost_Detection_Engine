@@ -8,21 +8,21 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from auth_utils import require_auth
 from utils.database import load_shipments_with_fallback
-from utils.styling import inject_css, top_nav, NAVY_900, NAVY_500, chart_theme, risk_badge_html
+from utils.styling import inject_css, sidebar_account, NAVY_900, NAVY_500, chart_theme, risk_badge_html
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="PACE — Dashboard",
     page_icon="📊",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 inject_css()
 
 # ── Auth guard ────────────────────────────────────────────────────────────────
 require_auth()
 username = st.session_state.get("username", "User")
-top_nav(username)
+sidebar_account(username)
 
 # ── Load data (live DB with mock fallback) ────────────────────────────────────
 df_raw = load_shipments_with_fallback()
@@ -149,7 +149,7 @@ min_date = df_all["ship_date_dt"].min().date()
 max_date = df_all["ship_date_dt"].max().date()
 carriers = sorted(df_all["carrier"].unique())
 
-with st.expander("⚙️ Filters", expanded=False):
+with st.expander("Filters", expanded=False):
     f1, f2, f3 = st.columns(3)
     with f1:
         date_range = st.date_input(

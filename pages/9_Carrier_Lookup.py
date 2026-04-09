@@ -8,20 +8,20 @@ import streamlit as st
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from auth_utils import require_auth
-from utils.styling import inject_css, top_nav, TIER_COLORS, CHARGE_COLORS
+from utils.styling import inject_css, sidebar_account, TIER_COLORS, CHARGE_COLORS
 from pipeline.config import CHARGE_TYPE_LABELS, is_pace_model_ready
 
 st.set_page_config(
     page_title="PACE — Carrier Lookup",
     page_icon="🔍",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 inject_css()
 
 require_auth()
 username = st.session_state.get("username", "User")
-top_nav(username)
+sidebar_account(username)
 
 # ── Constants ─────────────────────────────────────────────────────
 MODEL_READY = is_pace_model_ready()

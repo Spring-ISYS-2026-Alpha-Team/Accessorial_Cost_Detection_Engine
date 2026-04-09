@@ -8,7 +8,7 @@
 
 ## Test Plan
 <!-- How did you verify this works? -->
-- [ ] Ran `streamlit run app.py` locally and tested manually
+- [ ] Ran `streamlit run PACE.py` locally and tested manually
 - [ ] No console errors
 - [ ] Edge cases considered (empty data, bad input, etc.)
 

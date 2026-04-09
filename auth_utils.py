@@ -11,7 +11,7 @@ def logout():
     st.cache_data.clear()
     # Intentionally NOT clearing cache_resource so the ML model
     # stays loaded in memory between sessions for faster reloads.
-    st.switch_page("app.py")
+    st.switch_page("PACE.py")
 
 def check_auth():
     """
@@ -21,6 +21,15 @@ def check_auth():
     return st.session_state.get('authenticated', False)
 
 
+def pace_role_is_admin(role=None) -> bool:
+    """
+    True if role is the admin role (case-insensitive).
+    If role is None, uses st.session_state["role"] (DB may return "Admin", "ADMIN", etc.).
+    """
+    r = role if role is not None else st.session_state.get("role")
+    return str(r or "").strip().lower() == "admin"
+
+
 def require_auth() -> None:
     """
     Auth guard for protected pages.
@@ -28,5 +37,5 @@ def require_auth() -> None:
     Only called when a page is accessed directly without a session.
     """
     if not check_auth():
-        st.switch_page("pages/1_Login.py")
+        st.switch_page("pages/_Login.py")
         st.stop()

@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from auth_utils import require_auth
 from utils.database import load_shipments_with_fallback
 from utils.styling import (
-    inject_css, top_nav,
+    inject_css, sidebar_account,
     NAVY_500,
     TIER_BG_FG, CHARGE_COLORS,
 )
@@ -20,13 +20,13 @@ st.set_page_config(
     page_title="PACE — Shipments",
     page_icon="🚚",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 inject_css()
 
 require_auth()
 username = st.session_state.get("username", "User")
-top_nav(username)
+sidebar_account(username)
 
 # ── Model availability ────────────────────────────────────────────
 MODEL_READY = is_pace_model_ready()
@@ -82,7 +82,7 @@ ID_COL = next(
 )
 
 # ── Filters ───────────────────────────────────────────────────────
-with st.expander("⚙️ Filters", expanded=False):
+with st.expander("Filters", expanded=False):
     f1, f2, f3, f4 = st.columns(4)
 
     with f1:

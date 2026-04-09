@@ -9,7 +9,7 @@ import streamlit as st
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from auth_utils import require_auth
-from utils.styling import inject_css, top_nav
+from utils.styling import inject_css, sidebar_account
 
 from utils.database import load_shipments_with_fallback
 
@@ -19,14 +19,14 @@ st.set_page_config(
     page_title="PACE — Cost Estimate",
     page_icon="💰",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 inject_css()
 require_auth()
 
 username = st.session_state.get("username", "User")
-top_nav(username)
+sidebar_account(username)
 
 
 # -------------------------------------------------------------------
@@ -360,6 +360,36 @@ st.caption(
     "DOT, origin, and destination filters before model training."
 )
 st.divider()
+
+# Ensure KPI-style metric labels/values wrap instead of truncating in narrow columns.
+st.markdown(
+    """
+<style>
+div[data-testid="stMetric"] label[data-testid="stMetricLabel"] > div,
+div[data-testid="stMetric"] label[data-testid="stMetricLabel"] p,
+div[data-testid="stMetricValue"],
+div[data-testid="stMetricValue"] > div,
+div[data-testid="stMetricValue"] > div > div,
+div[data-testid="stMetricDelta"] > div {
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+}
+div[data-testid="stMetricValue"] > div,
+div[data-testid="stMetricValue"] > div > div {
+    font-size: clamp(1.05rem, 1.4vw, 1.5rem) !important;
+    line-height: 1.25 !important;
+}
+div[data-testid="stMetricDelta"] > div {
+    line-height: 1.2 !important;
+}
+div[data-testid="stMetric"] {
+    min-height: 132px !important;
+}
+</style>
+""",
+    unsafe_allow_html=True,
+)
 
 if shipments_df is None or shipments_df.empty:
     st.error(

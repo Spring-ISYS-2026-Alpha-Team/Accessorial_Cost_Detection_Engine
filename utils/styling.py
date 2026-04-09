@@ -3,9 +3,43 @@ utils/styling.py
 Dark glass theme — PACE Predictive Accessorial Cost Engine.
 Purple-magenta background image, glass cards, glowing accents.
 """
+import json
 import os
 import base64
 import streamlit as st
+
+from auth_utils import pace_role_is_admin
+
+# Sidebar: hide flow-only pages (still routable via st.switch_page).
+_HIDE_FLOW_NAV_CSS = """
+[data-testid="stSidebarNav"] a[href*="Login"],
+[data-testid="stSidebarNav"] a[href*="login"],
+[data-testid="stSidebarNav"] a[href*="_Login"],
+[data-testid="stSidebarNav"] a[href*="loading"],
+[data-testid="stSidebarNav"] a[href*="Loading"],
+[data-testid="stSidebarNav"] a[href*="_loading"] {
+    display: none !important;
+}
+[data-testid="stSidebarNav"] li:has(> a[href*="Login"]),
+[data-testid="stSidebarNav"] li:has(> a[href*="login"]),
+[data-testid="stSidebarNav"] li:has(> a[href*="_Login"]),
+[data-testid="stSidebarNav"] li:has(> a[href*="loading"]),
+[data-testid="stSidebarNav"] li:has(> a[href*="Loading"]),
+[data-testid="stSidebarNav"] li:has(> a[href*="_loading"]) {
+    display: none !important;
+}
+"""
+
+# Non-admins: hide Admin in sidebar (8_Admin.py still enforces access).
+# Match both casings — Streamlit hrefs may use 8_Admin or 8_admin depending on version.
+_HIDE_ADMIN_NAV_CSS = """
+[data-testid="stSidebarNav"] a[href*="Admin"],
+[data-testid="stSidebarNav"] a[href*="admin"],
+[data-testid="stSidebarNav"] li:has(> a[href*="Admin"]),
+[data-testid="stSidebarNav"] li:has(> a[href*="admin"]) {
+    display: none !important;
+}
+"""
 
 
 def _bg_css() -> str:
@@ -117,32 +151,6 @@ def chart_theme(**overrides) -> dict:
     return base
 
 
-# ── Navigation pages ──────────────────────────────────────────────────────────
-_NAV_PAGES = [
-    ("Home",        "pages/0_Home.py"),
-    ("Dashboard",   "pages/1_Dashboard.py"),
-    ("Upload",      "pages/2_Upload.py"),
-    ("Shipments",   "pages/3_Shipments.py"),
-    ("Cost Est.",   "pages/4_Cost_Estimate.py"),
-    ("Routes",      "pages/5_Route_Analysis.py"),
-    ("Carriers",    "pages/6_Carrier_Comparison.py"),
-    ("Accessorial", "pages/7_Accessorial_Tracker.py"),
-    ("Admin",       "pages/8_Admin.py"),
-]
-
-# Slug map for absolute URL navigation
-_NAV_SLUGS = {
-    "pages/0_Home.py":              "/Home",
-    "pages/1_Dashboard.py":         "/Dashboard",
-    "pages/2_Upload.py":            "/Upload",
-    "pages/3_Shipments.py":         "/Shipments",
-    "pages/4_Cost_Estimate.py":     "/Cost_Estimate",
-    "pages/5_Route_Analysis.py":    "/Route_Analysis",
-    "pages/6_Carrier_Comparison.py":"/Carrier_Comparison",
-    "pages/7_Accessorial_Tracker.py":"/Accessorial_Tracker",
-    "pages/8_Admin.py":             "/Admin",
-}
-
 # ── Base page CSS (injected on every page) ────────────────────────────────────
 _BASE_CSS = f"""
 <style>
@@ -171,107 +179,112 @@ _BASE_CSS = f"""
     filter: blur(2px);
 }}
 
-/* ── Hide Streamlit chrome and sidebar ── */
-#MainMenu, header, footer {{ visibility: hidden; }}
-[data-testid="stSidebar"],
-[data-testid="collapsedControl"],
-[data-testid="stSidebarNav"],
-section[data-testid="stSidebarNav"],
-button[kind="header"],
-[data-testid="stSidebarNavItems"],
-[data-testid="stSidebarNavSeparator"] {{
-    display: none !important;
-    visibility: hidden !important;
-    width: 0 !important;
-    height: 0 !important;
-    overflow: hidden !important;
+/* ── Hide Streamlit chrome; keep sidebar expand/collapse control usable ── */
+#MainMenu, footer {{ visibility: hidden !important; }}
+/* Do not hide the whole header — it often contains [data-testid="collapsedControl"] */
+[data-testid="stHeader"] {{
+    background: transparent !important;
+    visibility: visible !important;
+}}
+[data-testid="collapsedControl"] {{
+    visibility: visible !important;
+    display: flex !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    z-index: 1000002 !important;
+}}
+[data-testid="collapsedControl"] button,
+[data-testid="collapsedControl"] [role="button"] {{
+    color: {ACCENT_SOFT} !important;
+    min-width: 2.5rem !important;
+    min-height: 2.5rem !important;
+}}
+button[kind="headerNoPadding"] {{
+    z-index: 1000003 !important;
+    position: relative !important;
 }}
 
+/* ── Multipage sidebar — dark glass to match PACE theme ── */
+[data-testid="stSidebar"] {{
+    background: linear-gradient(180deg, rgba(10, 5, 32, 0.98) 0%, rgba(6, 0, 18, 0.99) 100%) !important;
+    border-right: 1px solid {GLASS_BORDER} !important;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35) !important;
+}}
+[data-testid="stSidebar"] [data-testid="stSidebarNav"] {{
+    background: transparent !important;
+}}
+/* Inner scroll lives on stSidebarContent (Streamlit default). Tighten vertical rhythm so nav + footer fit without it. */
+[data-testid="stSidebarContent"] {{
+    overflow-x: hidden !important;
+    overflow-y: hidden !important;
+    scrollbar-gutter: auto !important;
+}}
+[data-testid="stSidebarHeader"] {{
+    margin-bottom: 0.35rem !important;
+    height: auto !important;
+    min-height: 0 !important;
+}}
+[data-testid="stSidebarUserContent"] {{
+    padding-top: 0.35rem !important;
+}}
+[data-testid="stSidebarUserContent"] hr {{
+    margin: 0.35rem 0 !important;
+}}
+[data-testid="stSidebarUserContent"] [data-testid="stCaptionContainer"] {{
+    margin-top: 0 !important;
+    margin-bottom: 0.15rem !important;
+}}
+[data-testid="stSidebarUserContent"] .stButton {{
+    margin-top: 0 !important;
+}}
+[data-testid="stSidebarNav"] ul {{
+    padding-top: 0.15rem !important;
+    padding-bottom: 0.1rem !important;
+}}
+[data-testid="stSidebarNav"] li {{
+    margin: 0 !important;
+    padding: 0 !important;
+}}
+/* Border-top on li+li: separators between links only, not under the last visible row. */
+[data-testid="stSidebarNav"] li + li {{
+    border-top: 1px solid {GLASS_BORDER} !important;
+    padding-top: 0.35rem !important;
+    margin-top: 0.35rem !important;
+}}
+[data-testid="stSidebarNav"] a {{
+    color: {TEXT_SECONDARY} !important;
+    font-weight: 500 !important;
+    border-radius: 6px !important;
+    font-size: 0.8125rem !important;
+    line-height: 1.2 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding: 0.28rem 0.45rem !important;
+    gap: 0.35rem !important;
+}}
+[data-testid="stSidebarNav"] a:hover {{
+    color: {TEXT_PRIMARY} !important;
+    background: rgba(147, 51, 234, 0.12) !important;
+}}
+[data-testid="stSidebarNav"] a[aria-current="page"] {{
+    color: #FFFFFF !important;
+    background: rgba(147, 51, 234, 0.22) !important;
+    border-left: 3px solid {ACCENT_PURPLE} !important;
+}}
+[data-testid="stSidebarNavSeparator"] {{
+    display: none !important;
+}}
+@media (max-height: 680px) {{
+    [data-testid="stSidebarContent"] {{
+        overflow-y: auto !important;
+    }}
+}}
 /* ── Page content padding ── */
 .block-container {{
     padding-top: 1rem !important;
     padding-left: 2.5rem !important;
     padding-right: 2.5rem !important;
     max-width: 1400px !important;
-}}
-
-/* ── Nav bar ── */
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"]) {{
-    background: {NAVY_900} !important;
-    border-bottom: 2px solid {NAVY_700} !important;
-    padding: 5px 16px !important;
-    margin-bottom: 1.5rem !important;
-    border-radius: 6px !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
-    align-items: center !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    scrollbar-width: none !important;
-}}
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])::-webkit-scrollbar {{
-    display: none !important;
-}}
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
-> div[data-testid="stColumn"] > div {{
-    padding: 0 2px !important;
-    gap: 0 !important;
-}}
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
-[data-testid="stPageLink"] {{
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    min-height: unset !important;
-}}
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
-[data-testid="stPageLink"] a,
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
-[data-testid="stPageLink"] a p,
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
-[data-testid="stPageLink"] a span,
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
-[data-testid="stPageLink"] a div {{
-    color: #FFFFFF !important;
-    font-size: 13px !important;
-    font-weight: 700 !important;
-    text-decoration: none !important;
-    white-space: nowrap !important;
-}}
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
-[data-testid="stPageLink"] a {{
-    padding: 4px 7px !important;
-    border-radius: 4px !important;
-    display: inline-block !important;
-    transition: background 0.15s !important;
-}}
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
-[data-testid="stPageLink"] a:hover,
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
-[data-testid="stPageLink"] a:hover p,
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
-[data-testid="stPageLink"] a:hover span {{
-    color: #FFFFFF !important;
-    background: rgba(255,255,255,0.12) !important;
-}}
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
-.stButton > button {{
-    background: rgba(147,51,234,0.15) !important;
-    color: rgba(220,200,255,0.8) !important;
-    border: 1px solid rgba(180,80,220,0.4) !important;
-    font-size: 12px !important;
-    padding: 4px 14px !important;
-    min-height: unset !important;
-    height: auto !important;
-    line-height: 1.4 !important;
-    border-radius: 5px !important;
-    white-space: nowrap !important;
-}}
-[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"])
-.stButton > button:hover {{
-    color: #FFFFFF !important;
-    border-color: rgba(255,255,255,0.5) !important;
-    background: rgba(255,255,255,0.1) !important;
 }}
 
 /* ── Metric Cards ── */
@@ -429,42 +442,256 @@ strong, b {{ color: #F1F5F9 !important; }}
 """
 
 
-def inject_css() -> None:
-    """Inject PACE base CSS. Call at the top of every page."""
-    st.markdown(_BASE_CSS, unsafe_allow_html=True)
-
-
-def top_nav(username: str) -> None:
+def inject_persistent_nav_hides() -> None:
     """
-    Render the top navigation bar using st.page_link() for client-side
-    navigation that preserves the WebSocket session.
-    Call this at the top of every authenticated page, after inject_css().
+    Put sidebar hide rules in the parent <head> and watch the DOM.
+    Survives Streamlit multipage transitions (Login/Loading always; Admin link hidden unless admin).
+    Expands collapsed multipage nav (localStorage + programmatic click) and hides View more/less.
     """
-    logo_col, *page_cols, user_col, out_col = st.columns(
-        [1.4] + [1.0] * 9 + [1.0, 0.7]
+    try:
+        import streamlit.components.v1 as components
+    except ImportError:
+        return
+    is_admin = pace_role_is_admin()
+    css = _HIDE_FLOW_NAV_CSS + (_HIDE_ADMIN_NAV_CSS if not is_admin else "")
+    css_literal = json.dumps(css)
+    role_literal = json.dumps("admin" if is_admin else st.session_state.get("role"))
+    components.html(
+        f"""
+<script>
+(function () {{
+  try {{
+    var appWin = window.parent;
+    var doc = appWin.document;
+    if (!doc || !doc.head) return;
+    /* Parent app window only — old iframes' MutationObservers must not read stale __paceUserRole. */
+    appWin.__paceUserRole = {role_literal};
+    var legacy = doc.getElementById("pace-hide-flow-nav");
+    if (legacy) legacy.remove();
+
+    var sid = "pace-sidebar-nav-filters";
+    var stEl = doc.getElementById(sid);
+    if (!stEl) {{
+      stEl = doc.createElement("style");
+      stEl.id = sid;
+      doc.head.appendChild(stEl);
+    }}
+    stEl.textContent = {css_literal};
+
+    function ensureSidebarNavExpanded() {{
+      try {{
+        if (window.localStorage)
+          window.localStorage.setItem("sidebarNavState", "expanded");
+      }} catch (e) {{}}
+      var btn = doc.querySelector('[data-testid="stSidebarNavViewButton"]');
+      if (!btn) return;
+      var text = (btn.textContent || "").trim();
+      if (text.indexOf("less") !== -1) return;
+      if (text.indexOf("more") !== -1) btn.click();
+    }}
+    function hideSidebarViewToggle() {{
+      var btn = doc.querySelector('[data-testid="stSidebarNavViewButton"]');
+      if (btn) btn.style.setProperty("display", "none", "important");
+    }}
+    function hideFlowNavLinks() {{
+      var nav = doc.querySelector('[data-testid="stSidebarNav"]');
+      if (!nav) return;
+      nav.querySelectorAll("a[href]").forEach(function (a) {{
+        var h = a.getAttribute("href") || "";
+        if (/Login|_Login|loading|_loading/i.test(h)) {{
+          var li = a.closest("li");
+          (li || a).style.setProperty("display", "none", "important");
+        }}
+      }});
+    }}
+    function paceIsAdminRole() {{
+      return String(appWin.__paceUserRole || "").trim().toLowerCase() === "admin";
+    }}
+    function hideAdminNavLinks() {{
+      if (paceIsAdminRole()) return;
+      var nav = doc.querySelector('[data-testid="stSidebarNav"]');
+      if (!nav) return;
+      nav.querySelectorAll("a[href]").forEach(function (a) {{
+        var h = a.getAttribute("href") || "";
+        if (/Admin/i.test(h)) {{
+          var li = a.closest("li");
+          (li || a).style.setProperty("display", "none", "important");
+        }}
+      }});
+    }}
+    function applySidebarNavHiding() {{
+      ensureSidebarNavExpanded();
+      hideFlowNavLinks();
+      hideAdminNavLinks();
+      hideSidebarViewToggle();
+    }}
+    applySidebarNavHiding();
+    if (!appWin.__paceSidebarNavObs) {{
+      appWin.__paceSidebarNavObs = true;
+      var root = doc.querySelector('[data-testid="stAppViewContainer"]') || doc.body;
+      new MutationObserver(function () {{ applySidebarNavHiding(); }}).observe(root, {{
+        subtree: true,
+        childList: true,
+      }});
+    }}
+  }} catch (e) {{}}
+}})();
+</script>
+        """,
+        height=0,
     )
 
-    with logo_col:
-        st.markdown(
-            "<div style='color:#FFFFFF; font-size:15px; font-weight:700; "
-            "letter-spacing:1px; padding:4px 0;'>📦 PACE</div>",
-            unsafe_allow_html=True,
-        )
 
-    for col, (label, page) in zip(page_cols, _NAV_PAGES):
-        with col:
-            st.page_link(page, label=label)
+def remove_nav_toggle_fallback() -> None:
+    """Remove the ☰ fallback button (e.g. on landing/login where nav is intentionally hidden)."""
+    try:
+        import streamlit.components.v1 as components
+    except ImportError:
+        return
+    components.html(
+        """
+<script>
+try {
+  var b = window.parent.document.getElementById("pace-nav-toggle-btn");
+  if (b) b.remove();
+} catch (e) {}
+</script>
+        """,
+        height=0,
+    )
 
-    with user_col:
-        st.markdown(
-            f"<div style='color:rgba(255,255,255,0.7); font-size:11px; "
-            f"text-align:right; padding:5px 4px 0;'>👤 {username}</div>",
-            unsafe_allow_html=True,
-        )
 
-    with out_col:
-        if st.button("Sign Out", key="nav_signout"):
+def _inject_sidebar_open_fallback() -> None:
+    """
+    Streamlit's sidebar chevron is easy to lose behind custom CSS or new layouts.
+    Inject a fixed ☰ into the parent document that forwards a click to the real toggle.
+    Hidden on landing/login/loading via #pace-nav-toggle-btn {{ display: none }} there.
+    """
+    try:
+        import streamlit.components.v1 as components
+    except ImportError:
+        return
+
+    components.html(
+        """
+<script>
+(function () {
+  try {
+    var doc = window.parent.document;
+    if (!doc || !doc.body) return;
+    if (doc.getElementById("pace-nav-toggle-btn")) return;
+
+    var btn = doc.createElement("button");
+    btn.id = "pace-nav-toggle-btn";
+    btn.type = "button";
+    btn.setAttribute("aria-label", "Open navigation menu");
+    btn.innerHTML = "&#9776;";
+    btn.style.cssText = [
+      "position:fixed","left:10px","top:10px","z-index:2147483646",
+      "width:44px","height:44px","border-radius:10px","cursor:pointer",
+      "display:none","align-items:center","justify-content:center",
+      "background:rgba(30,10,60,0.92)","color:#e9d5ff",
+      "border:1px solid rgba(180,80,220,0.55)",
+      "box-shadow:0 4px 20px rgba(0,0,0,0.45)",
+      "font-size:20px","line-height:1","padding:0","font-family:system-ui,sans-serif"
+    ].join(";");
+
+    function clickNativeToggle() {
+      var sels = [
+        '[data-testid="collapsedControl"] button',
+        '[data-testid="collapsedControl"] [role="button"]',
+        '[data-testid="collapsedControl"]',
+        'button[kind="headerNoPadding"]'
+      ];
+      for (var i = 0; i < sels.length; i++) {
+        var el = doc.querySelector(sels[i]);
+        if (el) { el.click(); return true; }
+      }
+      var hdr = doc.querySelector('[data-testid="stHeader"]');
+      if (hdr) {
+        var bs = hdr.querySelectorAll("button");
+        for (var j = 0; j < bs.length; j++) {
+          if (bs[j].offsetParent !== null) { bs[j].click(); return true; }
+        }
+      }
+      return false;
+    }
+
+    function sidebarLooksCollapsed() {
+      var side = doc.querySelector('[data-testid="stSidebar"]');
+      if (!side) return true;
+      var cs = window.getComputedStyle(side);
+      if (cs.display === "none" || cs.visibility === "hidden") return true;
+      var w = side.getBoundingClientRect().width;
+      return w < 56;
+    }
+
+    function sync() {
+      try {
+        btn.style.display = sidebarLooksCollapsed() ? "flex" : "none";
+      } catch (e) {}
+    }
+
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      clickNativeToggle();
+      setTimeout(sync, 250);
+    });
+
+    doc.body.appendChild(btn);
+    sync();
+    var mo = new MutationObserver(function () { requestAnimationFrame(sync); });
+    mo.observe(doc.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["style", "class"] });
+    window.addEventListener("resize", sync);
+  } catch (err) {}
+})();
+</script>
+        """,
+        height=0,
+    )
+
+
+def inject_css() -> None:
+    """
+    Inject PACE base CSS. Call at the top of every page.
+
+    Uses Streamlit's default left sidebar for multipage navigation.
+    Hides Login + Loading (flow-only pages; still work via st.switch_page).
+    Hides the Admin page entry unless role is "admin" (same rule as pages/8_Admin.py).
+    Keeps the full page list visible and hides Streamlit's "View more / View less" nav toggle.
+    Compacts sidebar spacing and disables inner nav scrolling when the viewport is tall enough.
+    """
+    inject_persistent_nav_hides()
+    admin_nav_css = _HIDE_ADMIN_NAV_CSS if not pace_role_is_admin() else ""
+    st.markdown(
+        _BASE_CSS.replace(
+            "</style>",
+            _HIDE_FLOW_NAV_CSS + admin_nav_css + "</style>",
+        ),
+        unsafe_allow_html=True,
+    )
+    _inject_sidebar_open_fallback()
+
+
+def sidebar_account(username: str) -> None:
+    """
+    Sidebar footer below Streamlit's page list: account + sign-out.
+    Call after inject_css() on authenticated pages.
+    Admins get an explicit Admin link (multipage entry may be CSS-hidden before role sync).
+    """
+    with st.sidebar:
+        st.caption(f"Signed in as **{username}**")
+        if pace_role_is_admin():
+            st.page_link(
+                "pages/8_Admin.py",
+                label="Admin panel",
+                icon=":material/admin_panel_settings:",
+                use_container_width=True,
+            )
+        if st.button("Sign out", key="pace_sidebar_signout", use_container_width=True):
             from auth_utils import logout
+
             logout()
 
 

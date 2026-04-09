@@ -1,4 +1,4 @@
-# File: pages/loading.py
+# File: pages/_loading.py (leading underscore = hidden from Streamlit sidebar)
 """
 Loading screen — shown after login, pre-warms all data caches before
 redirecting to the destination page stored in session state.
@@ -14,17 +14,20 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from auth_utils import check_auth
 from pipeline.config import is_pace_model_ready
+from utils.styling import remove_nav_toggle_fallback, inject_persistent_nav_hides
 
 st.set_page_config(
     page_title="PACE — Loading",
     page_icon="⬡",
     layout="centered",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
+remove_nav_toggle_fallback()
+inject_persistent_nav_hides()
 
 # Redirect if not authenticated
 if not check_auth():
-    st.switch_page("pages/1_Login.py")
+    st.switch_page("pages/_Login.py")
     st.stop()
 
 dest = st.session_state.get("post_load_dest", "pages/0_Home.py")
@@ -92,8 +95,10 @@ st.markdown(f"""
     z-index: 0;
 }}
 
-#MainMenu, header, footer {{ visibility:hidden; }}
-[data-testid="stSidebar"], [data-testid="collapsedControl"] {{ display:none !important; }}
+#MainMenu, footer {{ visibility: hidden !important; }}
+[data-testid="stHeader"] {{ background: transparent !important; }}
+[data-testid="stSidebar"], [data-testid="collapsedControl"] {{ display: none !important; }}
+#pace-nav-toggle-btn {{ display: none !important; }}
 .block-container {{ position:relative; z-index:1; padding-top:0 !important; }}
 
 [data-testid="stProgressBar"] > div > div {{
@@ -159,7 +164,7 @@ try:
         get_carriers, get_facilities, get_shipments_with_charges,
     )
     from utils.mock_data import generate_mock_shipments
- 
+
 
     _step("Connecting to database", 5)
     if time.time() - _load_start > _LOAD_TIMEOUT_SECS:
@@ -176,10 +181,11 @@ try:
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.session_state["_login_error"] = _err
-            st.switch_page("pages/1_Login.py")
+            st.switch_page("pages/_Login.py")
             st.stop()
-        st.session_state["role"] = verified_role
-        dest = "pages/8_Admin.py" if verified_role == "admin" else "pages/0_Home.py"
+        norm_role = str(verified_role).strip().lower()
+        st.session_state["role"] = norm_role
+        dest = "pages/8_Admin.py" if norm_role == "admin" else "pages/0_Home.py"
         st.session_state["post_load_dest"] = dest
 
     _step("Loading shipment records", 20)
@@ -204,7 +210,7 @@ try:
     # Old get_cost_model / get_risk_model calls removed
 
     _step("Preparing dashboards", 90)
-    _df = df.copy() 
+    _df = df.copy()
     _df["ship_date_dt"] = pd.to_datetime(_df["ship_date"])
     _df["week"] = _df["ship_date_dt"].dt.to_period("W").dt.start_time
     st.session_state["_preload_df"] = _df

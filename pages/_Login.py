@@ -1,5 +1,5 @@
-# File: pages/1_Login.py
-# Login form — moved here from app.py so app.py can serve as a pre-login landing page.
+# File: pages/_Login.py (leading underscore = hidden from Streamlit sidebar; still routable)
+# Login form — pre-login page; main landing is PACE.py.
 import os
 import sys
 import base64
@@ -7,7 +7,7 @@ import streamlit as st
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from auth_utils import check_auth
+from auth_utils import check_auth, pace_role_is_admin
 
 
 def _bg_css() -> str:
@@ -133,16 +133,15 @@ p, .stMarkdown p { color: #94A3B8 !important; }
 # ── Already logged in → route by role ─────────────────────────────────────────
 if check_auth():
     if st.session_state.get("_data_preloaded"):
-        if st.session_state.get("role") == "admin":
+        if pace_role_is_admin():
             st.switch_page("pages/8_Admin.py")
         else:
             st.switch_page("pages/0_Home.py")
     else:
         st.session_state["post_load_dest"] = (
-            "pages/8_Admin.py" if st.session_state.get("role") == "admin"
-            else "pages/0_Home.py"
+            "pages/8_Admin.py" if pace_role_is_admin() else "pages/0_Home.py"
         )
-        st.switch_page("pages/loading.py")
+        st.switch_page("pages/_loading.py")
 
 # ── Logo header ────────────────────────────────────────────────────────────────
 _logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "logo.png")
@@ -231,7 +230,7 @@ with st.container(border=True):
                 st.session_state["post_load_dest"] = (
                     "pages/8_Admin.py" if role == "admin" else "pages/0_Home.py"
                 )
-                st.switch_page("pages/loading.py")
+                st.switch_page("pages/_loading.py")
             else:
                 st.error("Please enter both username and password.")
 

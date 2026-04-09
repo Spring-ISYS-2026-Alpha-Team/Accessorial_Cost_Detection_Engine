@@ -125,13 +125,13 @@ Dashboard Data
 
 ```
 Accessorial_Cost_Detection_Engine/
-├── app.py                        # Landing page (pre-login hero)
+├── PACE.py                       # Entry / landing (pre-login hero); run: streamlit run PACE.py
 ├── auth_utils.py                 # Session auth, logout, require_auth guard
 ├── requirements.txt
 │
 ├── pages/
-│   ├── 1_Login.py                # Login form, fallback auth, DB verification
-│   ├── loading.py                # Post-login cache pre-warm + weight download
+│   ├── _Login.py                 # Login (underscore = hidden from sidebar nav)
+│   ├── _loading.py               # Post-login cache pre-warm + weight download
 │   ├── 0_Home.py                 # Home KPIs + charts
 │   ├── 1_Dashboard.py            # Risk dashboard
 │   ├── 2_Upload.py               # Batch upload & FT-Transformer scoring
@@ -209,7 +209,7 @@ This pulls `pace_transformer_weights.pt` and `artifacts.pkl` from the GitHub Rel
 ### 4. Run
 
 ```bash
-streamlit run app.py
+streamlit run PACE.py
 ```
 
 Opens at **http://localhost:8501**

@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from auth_utils import require_auth
 from utils.doc_parser import parse_uploaded_document
-from utils.styling import inject_css, top_nav, TIER_COLORS
+from utils.styling import inject_css, sidebar_account, TIER_COLORS
 from pipeline.data_pipeline import get_data_pipeline
 from pipeline.config import CHARGE_TYPE_LABELS, is_pace_model_ready
 from utils.column_mapper import (
@@ -24,14 +24,14 @@ st.set_page_config(
     page_title="PACE — Upload",
     page_icon="📁",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 inject_css()
 
 # ── Auth guard ────────────────────────────────────────────────────
 require_auth()
 username = st.session_state.get("username", "User")
-top_nav(username)
+sidebar_account(username)
 
 # ── Model availability check ──────────────────────────────────────
 MODEL_READY = is_pace_model_ready()
