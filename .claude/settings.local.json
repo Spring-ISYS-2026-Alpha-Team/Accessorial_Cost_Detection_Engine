@@ -79,7 +79,17 @@
       "Bash(grep -rn \"stFileUploader\\\\|file.uploader\\\\|drag.and.drop\\\\|Browse files\" c:/Users/clayt/source/repos/PACE/ --include=*.py --include=*.css)",
       "Bash(ping -n 4 131.186.6.189)",
       "Bash(powershell -Command \"Test-NetConnection -ComputerName 131.186.6.189 -Port 22 -WarningAction SilentlyContinue | Select-Object ComputerName, RemotePort, TcpTestSucceeded, PingSucceeded\")",
-      "Bash(ssh -v -i /mnt/c/Users/clayt/.ssh/oci_key -o ConnectTimeout=10 ubuntu@131.186.6.189)"
+      "Bash(ssh -v -i /mnt/c/Users/clayt/.ssh/oci_key -o ConnectTimeout=10 ubuntu@131.186.6.189)",
+      "Bash(ssh -i /mnt/c/Users/clayt/.ssh/oci_key -o ConnectTimeout=15 ubuntu@100.95.54.86 \"echo connected && sudo ufw status\")",
+      "Read(//c/Users/clayt/.ssh/**)",
+      "Bash(ssh -i ~/.ssh/oci_key -o ConnectTimeout=15 ubuntu@100.95.54.86 \"echo connected && sudo ufw status\")",
+      "Bash(ssh -i ~/.ssh/oci_key ubuntu@100.95.54.86 \"sudo iptables -L INPUT -n --line-numbers | head -30\")",
+      "Bash(ssh -i ~/.ssh/oci_key ubuntu@100.95.54.86 \"sudo iptables -L ts-input -n --line-numbers\")",
+      "Bash(ssh -i ~/.ssh/oci_key -o ConnectTimeout=10 ubuntu@131.186.6.189 \"echo 'public SSH works!'\")",
+      "Bash(ssh -i ~/.ssh/oci_key ubuntu@100.95.54.86 \"sudo cat /etc/iptables/rules.v4\")",
+      "Bash(ssh -i ~/.ssh/oci_key ubuntu@100.95.54.86 \"sudo iptables -D INPUT -i enp0s6 -p tcp -m tcp --dport 22 -j DROP && sudo netfilter-persistent save && echo 'done'\")",
+      "Bash(python -c \"from pipeline.config import is_pace_model_ready; print\\('Model ready:', is_pace_model_ready\\(\\)\\)\")",
+      "Bash(gh release:*)"
     ]
   }
 }

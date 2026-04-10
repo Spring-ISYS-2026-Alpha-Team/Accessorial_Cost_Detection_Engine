@@ -125,7 +125,7 @@ st.markdown(f"""
 /* — Nav — */
 .pace-nav {{
     display: flex; align-items: center; justify-content: space-between;
-    padding: 22px 56px;
+    padding: 22px clamp(1rem, 7vw, 56px);
     border-bottom: 1px solid rgba(147,51,234,0.22);
     position: relative; z-index: 10;
     background: rgba(6,0,18,0.45);
@@ -141,8 +141,9 @@ st.markdown(f"""
 .pace-nav-links {{ display: flex; align-items: center; gap: 36px; }}
 .pace-nav-link {{
     font-family: 'Outfit', Arial, sans-serif;
-    font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em;
+    font-size: clamp(0.6rem, 2vw, 0.66rem); font-weight: 600; letter-spacing: 0.16em;
     text-transform: uppercase; color: #d8ccf0; text-decoration: none;
+    min-height: 44px; display: flex; align-items: center;
     transition: color 0.2s;
 }}
 .pace-nav-link:hover {{ color: #ffffff; }}
@@ -159,7 +160,7 @@ st.markdown(f"""
 .pace-ticker-item {{
     display: inline-flex; align-items: center; gap: 10px;
     font-family: 'Outfit', Arial, sans-serif;
-    font-size: 9px; font-weight: 700; letter-spacing: 0.2em;
+    font-size: clamp(0.5rem, 1.8vw, 0.56rem); font-weight: 700; letter-spacing: 0.2em;
     text-transform: uppercase; color: #c9bce8; margin-right: 40px;
 }}
 .pace-ticker-item.lit {{ color: #e879f9; }}
@@ -169,13 +170,13 @@ st.markdown(f"""
 .pace-hero {{
     display: grid; grid-template-columns: 1fr auto;
     align-items: start; gap: 36px;
-    padding: 72px 56px 0;
+    padding: clamp(32px, 7vw, 72px) clamp(1rem, 7vw, 56px) 0;
     position: relative; z-index: 5;
 }}
 .pace-eyebrow {{
     display: flex; align-items: center; gap: 14px;
     font-family: 'Outfit', Arial, sans-serif;
-    font-size: 9px; font-weight: 700; letter-spacing: 0.26em;
+    font-size: clamp(0.5rem, 1.8vw, 0.56rem); font-weight: 700; letter-spacing: 0.26em;
     text-transform: uppercase; color: #e879f9; margin-bottom: 26px;
     animation: eyebrow-in 0.7s ease-out 0.2s both;
 }}
@@ -246,7 +247,7 @@ st.markdown(f"""
 .pace-stat:last-child {{ border-bottom: none; }}
 .pace-stat-num {{
     font-family: 'Cormorant Garamond', Georgia, serif;
-    font-size: 3.4rem; letter-spacing: 0.04em; line-height: 1; font-weight: 600;
+    font-size: clamp(2rem, 5vw, 3.4rem); letter-spacing: 0.04em; line-height: 1; font-weight: 600;
     background: linear-gradient(135deg, #f0e6ff, #e040fb, #c2185b);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     filter: drop-shadow(0 0 14px rgba(147,51,234,0.45));
@@ -259,7 +260,7 @@ st.markdown(f"""
 
 /* — Divider — */
 .pace-div {{
-    height: 1px; margin: 52px 56px 0;
+    height: 1px; margin: 52px clamp(1rem, 7vw, 56px) 0;
     background: linear-gradient(90deg, transparent, rgba(147,51,234,0.45), rgba(194,24,91,0.35), transparent);
     position: relative; z-index: 5;
 }}
@@ -267,9 +268,9 @@ st.markdown(f"""
 /* — Features — */
 .pace-feat-label {{
     display: flex; align-items: center; gap: 14px;
-    padding: 38px 56px 20px;
+    padding: 38px clamp(1rem, 7vw, 56px) 20px;
     font-family: 'Outfit', Arial, sans-serif;
-    font-size: 8.5px; font-weight: 800; letter-spacing: 0.26em;
+    font-size: clamp(0.5rem, 1.8vw, 0.53rem); font-weight: 800; letter-spacing: 0.26em;
     text-transform: uppercase; color: #d8b4fe;
     position: relative; z-index: 5;
 }}
@@ -280,7 +281,7 @@ st.markdown(f"""
 .pace-grid {{
     display: grid; grid-template-columns: repeat(3, 1fr);
     gap: 1px; background: rgba(147,51,234,0.09);
-    margin: 0 56px 0;
+    margin: 0 clamp(1rem, 7vw, 56px) 0;
     border: 1px solid rgba(147,51,234,0.15);
     border-radius: 8px; overflow: hidden;
     position: relative; z-index: 5;
@@ -327,8 +328,9 @@ st.markdown(f"""
 /* — Footer — */
 .pace-footer {{
     border-top: 1px solid rgba(147,51,234,0.12);
-    padding: 24px 56px; margin-top: 52px;
+    padding: 24px clamp(1rem, 7vw, 56px); margin-top: 52px;
     display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 12px;
     position: relative; z-index: 5;
     background: rgba(6,0,18,0.45);
 }}
@@ -354,6 +356,78 @@ st.markdown(f"""
 .stButton > button[kind="primary"]:hover {{
     box-shadow: 0 0 58px rgba(147,51,234,0.85) !important;
     transform: translateY(-2px) !important;
+}}
+
+/* ═══════════════════════════════════════════
+   LANDING PAGE — MOBILE BREAKPOINTS
+   ═══════════════════════════════════════════ */
+
+/* Tablet (≤1024px): 2-col feature grid */
+@media (max-width: 1024px) {{
+    .pace-grid {{
+        grid-template-columns: repeat(2, 1fr) !important;
+    }}
+}}
+
+/* Mobile (≤768px): single-column everything */
+@media (max-width: 768px) {{
+    /* Scale down ambient glows so they don't overflow */
+    .g1 {{ width: 400px !important; height: 400px !important; top: -100px !important; left: -100px !important; }}
+    .g2 {{ width: 320px !important; height: 320px !important; bottom: -80px !important; right: -80px !important; }}
+    .g3 {{ width: 260px !important; height: 260px !important; opacity: 0.6 !important; }}
+
+    /* Hide desktop nav links — too small for touch */
+    .pace-nav-links {{ display: none !important; }}
+
+    /* Hero: stack text and stats vertically */
+    .pace-hero {{
+        grid-template-columns: 1fr !important;
+        gap: 28px !important;
+    }}
+    .pace-stats-col {{
+        flex-direction: row !important;
+        min-width: unset !important;
+        width: 100% !important;
+        overflow-x: auto !important;
+    }}
+    .pace-stat {{
+        flex: 1 !important;
+        min-width: 90px !important;
+        border-bottom: none !important;
+        border-right: 1px solid rgba(147,51,234,0.14) !important;
+        padding: 16px 14px !important;
+    }}
+    .pace-stat:last-child {{ border-right: none !important; }}
+
+    /* Hero description: slightly smaller */
+    .pace-hero-desc {{
+        font-size: 15px !important;
+        margin-top: 20px !important;
+    }}
+    .pace-hero-btns {{ margin-top: 24px !important; }}
+    .pace-btn-outline {{
+        min-height: 44px !important;
+        padding: 12px 24px !important;
+    }}
+
+    /* Feature grid: single column */
+    .pace-grid {{
+        grid-template-columns: 1fr !important;
+        margin: 0 clamp(1rem, 5vw, 2rem) !important;
+    }}
+    .pace-feat {{ padding: 24px 20px !important; }}
+
+    /* Footer: center-align on small screens */
+    .pace-footer {{
+        justify-content: center !important;
+        text-align: center !important;
+    }}
+}}
+
+/* Small mobile (≤480px): hide glows entirely */
+@media (max-width: 480px) {{
+    .g1, .g2, .g3 {{ display: none !important; }}
+    .pace-ticker {{ display: none !important; }} /* ticker unreadable at this size */
 }}
 </style>
 """, unsafe_allow_html=True)

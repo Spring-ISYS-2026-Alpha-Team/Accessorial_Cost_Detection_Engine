@@ -438,6 +438,120 @@ strong, b {{ color: #F1F5F9 !important; }}
 
 /* ── Alerts ── */
 [data-testid="stAlert"] {{ border-radius: 8px !important; }}
+
+/* ══════════════════════════════════════════════════
+   MOBILE RESPONSIVENESS — iOS & Android
+   ══════════════════════════════════════════════════ */
+
+/* ── Tablet (≤1024px): 2-column max for wide layouts ── */
+@media (max-width: 1024px) {{
+    .block-container {{
+        padding-left: 1.5rem !important;
+        padding-right: 1.5rem !important;
+    }}
+}}
+
+/* ── Mobile (≤768px): single-column stacking ── */
+@media (max-width: 768px) {{
+    /* Reduce page-level padding */
+    .block-container {{
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        padding-top: 0.75rem !important;
+    }}
+
+    /* Stack all st.columns() layouts vertically */
+    [data-testid="stHorizontalBlock"] {{
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
+    }}
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
+        flex: 1 1 100% !important;
+        min-width: 100% !important;
+        width: 100% !important;
+    }}
+
+    /* Compact metric cards */
+    [data-testid="stMetric"] {{
+        padding: 14px 16px !important;
+    }}
+    [data-testid="stMetricValue"] > div {{
+        font-size: 20px !important;
+    }}
+    [data-testid="stMetricLabel"] > div {{
+        font-size: 10px !important;
+        letter-spacing: 0.5px !important;
+    }}
+    [data-testid="stMetricDelta"] > div {{
+        font-size: 11px !important;
+    }}
+
+    /* Ensure minimum touch target size (44×44px) */
+    .stButton > button {{
+        min-height: 44px !important;
+        padding: 10px 16px !important;
+    }}
+    [data-testid="stVerticalBlockBorderWrapper"] [data-testid="baseButton-secondary"] {{
+        min-width: 44px !important;
+        min-height: 44px !important;
+        padding: 10px 12px !important;
+    }}
+
+    /* Larger tap targets for nav links */
+    [data-testid="stSidebarNav"] a {{
+        padding: 0.55rem 0.65rem !important;
+        font-size: 0.875rem !important;
+    }}
+
+    /* Dialogs — prevent overflow on narrow screens */
+    [data-testid="modalDialog"],
+    [data-testid="stDialog"] {{
+        width: 95vw !important;
+        max-width: 95vw !important;
+    }}
+
+    /* Sidebar: allow scroll on small screens */
+    [data-testid="stSidebarContent"] {{
+        overflow-y: auto !important;
+    }}
+
+    /* Inputs — minimum touch height */
+    [data-testid="stTextInput"] input,
+    [data-testid="stNumberInput"] input {{
+        min-height: 44px !important;
+        font-size: 16px !important; /* prevents iOS auto-zoom */
+    }}
+    [data-testid="stSelectbox"] > div > div,
+    [data-testid="stMultiSelect"] > div > div {{
+        min-height: 44px !important;
+    }}
+
+    /* Reduce chart hover lift on touch to avoid stuck transforms */
+    [data-testid="stVerticalBlockBorderWrapper"]:has([data-testid="stPlotlyChart"]) > div:hover {{
+        transform: none !important;
+        box-shadow: 0 0 0 1px rgba(180,80,220,0.45) !important;
+    }}
+
+    /* Headings — clamp large text */
+    h1 {{ font-size: clamp(1.4rem, 6vw, 2rem) !important; }}
+    h2 {{ font-size: clamp(1.1rem, 5vw, 1.5rem) !important; }}
+    h3 {{ font-size: clamp(1rem, 4.5vw, 1.25rem) !important; }}
+}}
+
+/* ── Small mobile (≤480px): tighten further ── */
+@media (max-width: 480px) {{
+    .block-container {{
+        padding-left: 0.6rem !important;
+        padding-right: 0.6rem !important;
+    }}
+    [data-testid="stMetricValue"] > div {{
+        font-size: 18px !important;
+    }}
+    /* Caption text — keep readable */
+    .stCaption, [data-testid="stCaptionContainer"] p {{
+        font-size: 12px !important;
+    }}
+}}
 </style>
 """
 
