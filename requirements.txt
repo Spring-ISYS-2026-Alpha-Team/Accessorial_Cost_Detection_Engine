@@ -1,3 +1,4 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
 streamlit>=1.31.0
 pandas
 numpy
@@ -13,11 +14,11 @@ openpyxl
 # Azure SQL (requires freetds — see packages.txt for system deps)
 pymssql
 
-# Document parsing + semantic column mapping
+# Document parsing
 pdfplumber
 Pillow
 pytesseract
-sentence-transformers
+# sentence-transformers — optional; column_mapper + doc_parser degrade gracefully without it
 
 # Geospatial routing
 geopy
