@@ -26,6 +26,8 @@ MODEL_FILES = {
     "models/pace_transformer_weights.pt": f"{BASE_URL}/pace_transformer_weights.pt",
     "models/pace_transformer_ltl.pt":     f"{BASE_URL}/pace_transformer_ltl.pt",
     "models/artifacts_ltl.pkl":           f"{BASE_URL}/artifacts_ltl.pkl",
+    "models/pace_transformer_ftl.pt":     f"{BASE_URL}/pace_transformer_ftl.pt",
+    "models/artifacts_ftl.pkl":           f"{BASE_URL}/artifacts_ftl.pkl",
 }
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
